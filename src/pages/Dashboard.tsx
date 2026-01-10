@@ -545,18 +545,39 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                         <div className="flex-1 overflow-y-auto min-h-0">
                             {selectedRisk?.signal_evidence && isMonitorMode ? (
                                 <div className="space-y-3">
-                                    {selectedRisk.signal_evidence.map((item, idx) => (
-                                        <div key={idx} className="flex gap-2 p-2 rounded bg-white/5">
-                                            <div className="text-[10px] text-gray-600 w-10 shrink-0">{item.date}</div>
-                                            <div className="flex-1">
-                                                {item.isNew && (
-                                                    <span className="text-[8px] bg-red-500 text-white px-1 rounded mr-1">NEW</span>
-                                                )}
-                                                <span className="text-xs">{item.headline}</span>
-                                                <div className="text-[9px] text-gray-500 uppercase mt-0.5">{item.source}</div>
+                                    {selectedRisk.signal_evidence.map((item, idx) => {
+                                        const Content = () => (
+                                            <>
+                                                <div className="text-[10px] text-gray-600 w-10 shrink-0">{item.date}</div>
+                                                <div className="flex-1">
+                                                    {item.isNew && (
+                                                        <span className="text-[8px] bg-red-500 text-white px-1 rounded mr-1">NEW</span>
+                                                    )}
+                                                    <span className={`text-xs ${item.url ? 'group-hover:text-cyan-400 decoration-cyan-400 group-hover:underline' : ''}`}>
+                                                        {item.headline}
+                                                        {item.url && <span className="inline-block ml-1 text-gray-500">↗</span>}
+                                                    </span>
+                                                    <div className="text-[9px] text-gray-500 uppercase mt-0.5">{item.source}</div>
+                                                </div>
+                                            </>
+                                        );
+
+                                        return item.url ? (
+                                            <a
+                                                key={idx}
+                                                href={item.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex gap-2 p-2 rounded bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
+                                            >
+                                                <Content />
+                                            </a>
+                                        ) : (
+                                            <div key={idx} className="flex gap-2 p-2 rounded bg-white/5">
+                                                <Content />
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-gray-600 text-xs">No signals available</div>
@@ -567,8 +588,8 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                     <div className="shrink-0 p-4">
                         <h2 className="text-[10px] uppercase tracking-widest text-gray-500 mb-3">Your Exposure</h2>
                         <select className={`w-full text-sm p-2 rounded mb-4 ${isMonitorMode
-                                ? 'bg-[#0d1526] border border-[#1a2035] text-gray-400'
-                                : 'bg-[#0a1a10] border border-green-900 text-green-300'
+                            ? 'bg-[#0d1526] border border-[#1a2035] text-gray-400'
+                            : 'bg-[#0a1a10] border border-green-900 text-green-300'
                             }`}>
                             <option>Select profile...</option>
                             <option>Software Engineer</option>

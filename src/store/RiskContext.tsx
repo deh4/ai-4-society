@@ -7,6 +7,7 @@ export interface SignalEvidence {
     isNew: boolean;
     headline: string;
     source: string;
+    url?: string;
 }
 
 export interface TimelineNarrative {

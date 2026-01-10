@@ -40,9 +40,9 @@ The "Liar's Dividend" compounds the problem: as deepfakes become common, genuine
             'Create legal frameworks for synthetic media accountability'
         ],
         signal_evidence: [
-            { date: '11/26', isNew: true, headline: 'Deepfake Senator scandal rocks midterms', source: 'GLOBAL NEWS' },
-            { date: '08/26', isNew: false, headline: '$25M CEO voice clone heist confirmed', source: 'FINANCIAL TIMES' },
-            { date: '03/26', isNew: false, headline: 'First conviction under Digital Authenticity Act', source: 'REUTERS' }
+            { date: '11/26', isNew: true, headline: 'Deepfake Senator scandal rocks midterms', source: 'GLOBAL NEWS', url: 'https://example.com/deepfake-senator' },
+            { date: '08/26', isNew: false, headline: '$25M CEO voice clone heist confirmed', source: 'FINANCIAL TIMES', url: 'https://example.com/voice-clone-heist' },
+            { date: '03/26', isNew: false, headline: 'First conviction under Digital Authenticity Act', source: 'REUTERS', url: 'https://example.com/digital-auth-act' }
         ],
         expert_severity: 9.5,
         public_perception: 6.2
@@ -75,8 +75,8 @@ This creates a feedback loop: AI generates content → humans use it → new AI 
             'Preserve pre-AI internet archives as baseline datasets'
         ],
         signal_evidence: [
-            { date: '09/26', isNew: true, headline: 'OpenAI admits training data contamination', source: 'WIRED' },
-            { date: '05/26', isNew: false, headline: 'Wikipedia editors overwhelmed by AI submissions', source: 'THE VERGE' }
+            { date: '09/26', isNew: true, headline: 'OpenAI admits training data contamination', source: 'WIRED', url: 'https://example.com/data-contamination' },
+            { date: '05/26', isNew: false, headline: 'Wikipedia editors overwhelmed by AI submissions', source: 'THE VERGE', url: 'https://example.com/wikipedia-ai' }
         ],
         expert_severity: 8.2,
         public_perception: 3.1
@@ -109,8 +109,8 @@ This isn't science fiction. It's happening now. The 2024 elections saw unprecede
             'Create international norms against AI-enabled election interference'
         ],
         signal_evidence: [
-            { date: '10/26', isNew: true, headline: 'EU mandates AI labels on political ads', source: 'POLITICO' },
-            { date: '06/26', isNew: false, headline: 'Brazilian election results delayed over deepfake claims', source: 'BBC' }
+            { date: '10/26', isNew: true, headline: 'EU mandates AI labels on political ads', source: 'POLITICO', url: 'https://example.com/eu-ai-labels' },
+            { date: '06/26', isNew: false, headline: 'Brazilian election results delayed over deepfake claims', source: 'BBC', url: 'https://example.com/brazil-election-deepfake' }
         ],
         expert_severity: 8.8,
         public_perception: 7.5
@@ -143,8 +143,8 @@ This creates two concerning dynamics. First, companies with proprietary data (pr
             'Fund public domain knowledge repositories'
         ],
         signal_evidence: [
-            { date: '07/26', isNew: false, headline: 'Reddit data deal valued at $500M', source: 'TECHCRUNCH' },
-            { date: '04/26', isNew: false, headline: 'Researchers warn of "peak data" for LLMs', source: 'MIT TECH REVIEW' }
+            { date: '07/26', isNew: false, headline: 'Reddit data deal valued at $500M', source: 'TECHCRUNCH', url: 'https://example.com/reddit-data-deal' },
+            { date: '04/26', isNew: false, headline: 'Researchers warn of "peak data" for LLMs', source: 'MIT TECH REVIEW', url: 'https://example.com/peak-data' }
         ],
         expert_severity: 7.5,
         public_perception: 2.8
@@ -177,8 +177,8 @@ The most vulnerable are young people who've never known a world without these pr
             'Expand mental health resources with AI-specific training'
         ],
         signal_evidence: [
-            { date: '08/26', isNew: true, headline: 'Surgeon General warns of AI companion dependency', source: 'CNN' },
-            { date: '02/26', isNew: false, headline: 'Teen anxiety rates hit record high globally', source: 'WHO' }
+            { date: '08/26', isNew: true, headline: 'Surgeon General warns of AI companion dependency', source: 'CNN', url: 'https://example.com/ai-dependency-warning' },
+            { date: '02/26', isNew: false, headline: 'Teen anxiety rates hit record high globally', source: 'WHO', url: 'https://example.com/teen-anxiety-stats' }
         ],
         expert_severity: 8.0,
         public_perception: 7.8
@@ -211,8 +211,8 @@ The danger is scale and invisibility. A biased human might affect hundreds of de
             'Diversify AI development teams and training data'
         ],
         signal_evidence: [
-            { date: '10/26', isNew: true, headline: 'California passes landmark AI Fairness Act', source: 'LOS ANGELES TIMES' },
-            { date: '01/26', isNew: false, headline: 'Healthcare AI audit reveals racial disparities', source: 'JAMA' }
+            { date: '10/26', isNew: true, headline: 'California passes landmark AI Fairness Act', source: 'LOS ANGELES TIMES', url: 'https://example.com/ai-fairness-act' },
+            { date: '01/26', isNew: false, headline: 'Healthcare AI audit reveals racial disparities', source: 'JAMA', url: 'https://example.com/healthcare-ai-bias' }
         ],
         expert_severity: 8.8,
         public_perception: 5.5
