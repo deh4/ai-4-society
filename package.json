@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "seed": "ts-node src/scripts/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts",
+    "seed:prod": "ts-node src/scripts/seed-prod.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

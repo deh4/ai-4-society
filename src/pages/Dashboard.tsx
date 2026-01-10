@@ -45,8 +45,8 @@ function RiskAccordion({
                             key={risk.id}
                             onClick={() => onSelect(risk.id)}
                             className={`p-2 rounded cursor-pointer transition-all ${selectedId === risk.id
-                                    ? 'bg-cyan-950/50 border-l-2 border-cyan-400'
-                                    : 'hover:bg-white/5'
+                                ? 'bg-cyan-950/50 border-l-2 border-cyan-400'
+                                : 'hover:bg-white/5'
                                 }`}
                         >
                             <div className="flex justify-between items-start">
@@ -57,7 +57,7 @@ function RiskAccordion({
                                     </div>
                                 </div>
                                 <div className={`text-sm font-bold ${risk.velocity === 'Critical' ? 'text-red-400' :
-                                        risk.velocity === 'High' ? 'text-orange-400' : 'text-gray-400'
+                                    risk.velocity === 'High' ? 'text-orange-400' : 'text-gray-400'
                                     }`}>
                                     {year <= 2030 ? risk.score_2026 : risk.score_2035}
                                 </div>
@@ -70,9 +70,54 @@ function RiskAccordion({
     );
 }
 
+function PrivacyModal({ onClose }: { onClose: () => void }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-[#0f172a] border border-[#1e293b] rounded-lg max-w-lg w-full p-6 shadow-2xl relative">
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                >
+                    ✕
+                </button>
+
+                <h2 className="text-xl font-bold mb-4 text-white">Privacy & Disclaimer</h2>
+
+                <div className="space-y-4 text-sm text-gray-300 max-h-[60vh] overflow-y-auto pr-2">
+                    <section>
+                        <h3 className="font-semibold text-white mb-2">Disclaimer</h3>
+                        <p>The AI 4 Society Observatory is an educational simulation. Risk scores, timelines, and impact assessments are illustrative estimates based on current research trends and do not constitute financial, legal, or professional advice. The "Weather Station" metaphor is for visualization purposes only.</p>
+                    </section>
+
+                    <section>
+                        <h3 className="font-semibold text-white mb-2">Privacy Policy</h3>
+                        <p>We respect your privacy. This dashboard:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                            <li>Does <strong>not</strong> use cookies for tracking.</li>
+                            <li>Does <strong>not</strong> collect personal identifiable information (PII).</li>
+                            <li>Stores user preferences (like "Your Exposure" selection) strictly in your local browser storage if at all.</li>
+                            <li>Uses anonymous aggregate analytics to understand general usage patterns.</li>
+                        </ul>
+                    </section>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-sm font-medium transition-colors"
+                    >
+                        I Understand
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
     const [year, setYear] = useState(2026);
     const [selectedId, setSelectedId] = useState<string | null>('R01');
+    const [showPrivacy, setShowPrivacy] = useState(false);
     const { risks, solutions, loading, error } = useRisks();
 
     const isMonitorMode = themeMode === 'monitor';
@@ -190,8 +235,8 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                                         key={sol.id}
                                         onClick={() => setSelectedId(sol.id)}
                                         className={`p-2 rounded cursor-pointer transition-all ${selectedId === sol.id
-                                                ? 'bg-green-950/50 border-l-2 border-green-400'
-                                                : 'hover:bg-white/5'
+                                            ? 'bg-green-950/50 border-l-2 border-green-400'
+                                            : 'hover:bg-white/5'
                                             }`}
                                     >
                                         <div className="text-sm font-medium">{sol.solution_title}</div>
@@ -254,8 +299,8 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                                             {selectedRisk.category}
                                         </span>
                                         <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded ${selectedRisk.velocity === 'Critical' ? 'bg-red-500/20 text-red-400' :
-                                                selectedRisk.velocity === 'High' ? 'bg-orange-500/20 text-orange-400' :
-                                                    'bg-gray-500/20 text-gray-400'
+                                            selectedRisk.velocity === 'High' ? 'bg-orange-500/20 text-orange-400' :
+                                                'bg-gray-500/20 text-gray-400'
                                             }`}>
                                             {selectedRisk.velocity} Velocity
                                         </span>
@@ -519,10 +564,9 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                         </div>
                     </div>
 
-                    {/* Resilience Check - Fixed at bottom */}
                     <div className="shrink-0 p-4">
                         <h2 className="text-[10px] uppercase tracking-widest text-gray-500 mb-3">Your Exposure</h2>
-                        <select className={`w-full text-sm p-2 rounded ${isMonitorMode
+                        <select className={`w-full text-sm p-2 rounded mb-4 ${isMonitorMode
                                 ? 'bg-[#0d1526] border border-[#1a2035] text-gray-400'
                                 : 'bg-[#0a1a10] border border-green-900 text-green-300'
                             }`}>
@@ -534,10 +578,22 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                             <option>Healthcare Worker</option>
                             <option>Financial Professional</option>
                         </select>
+
+                        <div className="flex justify-center border-t border-white/5 pt-3">
+                            <button
+                                onClick={() => setShowPrivacy(true)}
+                                className="text-[9px] uppercase tracking-widest text-gray-600 hover:text-gray-400 transition-colors"
+                            >
+                                Privacy & Disclaimer
+                            </button>
+                        </div>
                     </div>
                 </div>
 
             </main>
+
+            {/* Privacy Modal */}
+            {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
         </div>
     );
 }
