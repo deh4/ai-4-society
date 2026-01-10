@@ -28,27 +28,29 @@ const generateParticles = (count: number) => {
 const particlesPosition = generateParticles(1500);
 
 function SignalRipples() {
-    // Number of concurrent ripples
-    const count = 20;
+    // Number of concurrent ripples - Reduced to 10
+    const count = 10;
 
     const ripples = useMemo(() => {
         return new Array(count).fill(0).map(() => ({
-            speed: 0.5 + Math.random() * 1.5, // Random speed
+            // Slower speed: 0.2 to 0.5
+            speed: 0.2 + Math.random() * 0.3,
         }));
     }, []);
 
     return (
         <group>
             {ripples.map((rip, i) => (
-                <Ripple key={i} speed={rip.speed} delay={i * 0.2} />
+                <Ripple key={i} speed={rip.speed} delay={i * 0.5} />
             ))}
         </group>
     );
 }
 
-// Individual expanding ripple on surface
+// Individual expanding ripple on surface (Double Ring Effect)
 function Ripple({ speed, delay }: { speed: number, delay: number }) {
-    const meshRef = useRef<THREE.Mesh>(null!);
+    const mainRef = useRef<THREE.Mesh>(null!);
+    const subRef = useRef<THREE.Mesh>(null!);
 
     // Initial random position
     const [startPos] = useMemo(() => {
@@ -56,62 +58,83 @@ function Ripple({ speed, delay }: { speed: number, delay: number }) {
     }, []);
 
     useFrame((state) => {
-        if (!meshRef.current) return;
+        if (!mainRef.current || !subRef.current) return;
 
         // Add delay so they don't all start at once
         const time = state.clock.elapsedTime * speed + delay;
         const cycle = time % 1;
 
-        // Animation: Expand and fade
-        // 0 -> 1 linear expansion
-        const scale = cycle * 1.5;
+        // --- Logic for Main Ring ---
+        // Expansion: 0 -> 1 
+        // Size: Reduced max radius
+        const scaleMain = cycle * 0.3; // Max scale 0.3 relative to globe
 
-        // Opacity: Strong start, fade to 0
-        let opacity = 1 - Math.pow(cycle, 2); // Quadratic fade
+        let opacityMain = 1 - Math.pow(cycle, 1.5);
+        if (opacityMain < 0) opacityMain = 0;
 
-        if (opacity < 0) opacity = 0;
+        // --- Logic for Sub Ring (Echo) ---
+        // Lags behind slightly
+        // Actually simpler: just make it smaller or scaled differently.
+        const scaleSub = cycle * 0.2; // Smaller radius
+        let opacitySub = (1 - Math.pow(cycle, 2)) * 0.5; // Fades faster, lower max opacity
+        if (cycle < 0.05) opacitySub = 0; // Hide during reset
 
-        // When cycle wraps (just restarted), move to new position
-        // We use a simple trick: if cycle is very small, we assume it just wrapped.
-        if (cycle < 0.05 && Math.random() < 0.1) {
+        // Reset position logic
+        if (cycle < 0.02 && Math.random() < 0.1) {
             const newPos = generateSpherePoint(2.01);
-            meshRef.current.position.copy(newPos);
-            meshRef.current.lookAt(new THREE.Vector3(0, 0, 0)); // Look at center -> orients normal outwards?
-            // Actually geometry is flat on XY plane typically. 
-            // We want the ring to lie on the tangent plane.
-            // If we lookAt(0,0,0), the Z axis points to center.
-            // If RingGeometry is in XY plane, its normal is Z. 
-            // So looking at 0,0,0 puts the face of the ring towards the center.
-            // That's what we want (it "hugs" the surface).
+
+            mainRef.current.position.copy(newPos);
+            mainRef.current.lookAt(new THREE.Vector3(0, 0, 0));
+
+            subRef.current.position.copy(newPos);
+            subRef.current.lookAt(new THREE.Vector3(0, 0, 0));
         }
 
-        // Scale the mesh
-        // Base size = 0.1 radius
-        meshRef.current.scale.setScalar(0.1 + scale * 0.5);
+        // Apply Main
+        mainRef.current.scale.setScalar(scaleMain);
+        (mainRef.current.material as THREE.MeshBasicMaterial).opacity = opacityMain;
 
-        (meshRef.current.material as THREE.MeshBasicMaterial).opacity = opacity * 0.8; // Max opacity 0.8
+        // Apply Sub
+        subRef.current.scale.setScalar(scaleSub);
+        (subRef.current.material as THREE.MeshBasicMaterial).opacity = opacitySub;
     });
 
     // Set initial orientation
     useEffect(() => {
-        if (meshRef.current) {
-            meshRef.current.position.copy(startPos);
-            meshRef.current.lookAt(new THREE.Vector3(0, 0, 0));
+        if (mainRef.current && subRef.current) {
+            mainRef.current.position.copy(startPos);
+            mainRef.current.lookAt(new THREE.Vector3(0, 0, 0));
+
+            subRef.current.position.copy(startPos);
+            subRef.current.lookAt(new THREE.Vector3(0, 0, 0));
         }
     }, [startPos]);
 
     return (
-        <mesh ref={meshRef}>
-            {/* Ring: innerRadius, outerRadius, thetaSegments */}
-            <ringGeometry args={[0.7, 0.8, 32]} />
-            <meshBasicMaterial
-                color="#00ffff"
-                transparent
-                side={THREE.DoubleSide}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-            />
-        </mesh>
+        <group>
+            {/* Main Ring - Thin */}
+            <mesh ref={mainRef}>
+                <ringGeometry args={[0.9, 1.0, 32]} />
+                <meshBasicMaterial
+                    color="#00f0ff" // Tech Cyan
+                    transparent
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
+                    blending={THREE.AdditiveBlending}
+                />
+            </mesh>
+            {/* Sub Ring - Fainter Echo */}
+            <mesh ref={subRef}>
+                <ringGeometry args={[0.9, 1.0, 32]} />
+                <meshBasicMaterial
+                    color="#3b82f6" // Activity Blue
+                    transparent
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
+                    blending={THREE.AdditiveBlending}
+                />
+            </mesh>
+        </group>
     );
 }
 
@@ -123,8 +146,6 @@ export function Globe() {
         if (meshRef.current) {
             meshRef.current.rotation.y += delta * 0.1;
         }
-        // Points rotate slower/differently for parallax effect? 
-        // Or keep them locked.
         if (pointsRef.current) {
             pointsRef.current.rotation.y += delta * 0.05;
         }
@@ -155,7 +176,6 @@ export function Globe() {
                 />
             </Points>
 
-            {/* Ripples rotate WITH the globe so they feel grounded */}
             <RotatingGroup>
                 <SignalRipples />
             </RotatingGroup>
@@ -168,10 +188,6 @@ function RotatingGroup({ children }: { children: React.ReactNode }) {
     const groupRef = useRef<THREE.Group>(null!);
     useFrame((_, delta) => {
         if (groupRef.current) {
-            // Match the Globe mesh rotation speed (0.1) or Points (0.05)?
-            // If they represent "events on the map", they should stick to the map.
-            // But our map is abstract (points rotate at 0.05, sphere at 0.1).
-            // Let's match the POINTS speed since that's the "surface".
             groupRef.current.rotation.y += delta * 0.05;
         }
     });
