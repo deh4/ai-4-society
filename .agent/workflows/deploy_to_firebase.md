@@ -4,43 +4,48 @@ description: How to deploy the AI 4 Society app to Firebase Hosting
 
 # Deploy to Firebase Hosting
 
-This workflow guides you through manually deploying the application to Firebase.
+## Prerequisites
+- Firebase CLI installed (`npm install -g firebase-tools`)
+- Logged in to Firebase (`firebase login`)
+- Project linked via `.firebaserc`
 
-1.  **Install Firebase Tools** (if you haven't already):
-    ```bash
-    npm install -g firebase-tools
-    ```
+## Manual Deployment
 
-2.  **Login to Firebase**:
-    ```bash
-    firebase login
-    ```
-    *Follow the browser prompt to authenticate.*
+```bash
+# 1. Build the production bundle
+npm run build
 
-3.  **Initialize Firebase**:
-    Run the initialization command in the project root:
-    ```bash
-    firebase init hosting
-    ```
-    **Select the following options:**
-    *   **Project**: Select "Use an existing project" (or create a new one if you haven't yet).
-    *   **Public directory**: Type `dist` (Vite's build output folder).
-    *   **Configure as a single-page app?**: `Yes` (Important for React Router).
-    *   **Set up automatic builds and deploys with GitHub?**: `No` (for now, unless you want CI/CD).
-    *   **File dist/index.html already exists. Overwrite?**: `No`.
+# 2. Deploy to Firebase Hosting
+firebase deploy --only hosting
+```
 
-4.  **Build the Project**:
-    Ensure you have the latest production build:
-    ```bash
-    // turbo
-    npm run build
-    ```
+## CI/CD Deployment (GitHub Actions)
 
-5.  **Deploy**:
-    Push the `dist` folder to Firebase:
-    ```bash
-    firebase deploy --only hosting
-    ```
+The project includes automatic deployment via GitHub Actions on push to `main`.
 
-6.  **Verify**:
-    Firebase will output a `Hosting URL`. Click it to verify your live site.
+### One-Time Setup
+
+1. **Create Firebase Service Account**:
+   ```bash
+   firebase init hosting:github
+   ```
+   This will:
+   - Create a service account in Google Cloud
+   - Add the secret to your GitHub repository
+   - Generate the workflow file (already created)
+
+2. **Or manually add the secret**:
+   - Go to Firebase Console → Project Settings → Service Accounts
+   - Generate new private key
+   - Go to GitHub repo → Settings → Secrets → Actions
+   - Add secret: `FIREBASE_SERVICE_ACCOUNT_AI_4_SOCIETY`
+   - Paste the JSON content
+
+### Workflow Triggers
+
+| Event | Action |
+|-------|--------|
+| Push to `main` | Build + Deploy to production |
+| Pull Request | Build only (no deploy) |
+
+// turbo-all
