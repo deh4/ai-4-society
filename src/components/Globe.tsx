@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Sphere, Points, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
@@ -27,12 +27,11 @@ const generateParticles = (count: number) => {
 
 const particlesPosition = generateParticles(1500);
 
-function SignalBlips() {
-    // Number of concurrent blips
-    const count = 30;
+function SignalRipples() {
+    // Number of concurrent ripples
+    const count = 20;
 
-    // Store config for each blip
-    const blips = useMemo(() => {
+    const ripples = useMemo(() => {
         return new Array(count).fill(0).map(() => ({
             speed: 0.5 + Math.random() * 1.5, // Random speed
         }));
@@ -40,58 +39,78 @@ function SignalBlips() {
 
     return (
         <group>
-            {blips.map((blip, i) => (
-                <Blip key={i} speed={blip.speed} />
+            {ripples.map((rip, i) => (
+                <Ripple key={i} speed={rip.speed} delay={i * 0.2} />
             ))}
         </group>
     );
 }
 
-// Individual blinking blip component
-function Blip({ speed }: { speed: number }) {
+// Individual expanding ripple on surface
+function Ripple({ speed, delay }: { speed: number, delay: number }) {
     const meshRef = useRef<THREE.Mesh>(null!);
-    const [pos] = useMemo(() => {
-        return [generateSpherePoint(2.02)]; // Start position
+
+    // Initial random position
+    const [startPos] = useMemo(() => {
+        return [generateSpherePoint(2.01)]; // Just slightly above 2.0
     }, []);
 
     useFrame((state) => {
         if (!meshRef.current) return;
 
-        // Cycle: 0 to 1
-        const time = state.clock.elapsedTime * speed;
-        // The "activation" part of the cycle
+        // Add delay so they don't all start at once
+        const time = state.clock.elapsedTime * speed + delay;
         const cycle = time % 1;
 
-        // Animation: Blast (0.0 -> 0.2) then Decay (0.2 -> 1.0)
-        let scale = 0;
-        let opacity = 0;
+        // Animation: Expand and fade
+        // 0 -> 1 linear expansion
+        const scale = cycle * 1.5;
 
-        if (cycle < 0.1) {
-            // Rapid expand
-            scale = cycle * 15; // 0 -> 1.5
-            opacity = cycle * 10; // 0 -> 1
-        } else {
-            // Slow fade
-            scale = 1.5 + (cycle - 0.1);
-            opacity = 1 - (cycle - 0.1) * 1.1;
-        }
+        // Opacity: Strong start, fade to 0
+        let opacity = 1 - Math.pow(cycle, 2); // Quadratic fade
 
         if (opacity < 0) opacity = 0;
 
-        // Move when invisible to simulate random flashes
-        if (opacity <= 0 && Math.random() < 0.05) {
-            const newPos = generateSpherePoint(2.02);
-            meshRef.current.position.set(newPos.x, newPos.y, newPos.z);
+        // When cycle wraps (just restarted), move to new position
+        // We use a simple trick: if cycle is very small, we assume it just wrapped.
+        if (cycle < 0.05 && Math.random() < 0.1) {
+            const newPos = generateSpherePoint(2.01);
+            meshRef.current.position.copy(newPos);
+            meshRef.current.lookAt(new THREE.Vector3(0, 0, 0)); // Look at center -> orients normal outwards?
+            // Actually geometry is flat on XY plane typically. 
+            // We want the ring to lie on the tangent plane.
+            // If we lookAt(0,0,0), the Z axis points to center.
+            // If RingGeometry is in XY plane, its normal is Z. 
+            // So looking at 0,0,0 puts the face of the ring towards the center.
+            // That's what we want (it "hugs" the surface).
         }
 
-        meshRef.current.scale.setScalar(scale * 0.03); // Base size
-        (meshRef.current.material as THREE.MeshBasicMaterial).opacity = opacity;
+        // Scale the mesh
+        // Base size = 0.1 radius
+        meshRef.current.scale.setScalar(0.1 + scale * 0.5);
+
+        (meshRef.current.material as THREE.MeshBasicMaterial).opacity = opacity * 0.8; // Max opacity 0.8
     });
 
+    // Set initial orientation
+    useEffect(() => {
+        if (meshRef.current) {
+            meshRef.current.position.copy(startPos);
+            meshRef.current.lookAt(new THREE.Vector3(0, 0, 0));
+        }
+    }, [startPos]);
+
     return (
-        <mesh ref={meshRef} position={pos}>
-            <sphereGeometry args={[1, 8, 8]} />
-            <meshBasicMaterial color="#00ffff" transparent />
+        <mesh ref={meshRef}>
+            {/* Ring: innerRadius, outerRadius, thetaSegments */}
+            <ringGeometry args={[0.7, 0.8, 32]} />
+            <meshBasicMaterial
+                color="#00ffff"
+                transparent
+                side={THREE.DoubleSide}
+                depthWrite={false}
+                blending={THREE.AdditiveBlending}
+            />
         </mesh>
     );
 }
@@ -101,21 +120,21 @@ export function Globe() {
     const pointsRef = useRef<THREE.Points>(null!);
 
     useFrame((_, delta) => {
-        // Slowly rotate
         if (meshRef.current) {
             meshRef.current.rotation.y += delta * 0.1;
         }
+        // Points rotate slower/differently for parallax effect? 
+        // Or keep them locked.
         if (pointsRef.current) {
             pointsRef.current.rotation.y += delta * 0.05;
         }
     });
 
     return (
-        <group rotation={[0, 0, 0.1]}> {/* Tilted axis */}
+        <group rotation={[0, 0, 0.1]}>
             <ambientLight intensity={0.2} />
             <pointLight position={[10, 10, 10]} intensity={1.0} color="#2A9DFF" />
 
-            {/* The Wireframe Mesh */}
             <Sphere ref={meshRef} args={[2, 32, 32]}>
                 <meshStandardMaterial
                     color="#1a1a1a"
@@ -125,11 +144,10 @@ export function Globe() {
                 />
             </Sphere>
 
-            {/* The "Risks" / Activity Nodes */}
             <Points ref={pointsRef} positions={particlesPosition} stride={3} frustumCulled={false}>
                 <PointMaterial
                     transparent
-                    color="#FF4444" // Redder for risks
+                    color="#FF4444"
                     size={0.015}
                     sizeAttenuation={true}
                     depthWrite={false}
@@ -137,8 +155,9 @@ export function Globe() {
                 />
             </Points>
 
+            {/* Ripples rotate WITH the globe so they feel grounded */}
             <RotatingGroup>
-                <SignalBlips />
+                <SignalRipples />
             </RotatingGroup>
 
         </group>
@@ -149,7 +168,11 @@ function RotatingGroup({ children }: { children: React.ReactNode }) {
     const groupRef = useRef<THREE.Group>(null!);
     useFrame((_, delta) => {
         if (groupRef.current) {
-            groupRef.current.rotation.y += delta * 0.05; // Match points rotation
+            // Match the Globe mesh rotation speed (0.1) or Points (0.05)?
+            // If they represent "events on the map", they should stick to the map.
+            // But our map is abstract (points rotate at 0.05, sphere at 0.1).
+            // Let's match the POINTS speed since that's the "surface".
+            groupRef.current.rotation.y += delta * 0.05;
         }
     });
     return <group ref={groupRef}>{children}</group>;
