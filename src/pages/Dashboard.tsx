@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PrivacyModal } from '../components/PrivacyModal';
 import { useRisks, type Risk } from '../store/RiskContext';
 
 interface DashboardProps {
@@ -70,49 +71,7 @@ function RiskAccordion({
     );
 }
 
-function PrivacyModal({ onClose }: { onClose: () => void }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-[#0f172a] border border-[#1e293b] rounded-lg max-w-lg w-full p-6 shadow-2xl relative">
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-white"
-                >
-                    ✕
-                </button>
 
-                <h2 className="text-xl font-bold mb-4 text-white">Privacy & Disclaimer</h2>
-
-                <div className="space-y-4 text-sm text-gray-300 max-h-[60vh] overflow-y-auto pr-2">
-                    <section>
-                        <h3 className="font-semibold text-white mb-2">Disclaimer</h3>
-                        <p>The AI 4 Society Observatory is an educational simulation. Risk scores, timelines, and impact assessments are illustrative estimates based on current research trends and do not constitute financial, legal, or professional advice. The "Weather Station" metaphor is for visualization purposes only.</p>
-                    </section>
-
-                    <section>
-                        <h3 className="font-semibold text-white mb-2">Privacy Policy</h3>
-                        <p>We respect your privacy. This dashboard:</p>
-                        <ul className="list-disc pl-5 mt-1 space-y-1">
-                            <li>Does <strong>not</strong> use cookies for tracking.</li>
-                            <li>Does <strong>not</strong> collect personal identifiable information (PII).</li>
-                            <li>Stores user preferences (like "Your Exposure" selection) strictly in your local browser storage if at all.</li>
-                            <li>Uses anonymous aggregate analytics to understand general usage patterns.</li>
-                        </ul>
-                    </section>
-                </div>
-
-                <div className="mt-6 flex justify-end">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-sm font-medium transition-colors"
-                    >
-                        I Understand
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
     const [year, setYear] = useState(2026);

@@ -1,10 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { Globe } from '../components/Globe';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
+import { PrivacyModal } from '../components/PrivacyModal';
 
 export default function HeroPage() {
     const navigate = useNavigate();
+    const [showDisclaimer, setShowDisclaimer] = useState(false);
+
+    const handleEnter = () => {
+        navigate('/dashboard');
+    };
 
     return (
         <div className="relative w-full h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -30,7 +36,7 @@ export default function HeroPage() {
                 </p>
 
                 <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => setShowDisclaimer(true)}
                     className="px-8 py-3 text-lg font-semibold tracking-wider uppercase border border-[var(--accent-structural)] text-[var(--accent-structural)] hover:bg-[var(--accent-structural)] hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(42,157,255,0.3)]"
                 >
                     [ Enter the Observatory ]
@@ -42,19 +48,26 @@ export default function HeroPage() {
                 <FeatureHint
                     icon="⏳"
                     title="The Time Machine"
-                    desc="See how today's fake news becomes 2035's reality collapse."
+                    desc="Explore how current risks might evolve over the next decade."
                 />
                 <FeatureHint
                     icon="🕸️"
                     title="The Spider Web"
-                    desc="See the invisible threads connecting Energy, War, and Algorithms."
+                    desc="Trace the invisible threads connecting Energy, War, and Algorithms."
                 />
                 <FeatureHint
                     icon="💓"
                     title="The Public Pulse"
-                    desc="Vote on risks. Compare your anxiety against global consensus."
+                    desc="Vote on risks. Compare expert severity against public perception."
                 />
             </div>
+
+            {showDisclaimer && (
+                <PrivacyModal
+                    onClose={() => setShowDisclaimer(false)}
+                    onConfirm={handleEnter}
+                />
+            )}
         </div>
     );
 }
