@@ -97,23 +97,23 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
         <div className={`h-screen flex flex-col font-sans transition-colors duration-500 ${isMonitorMode ? 'bg-[#0a0f1a] text-white' : 'bg-[#051A10] text-green-50'
             }`}>
             {/* Header */}
-            <header className={`h-14 shrink-0 border-b flex items-center justify-between px-5 ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'
+            <header className={`h-14 shrink-0 border-b flex items-center justify-between px-3 md:px-5 ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'
                 }`}>
                 {/* Left: Logo */}
-                <div className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center ${isMonitorMode ? 'border-cyan-400' : 'border-green-400'
+                <div className="flex items-center gap-2 md:gap-3">
+                    <div className={`w-6 h-6 md:w-7 md:h-7 rounded-full border-2 flex items-center justify-center ${isMonitorMode ? 'border-cyan-400' : 'border-green-400'
                         }`}>
                         <div className={`w-1.5 h-3.5 rounded-full animate-pulse ${isMonitorMode ? 'bg-cyan-400' : 'bg-green-400'
                             }`} />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-sm font-bold tracking-wide">AI 4 Society</span>
-                        <span className="text-[9px] uppercase tracking-[0.2em] text-gray-500">Observatory</span>
+                        <span className="text-xs md:text-sm font-bold tracking-wide">AI 4 Society</span>
+                        <span className="text-[8px] md:text-[9px] uppercase tracking-[0.2em] text-gray-500">Observatory</span>
                     </div>
                 </div>
 
-                {/* Center: Year Slider */}
-                <div className="flex items-center gap-4">
+                {/* Center: Year Slider - Hidden on mobile */}
+                <div className="hidden md:flex items-center gap-4">
                     <span className="text-[10px] uppercase tracking-widest text-gray-500">Horizon</span>
                     <span className={`text-xl font-bold ${isMonitorMode ? 'text-cyan-400' : 'text-green-400'}`}>{year}</span>
                     <input
@@ -128,8 +128,8 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                 </div>
 
                 {/* Right: Mode Toggle */}
-                <div className="flex items-center gap-3">
-                    <span className={`text-[10px] uppercase tracking-widest ${isMonitorMode ? 'text-red-400 font-bold' : 'text-gray-500'
+                <div className="flex items-center gap-2 md:gap-3">
+                    <span className={`text-[9px] md:text-[10px] uppercase tracking-widest ${isMonitorMode ? 'text-red-400 font-bold' : 'text-gray-500'
                         }`}>Risks</span>
                     <button
                         onClick={() => {
@@ -141,16 +141,16 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                         <div className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-300 ${isMonitorMode ? 'left-1 bg-red-400' : 'left-7 bg-green-400'
                             }`} />
                     </button>
-                    <span className={`text-[10px] uppercase tracking-widest ${!isMonitorMode ? 'text-green-400 font-bold' : 'text-gray-500'
+                    <span className={`text-[9px] md:text-[10px] uppercase tracking-widest ${!isMonitorMode ? 'text-green-400 font-bold' : 'text-gray-500'
                         }`}>Solutions</span>
                 </div>
             </header>
 
-            {/* Main Grid - Fixed height, no page scroll */}
-            <main className="flex-1 grid grid-cols-12 gap-0 overflow-hidden min-h-0">
+            {/* Main Grid - Fixed height on desktop, scrollable on mobile */}
+            <main className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-0 overflow-hidden min-h-0">
 
-                {/* Left Panel - Scrollable risks with accordions */}
-                <div className={`col-span-2 border-r flex flex-col overflow-hidden ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'
+                {/* Left Panel - Hidden on mobile */}
+                <div className={`hidden md:flex md:col-span-2 border-r flex-col overflow-hidden ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'
                     }`}>
                     {/* Risk List with Accordions */}
                     <div className="flex-1 p-3 overflow-y-auto min-h-0">
@@ -245,8 +245,8 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                     </div>
                 </div>
 
-                {/* Center Panel - Scrollable content */}
-                <div className="col-span-7 flex flex-col overflow-hidden">
+                {/* Center Panel - Full width on mobile, scrollable */}
+                <div className="flex-1 md:col-span-7 flex flex-col overflow-hidden">
                     <div className="flex-1 p-4 overflow-y-auto">
                         {isMonitorMode && selectedRisk ? (
                             <>
@@ -436,8 +436,8 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                     </div>
                 </div>
 
-                {/* Right Panel - Scrollable sections */}
-                <div className={`col-span-3 border-l flex flex-col overflow-hidden ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'
+                {/* Right Panel - Hidden on mobile */}
+                <div className={`hidden md:flex md:col-span-3 border-l flex-col overflow-hidden ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'
                     }`}>
                     {/* Perception Gap - Fixed height */}
                     <div className={`shrink-0 p-4 border-b ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'}`}>

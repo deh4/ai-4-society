@@ -3,17 +3,19 @@ import { Canvas } from '@react-three/fiber';
 import { Globe } from '../components/Globe';
 import { Suspense, useState } from 'react';
 import { PrivacyModal } from '../components/PrivacyModal';
+import { AboutModal } from '../components/AboutModal';
 
 export default function HeroPage() {
     const navigate = useNavigate();
     const [showDisclaimer, setShowDisclaimer] = useState(false);
+    const [showAbout, setShowAbout] = useState(false);
 
     const handleEnter = () => {
         navigate('/dashboard');
     };
 
     return (
-        <div className="relative w-full h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
+        <div className="relative w-full min-h-screen overflow-x-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
             {/* 3D Background */}
             <div className="absolute inset-0 z-0 opacity-60">
                 <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
@@ -24,42 +26,38 @@ export default function HeroPage() {
             </div>
 
             {/* Main Content Overlay */}
-            <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4 py-12">
                 <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight drop-shadow-xl"
                     style={{ fontFamily: 'var(--font-heading)' }}>
                     Are we shaping AI, <br />
                     or is it shaping us?
                 </h1>
 
-                <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-2xl font-light">
+                <p className="text-lg md:text-xl text-gray-300 mb-8 md:mb-12 max-w-2xl font-light">
                     Real-time tracking of the 40+ existential shifts redefining human society.
                 </p>
 
-                <button
-                    onClick={() => setShowDisclaimer(true)}
-                    className="px-8 py-3 text-lg font-semibold tracking-wider uppercase border border-[var(--accent-structural)] text-[var(--accent-structural)] hover:bg-[var(--accent-structural)] hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(42,157,255,0.3)]"
-                >
-                    [ Enter the Observatory ]
-                </button>
-            </div>
-
-            {/* Feature Hints (Bottom) */}
-            <div className="absolute bottom-10 left-0 w-full flex justify-center gap-8 px-4 flex-wrap z-20 pointer-events-none">
-                <FeatureHint
-                    icon="⏳"
-                    title="The Time Machine"
-                    desc="Explore how current risks might evolve over the next decade."
-                />
-                <FeatureHint
-                    icon="🕸️"
-                    title="The Spider Web"
-                    desc="Trace the invisible threads connecting Energy, War, and Algorithms."
-                />
-                <FeatureHint
-                    icon="💓"
-                    title="The Public Pulse"
-                    desc="Vote on risks. Compare expert severity against public perception."
-                />
+                {/* Buttons - Vertical on mobile, Horizontal on desktop */}
+                <div className="flex flex-col md:flex-row gap-4 w-full max-w-md md:max-w-4xl">
+                    <button
+                        onClick={() => setShowDisclaimer(true)}
+                        className="px-6 md:px-8 py-4 text-sm md:text-base font-semibold tracking-wider uppercase border-2 border-[var(--accent-structural)] text-[var(--accent-structural)] hover:bg-[var(--accent-structural)] hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(42,157,255,0.3)] rounded"
+                    >
+                        [ Enter Observatory ]
+                    </button>
+                    <button
+                        onClick={() => setShowAbout(true)}
+                        className="px-6 md:px-8 py-4 text-sm md:text-base font-semibold tracking-wider uppercase border-2 border-cyan-600 text-cyan-400 hover:bg-cyan-600 hover:text-white transition-all duration-300 rounded"
+                    >
+                        What is AI-4-Society?
+                    </button>
+                    <button
+                        onClick={() => navigate('/contribute')}
+                        className="px-6 md:px-8 py-4 text-sm md:text-base font-semibold tracking-wider uppercase border-2 border-green-600 text-green-400 hover:bg-green-600 hover:text-white transition-all duration-300 rounded"
+                    >
+                        I want to contribute
+                    </button>
+                </div>
             </div>
 
             {showDisclaimer && (
@@ -68,18 +66,11 @@ export default function HeroPage() {
                     onConfirm={handleEnter}
                 />
             )}
+
+            {showAbout && (
+                <AboutModal onClose={() => setShowAbout(false)} />
+            )}
         </div>
     );
 }
 
-function FeatureHint({ icon, title, desc }: { icon: string, title: string, desc: string }) {
-    return (
-        <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-4 rounded-md backdrop-blur-sm max-w-xs text-left animate-fade-in-up">
-            <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">{icon}</span>
-                <h3 className="font-bold text-sm uppercase text-[var(--accent-structural)]">{title}</h3>
-            </div>
-            <p className="text-xs text-gray-400 leading-relaxed">{desc}</p>
-        </div>
-    );
-}

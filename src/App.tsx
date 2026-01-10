@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HeroPage from './pages/HeroPage';
 import Dashboard from './pages/Dashboard';
+import Contribute from './pages/Contribute';
 import { useEffect, useState } from 'react';
 import { RiskProvider } from './store/RiskContext';
 
@@ -25,6 +26,7 @@ export default function App() {
             path="/dashboard"
             element={<Dashboard themeMode={themeMode} setThemeMode={setThemeMode} />}
           />
+          <Route path="/contribute" element={<Contribute />} />
         </Routes>
       </Router>
     </RiskProvider>
