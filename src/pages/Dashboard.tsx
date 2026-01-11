@@ -77,6 +77,7 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
     const [year, setYear] = useState(2026);
     const [selectedId, setSelectedId] = useState<string | null>('R01');
     const [showPrivacy, setShowPrivacy] = useState(false);
+    const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
     const { risks, solutions, loading, error } = useRisks();
 
     const isMonitorMode = themeMode === 'monitor';
@@ -92,6 +93,12 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
     const relatedSolution = solutions.find(s => s.parent_risk_id === selectedId);
     const parentRisk = selectedSolution ? risks.find(r => r.id === selectedSolution.parent_risk_id) : null;
     const connectedRisks = selectedRisk?.connected_to?.map(id => risks.find(r => r.id === id)).filter(Boolean) as Risk[] || [];
+
+    // Handle mobile selection - close drawer after selection
+    const handleMobileSelect = (id: string) => {
+        setSelectedId(id);
+        setMobileDrawerOpen(false);
+    };
 
     return (
         <div className={`h-screen flex flex-col font-sans transition-colors duration-500 ${isMonitorMode ? 'bg-[#0a0f1a] text-white' : 'bg-[#051A10] text-green-50'
@@ -147,7 +154,89 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
             </header>
 
             {/* Main Grid - Fixed height on desktop, scrollable on mobile */}
-            <main className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-0 overflow-hidden min-h-0">
+            <main className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-0 overflow-hidden min-h-0 relative">
+
+                {/* Mobile Drawer Toggle Button - Fixed at left edge */}
+                <button
+                    onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
+                    className={`md:hidden fixed left-0 top-20 z-40 h-12 w-8 flex items-center justify-center rounded-r-lg transition-all duration-300 ${
+                        isMonitorMode ? 'bg-cyan-900/80 text-cyan-400' : 'bg-green-900/80 text-green-400'
+                    } ${mobileDrawerOpen ? 'translate-x-64' : 'translate-x-0'}`}
+                >
+                    <span className={`transition-transform duration-300 ${mobileDrawerOpen ? 'rotate-180' : ''}`}>
+                        ▶
+                    </span>
+                </button>
+
+                {/* Mobile Drawer Overlay */}
+                {mobileDrawerOpen && (
+                    <div
+                        className="md:hidden fixed inset-0 bg-black/50 z-30"
+                        onClick={() => setMobileDrawerOpen(false)}
+                    />
+                )}
+
+                {/* Mobile Drawer - Slides in from left */}
+                <div className={`md:hidden fixed left-0 top-14 bottom-0 w-64 z-40 transition-transform duration-300 ease-in-out ${
+                    isMonitorMode ? 'bg-[#0a0f1a] border-r border-[#1a2035]' : 'bg-[#051A10] border-r border-green-900'
+                } ${mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    {/* Risk List */}
+                    <div className="flex-1 p-3 overflow-y-auto h-full">
+                        <h2 className="text-[10px] uppercase tracking-widest text-gray-500 mb-3">
+                            {isMonitorMode ? 'Risk Index' : 'Solution Index'}
+                        </h2>
+
+                        {loading ? (
+                            <div className="text-gray-600 text-xs">Scanning...</div>
+                        ) : error ? (
+                            <div className="text-red-400 text-xs">{error}</div>
+                        ) : isMonitorMode ? (
+                            <>
+                                <RiskAccordion
+                                    title="Critical (Now)"
+                                    risks={nearTermRisks}
+                                    selectedId={selectedId}
+                                    onSelect={handleMobileSelect}
+                                    defaultOpen={true}
+                                    year={year}
+                                />
+                                <RiskAccordion
+                                    title="Emerging (2030s)"
+                                    risks={midTermRisks}
+                                    selectedId={selectedId}
+                                    onSelect={handleMobileSelect}
+                                    year={year}
+                                />
+                                <RiskAccordion
+                                    title="Horizon (2040s)"
+                                    risks={longTermRisks}
+                                    selectedId={selectedId}
+                                    onSelect={handleMobileSelect}
+                                    year={year}
+                                />
+                            </>
+                        ) : (
+                            <div className="space-y-1">
+                                {solutions.map((sol) => (
+                                    <div
+                                        key={sol.id}
+                                        onClick={() => handleMobileSelect(sol.id)}
+                                        className={`p-2 rounded cursor-pointer transition-all ${
+                                            selectedId === sol.id
+                                                ? 'bg-green-950/50 border-l-2 border-green-400'
+                                                : 'hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <div className="text-sm font-medium">{sol.solution_title}</div>
+                                        <div className="text-[9px] uppercase tracking-wider text-gray-500 mt-0.5">
+                                            {sol.solution_type}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 {/* Left Panel - Hidden on mobile */}
                 <div className={`hidden md:flex md:col-span-2 border-r flex-col overflow-hidden ${isMonitorMode ? 'border-[#1a2035]' : 'border-green-900'
@@ -345,6 +434,50 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                                         <div className="text-lg font-bold text-green-300">{relatedSolution.solution_title}</div>
                                         <div className="text-xs text-gray-400 mt-1">{relatedSolution.summary}</div>
                                     </button>
+                                )}
+
+                                {/* Mobile-only Signal Evidence Section */}
+                                {selectedRisk.signal_evidence && (
+                                    <div className="md:hidden mt-8 pt-6 border-t border-[#1a2035]">
+                                        <h3 className="text-[10px] uppercase tracking-widest text-gray-500 mb-3">
+                                            Signal Evidence
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {selectedRisk.signal_evidence.map((item, idx) => {
+                                                const Content = () => (
+                                                    <>
+                                                        <div className="text-[10px] text-gray-600 w-20 shrink-0">{item.date}</div>
+                                                        <div className="flex-1">
+                                                            {item.isNew && (
+                                                                <span className="text-[8px] bg-red-500 text-white px-1 rounded mr-1">NEW</span>
+                                                            )}
+                                                            <span className={`text-xs ${item.url ? 'group-hover:text-cyan-400 decoration-cyan-400 group-hover:underline' : ''}`}>
+                                                                {item.headline}
+                                                                {item.url && <span className="inline-block ml-1 text-gray-500">↗</span>}
+                                                            </span>
+                                                            <div className="text-[9px] text-gray-500 uppercase mt-0.5">{item.source}</div>
+                                                        </div>
+                                                    </>
+                                                );
+
+                                                return item.url ? (
+                                                    <a
+                                                        key={idx}
+                                                        href={item.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex gap-2 p-2 rounded bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
+                                                    >
+                                                        <Content />
+                                                    </a>
+                                                ) : (
+                                                    <div key={idx} className="flex gap-2 p-2 rounded bg-white/5">
+                                                        <Content />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 )}
                             </>
                         ) : !isMonitorMode && selectedSolution ? (
