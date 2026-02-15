@@ -24,6 +24,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Usage tracking: admin read only, server write only
+    match /_usage/{document=**} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     function isAdmin() {
       return request.auth != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
