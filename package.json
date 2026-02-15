@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "seed": "ts-node src/scripts/seed.ts",
-    "seed:prod": "ts-node src/scripts/seed-prod.ts"
+    "seed:prod": "ts-node src/scripts/seed-prod.ts",
+    "seed:admin": "ts-node src/scripts/seed-admin.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

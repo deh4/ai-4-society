@@ -448,6 +448,9 @@ export default function Dashboard({ themeMode, setThemeMode }: DashboardProps) {
                                                     <>
                                                         <div className="text-[10px] text-gray-600 w-20 shrink-0">{item.date}</div>
                                                         <div className="flex-1">
+                                                            {(item as any).isLive && (
+                                                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse mr-1.5" />
+                                                            )}
                                                             {item.isNew && (
                                                                 <span className="text-[8px] bg-red-500 text-white px-1 rounded mr-1">NEW</span>
                                                             )}
