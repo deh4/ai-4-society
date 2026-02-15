@@ -4,9 +4,9 @@ import Dashboard from './pages/Dashboard';
 import Contribute from './pages/Contribute';
 import { useEffect, useState } from 'react';
 import { RiskProvider } from './store/RiskContext';
+import { AuthProvider } from './store/AuthContext';
 
 export default function App() {
-  // Global Theme State could live here or in a context
   const [themeMode, setThemeMode] = useState<'monitor' | 'solution'>('monitor');
 
   useEffect(() => {
@@ -19,16 +19,18 @@ export default function App() {
 
   return (
     <RiskProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<HeroPage />} />
-          <Route
-            path="/dashboard"
-            element={<Dashboard themeMode={themeMode} setThemeMode={setThemeMode} />}
-          />
-          <Route path="/contribute" element={<Contribute />} />
-        </Routes>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<HeroPage />} />
+            <Route
+              path="/dashboard"
+              element={<Dashboard themeMode={themeMode} setThemeMode={setThemeMode} />}
+            />
+            <Route path="/contribute" element={<Contribute />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
     </RiskProvider>
   );
 }
