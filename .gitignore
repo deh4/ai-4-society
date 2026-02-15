@@ -38,6 +38,10 @@ ui-debug.log
 .DS_Store
 Thumbs.db
 
+# Cloud Functions
+functions/lib/
+functions/node_modules/
+
 # Cache
 .vite
 .eslintcache
