@@ -46,10 +46,14 @@ async function fetchGDELT(source: DataSource): Promise<RawArticle[]> {
   }));
 }
 
-export async function fetchAllSources(): Promise<RawArticle[]> {
+export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<RawArticle[]> {
   const results: RawArticle[] = [];
 
   for (const source of DATA_SOURCES) {
+    if (enabledSourceIds && !enabledSourceIds.has(source.id)) {
+      logger.info(`Skipping disabled source: ${source.name}`);
+      continue;
+    }
     try {
       const articles =
         source.type === "rss"

@@ -53,16 +53,23 @@ For irrelevant articles:
 
 Only output valid JSON. No markdown fences. No explanation.`;
 
+export interface ClassificationResult {
+  signals: ClassifiedSignal[];
+  tokenUsage: { input: number; output: number };
+}
+
 const BATCH_SIZE = 10;
 
 export async function classifyArticles(
   articles: RawArticle[],
   geminiApiKey: string
-): Promise<ClassifiedSignal[]> {
+): Promise<ClassificationResult> {
   const genAI = new GoogleGenerativeAI(geminiApiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const results: ClassifiedSignal[] = [];
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   // Process in batches
   for (let i = 0; i < articles.length; i += BATCH_SIZE) {
@@ -86,6 +93,12 @@ export async function classifyArticles(
           temperature: 0.1,
         },
       });
+
+      const usage = result.response.usageMetadata;
+      if (usage) {
+        totalInputTokens += usage.promptTokenCount ?? 0;
+        totalOutputTokens += usage.candidatesTokenCount ?? 0;
+      }
 
       const text = result.response.text();
       const parsed: Array<{
@@ -125,5 +138,5 @@ export async function classifyArticles(
     }
   }
 
-  return results;
+  return { signals: results, tokenUsage: { input: totalInputTokens, output: totalOutputTokens } };
 }
