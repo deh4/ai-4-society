@@ -3,6 +3,7 @@ import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTi
 import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import PipelineHealth from '../components/PipelineHealth';
 
 type SignalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
 
@@ -101,12 +102,16 @@ export default function Admin() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-white transition-colors">
-                        &larr; Observatory
+                        &larr; Home
+                    </button>
+                    <button onClick={() => navigate('/observatory')} className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
+                        Agent Observatory
                     </button>
                     <h1 className="text-lg font-bold">Signal Review</h1>
                     <span className="text-xs text-gray-500">
                         {signals.length} signal{signals.length !== 1 ? 's' : ''}
                     </span>
+                    <PipelineHealth />
                 </div>
                 <div className="flex items-center gap-4">
                     <span className="text-xs text-gray-500">{user?.email}</span>

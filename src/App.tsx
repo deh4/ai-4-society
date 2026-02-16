@@ -3,6 +3,7 @@ import HeroPage from './pages/HeroPage';
 import Dashboard from './pages/Dashboard';
 import Contribute from './pages/Contribute';
 import Admin from './pages/Admin';
+import Observatory from './pages/Observatory';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useEffect, useState } from 'react';
 import { RiskProvider } from './store/RiskContext';
@@ -33,6 +34,11 @@ export default function App() {
             <Route path="/admin" element={
               <ProtectedRoute>
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/observatory" element={
+              <ProtectedRoute>
+                <Observatory />
               </ProtectedRoute>
             } />
           </Routes>
