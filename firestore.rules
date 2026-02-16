@@ -18,14 +18,54 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Admins collection: only readable by authenticated users
+    // Admins collection: readable by authenticated users
+    // Whitelisted emails can self-provision their own admin doc
     match /admins/{userId} {
       allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.auth.token.email in ['dehakuran@gmail.com'];
+      allow update, delete: if false;
+    }
+
+    // Pipeline health: public read (shown on dashboard), server write only
+    match /_pipeline_health/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Archived signals: admin read only, server write only
+    match /_archive/{document=**} {
+      allow read: if isAdmin();
       allow write: if false;
     }
 
     // Usage tracking: admin read only, server write only
     match /_usage/{document=**} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Agent registry: public read for status badges
+    match /agents/{agentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Agent config: admin read + write
+    match /agents/{agentId}/config/{doc} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Agent health: admin read, server write only
+    match /agents/{agentId}/health/{doc} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Agent run history: admin read, server write only
+    match /agents/{agentId}/runs/{runId} {
       allow read: if isAdmin();
       allow write: if false;
     }
