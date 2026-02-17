@@ -46,6 +46,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Topics: admin read, server write only (intermediate agent output)
+    match /topics/{topicId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Agent registry: public read for status badges
     match /agents/{agentId} {
       allow read: if true;
