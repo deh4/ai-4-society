@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, orderBy, query, limit, updateDoc, serverTi
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
 import TopicsTab from './TopicsTab';
+import ObservatoryRiskUpdatesTab from './RiskUpdatesTab';
 
 // --- Types ---
 
@@ -92,7 +93,7 @@ const OUTCOME_COLOR: Record<string, string> = {
 
 export default function AgentDetail({ agent, health, onBack }: Props) {
     const { user } = useAuth();
-    const [tab, setTab] = useState<'health' | 'config' | 'runs' | 'topics'>('health');
+    const [tab, setTab] = useState<'health' | 'config' | 'runs' | 'topics' | 'risk-updates'>('health');
 
     // Not deployed: show info card only
     if (agent.status === 'not_deployed') {
@@ -131,6 +132,8 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
 
     const tabs = agent.id === 'topic-tracker'
         ? (['health', 'topics', 'runs'] as const)
+        : agent.id === 'risk-evaluation'
+        ? (['health', 'risk-updates', 'runs'] as const)
         : (['health', 'config', 'runs'] as const);
 
     return (
@@ -167,6 +170,7 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
             <div className="p-6 max-w-4xl mx-auto">
                 {tab === 'health' && <HealthTab health={health} />}
                 {tab === 'topics' && <TopicsTab />}
+                {tab === 'risk-updates' && <ObservatoryRiskUpdatesTab />}
                 {tab === 'config' && <ConfigTab agentId={agent.id} schedule={agent.schedule} functionName={agent.functionName} userId={user?.uid ?? null} />}
                 {tab === 'runs' && <RunsTab agentId={agent.id} />}
             </div>
