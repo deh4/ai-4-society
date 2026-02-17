@@ -109,14 +109,29 @@ export async function clusterSignals(
     };
 
     const text = result.response.text();
-    const parsed: ClusteredTopic[] = JSON.parse(text);
+    const raw: unknown[] = JSON.parse(text);
 
-    // Validate: filter out topics with fewer than 2 signals or invalid signalIds
+    // Validate structure: filter malformed entries and invalid signalIds
     const validSignalIds = new Set(signals.map((s) => s.id));
-    const validTopics = parsed
+    const VALID_VELOCITIES = new Set(["rising", "stable", "declining"]);
+
+    const validTopics = raw
+      .filter(
+        (t): t is Record<string, unknown> =>
+          typeof t === "object" &&
+          t !== null &&
+          typeof (t as Record<string, unknown>).name === "string" &&
+          typeof (t as Record<string, unknown>).description === "string" &&
+          Array.isArray((t as Record<string, unknown>).riskCategories) &&
+          Array.isArray((t as Record<string, unknown>).signalIds) &&
+          VALID_VELOCITIES.has(String((t as Record<string, unknown>).velocity))
+      )
       .map((t) => ({
-        ...t,
-        signalIds: t.signalIds.filter((id) => validSignalIds.has(id)),
+        name: t.name as string,
+        description: t.description as string,
+        riskCategories: t.riskCategories as string[],
+        velocity: t.velocity as "rising" | "stable" | "declining",
+        signalIds: (t.signalIds as string[]).filter((id) => validSignalIds.has(id)),
       }))
       .filter((t) => t.signalIds.length >= 2);
 
