@@ -4,7 +4,7 @@ service cloud.firestore {
     // Risks and solutions: public read, no client write
     match /risks/{riskId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /solutions/{solutionId} {
       allow read: if true;
@@ -50,6 +50,12 @@ service cloud.firestore {
     match /topics/{topicId} {
       allow read: if isAdmin();
       allow write: if false;
+    }
+
+    // Risk updates: admin read + write (approve/reject staging collection)
+    match /risk_updates/{updateId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // Agent registry: public read for status badges

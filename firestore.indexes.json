@@ -4,31 +4,66 @@
       "collectionGroup": "signals",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "fetched_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fetched_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "signals",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "fetched_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fetched_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "signals",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "isNew", "order": "ASCENDING" },
-        { "fieldPath": "fetched_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "isNew",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fetched_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "topics",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "risk_updates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],
