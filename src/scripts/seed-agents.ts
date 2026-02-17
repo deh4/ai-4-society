@@ -187,14 +187,15 @@ async function seedAgents() {
         });
     console.log('  Signal Scout config doc created (7 sources).');
 
-    // 3. Create Signal Scout health baseline
-    await db
-        .collection('agents')
-        .doc('signal-scout')
-        .collection('health')
-        .doc('latest')
-        .set(signalScoutHealth);
-    console.log('  Signal Scout health baseline created.');
+    // 3. Create Signal Scout health baseline (only if it doesn't exist)
+    const healthRef = db.collection('agents').doc('signal-scout').collection('health').doc('latest');
+    const healthSnap = await healthRef.get();
+    if (!healthSnap.exists) {
+        await healthRef.set(signalScoutHealth);
+        console.log('  Signal Scout health baseline created.');
+    } else {
+        console.log('  Signal Scout health baseline already exists, skipping.');
+    }
 }
 
 seedAgents()
