@@ -12,6 +12,10 @@ import { DATA_SOURCES } from "./config/sources.js";
 import { runDataLifecycle } from "./data-lifecycle.js";
 import { clusterSignals } from "./topic-tracker/clusterer.js";
 import { storeTopics } from "./topic-tracker/store.js";
+import { triageRisks } from "./risk-evaluation/triage.js";
+import { evaluateRisk } from "./risk-evaluation/evaluator.js";
+import { storeRiskUpdates } from "./risk-evaluation/store.js";
+import type { EvalRiskInput } from "./risk-evaluation/evaluator.js";
 
 initializeApp();
 
@@ -447,6 +451,281 @@ export const topicTracker = onSchedule(
           geminiCalls: 0,
           tokensInput: 0,
           tokensOutput: 0,
+          firestoreReads: 0,
+          firestoreWrites: 0,
+        },
+        sourcesUsed: [],
+      });
+    }
+  }
+);
+
+// ─── Risk Evaluation Pipeline ───────────────────────────────────────────────
+
+export const riskEvaluation = onSchedule(
+  {
+    schedule: "0 9 * * *",
+    timeoutSeconds: 300,
+    memory: "512MiB",
+    secrets: [geminiApiKey],
+  },
+  async () => {
+    logger.info("Risk Evaluation: starting daily run");
+    const runStartedAt = new Date();
+    const db = getFirestore();
+    let totalTokensInput = 0;
+    let totalTokensOutput = 0;
+    let geminiCalls = 0;
+
+    try {
+      // Step 1: Read approved signals from last 7 days
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7);
+
+      const signalsSnap = await db
+        .collection("signals")
+        .where("status", "in", ["approved", "edited"])
+        .where("fetched_at", ">", cutoff)
+        .orderBy("fetched_at", "desc")
+        .get();
+
+      const signals = signalsSnap.docs.map((d) => ({
+        id: d.id,
+        title: d.data().title as string,
+        summary: d.data().summary as string,
+        risk_categories: (d.data().risk_categories as string[]) ?? [],
+        severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+        source_name: (d.data().source_name as string) ?? "",
+        published_date: (d.data().published_date as string) ?? "",
+        source_url: (d.data().source_url as string) ?? "",
+      }));
+
+      logger.info(`Read ${signals.length} approved signals from last 7 days`);
+
+      if (signals.length < 3) {
+        logger.info("Fewer than 3 signals — insufficient data for risk evaluation. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "risk-evaluation",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls: 0,
+            tokensInput: 0,
+            tokensOutput: 0,
+            firestoreReads: 1,
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      // Step 2: Read latest topics (last 24h)
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+      const topicsSnap = await db
+        .collection("topics")
+        .where("createdAt", ">", oneDayAgo)
+        .orderBy("createdAt", "desc")
+        .limit(20)
+        .get();
+
+      const topics = topicsSnap.docs.map((d) => ({
+        id: d.id,
+        name: d.data().name as string,
+        description: (d.data().description as string) ?? "",
+        riskCategories: (d.data().riskCategories as string[]) ?? [],
+        velocity: (d.data().velocity as string) ?? "stable",
+        signalCount: (d.data().signalCount as number) ?? 0,
+      }));
+
+      logger.info(`Read ${topics.length} topics from last 24h`);
+
+      // Step 3: Read current risk documents
+      const risksSnap = await db.collection("risks").get();
+      const risks = risksSnap.docs.map((d) => ({
+        id: d.id,
+        risk_name: (d.data().risk_name as string) ?? d.id,
+        score_2026: (d.data().score_2026 as number) ?? 50,
+        score_2035: (d.data().score_2035 as number) ?? 50,
+        velocity: (d.data().velocity as string) ?? "Medium",
+        expert_severity: (d.data().expert_severity as number) ?? 50,
+        public_perception: (d.data().public_perception as number) ?? 50,
+        signalEvidenceCount: Array.isArray(d.data().signal_evidence) ? (d.data().signal_evidence as unknown[]).length : 0,
+      }));
+
+      logger.info(`Read ${risks.length} current risk documents`);
+
+      // Step 4: Stage 1 — Triage
+      const triageInput = signals.map((s) => ({
+        id: s.id,
+        title: s.title,
+        risk_categories: s.risk_categories,
+        severity_hint: s.severity_hint,
+      }));
+
+      const triageTopics = topics.map((t) => ({
+        id: t.id,
+        name: t.name,
+        riskCategories: t.riskCategories,
+        velocity: t.velocity,
+        signalCount: t.signalCount,
+      }));
+
+      const triageRiskInput = risks.map((r) => ({
+        id: r.id,
+        name: r.risk_name,
+        score_2026: r.score_2026,
+        velocity: r.velocity,
+      }));
+
+      const { flaggedRisks, tokenUsage: triageTokens } = await triageRisks(
+        triageInput,
+        triageTopics,
+        triageRiskInput,
+        geminiApiKey.value()
+      );
+
+      totalTokensInput += triageTokens.input;
+      totalTokensOutput += triageTokens.output;
+      geminiCalls++;
+
+      if (flaggedRisks.length === 0) {
+        logger.info("No risks flagged for re-evaluation. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "risk-evaluation",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls,
+            tokensInput: totalTokensInput,
+            tokensOutput: totalTokensOutput,
+            firestoreReads: 1 + 1 + 1,
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      logger.info(`Stage 1: flagged ${flaggedRisks.length} risks: ${flaggedRisks.map((r) => r.riskId).join(", ")}`);
+
+      // Step 5: Stage 2 — Per-risk evaluation
+      const signalMap = new Map(signals.map((s) => [s.id, s]));
+      const topicMap = new Map(topics.map((t) => [t.id, t]));
+      const riskMap = new Map(risks.map((r) => [r.id, r]));
+
+      const updates: Array<{
+        risk: EvalRiskInput;
+        evaluation: Awaited<ReturnType<typeof evaluateRisk>>["evaluation"];
+        topicIds: string[];
+        signalCount: number;
+      }> = [];
+
+      for (const flagged of flaggedRisks) {
+        const risk = riskMap.get(flagged.riskId);
+        if (!risk) continue;
+
+        const relevantSignals = flagged.relevantSignalIds
+          .map((id) => signalMap.get(id))
+          .filter((s): s is NonNullable<typeof s> => s !== undefined);
+
+        const relevantTopics = flagged.relevantTopicIds
+          .map((id) => topicMap.get(id))
+          .filter((t): t is NonNullable<typeof t> => t !== undefined);
+
+        if (relevantSignals.length === 0) {
+          logger.info(`Skipping ${flagged.riskId}: no valid signals after filtering`);
+          continue;
+        }
+
+        try {
+          const { evaluation, tokenUsage: evalTokens } = await evaluateRisk(
+            risk,
+            relevantSignals,
+            relevantTopics,
+            geminiApiKey.value()
+          );
+
+          totalTokensInput += evalTokens.input;
+          totalTokensOutput += evalTokens.output;
+          geminiCalls++;
+
+          updates.push({
+            risk,
+            evaluation,
+            topicIds: flagged.relevantTopicIds,
+            signalCount: relevantSignals.length,
+          });
+        } catch (err) {
+          logger.error(`Failed to evaluate ${flagged.riskId}, skipping:`, err);
+        }
+      }
+
+      if (updates.length === 0) {
+        logger.info("All per-risk evaluations failed or produced no results. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "risk-evaluation",
+          startedAt: runStartedAt,
+          outcome: "partial",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls,
+            tokensInput: totalTokensInput,
+            tokensOutput: totalTokensOutput,
+            firestoreReads: 1 + 1 + 1,
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      // Step 6: Store risk updates
+      const runRef = db.collection("agents").doc("risk-evaluation").collection("runs").doc();
+      const stored = await storeRiskUpdates(updates, runRef.id);
+
+      logger.info(`Risk Evaluation complete. Stored ${stored} risk updates from ${signals.length} signals.`);
+
+      // Step 7: Track health
+      await writeAgentRunSummary({
+        agentId: "risk-evaluation",
+        startedAt: runStartedAt,
+        outcome: "success",
+        error: null,
+        metrics: {
+          articlesFetched: signals.length,
+          signalsStored: stored,
+          geminiCalls,
+          tokensInput: totalTokensInput,
+          tokensOutput: totalTokensOutput,
+          firestoreReads: 1 + 1 + 1,
+          firestoreWrites: stored + 1,
+        },
+        sourcesUsed: [],
+      });
+    } catch (err) {
+      logger.error("Risk Evaluation pipeline error:", err);
+      await writeAgentRunSummary({
+        agentId: "risk-evaluation",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: {
+          articlesFetched: 0,
+          signalsStored: 0,
+          geminiCalls,
+          tokensInput: totalTokensInput,
+          tokensOutput: totalTokensOutput,
           firestoreReads: 0,
           firestoreWrites: 0,
         },
