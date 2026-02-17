@@ -10,6 +10,8 @@ import { storeSignals } from "./signal-scout/store.js";
 import { trackUsage, updatePipelineHealth, writeAgentRunSummary } from "./usage-monitor.js";
 import { DATA_SOURCES } from "./config/sources.js";
 import { runDataLifecycle } from "./data-lifecycle.js";
+import { clusterSignals } from "./topic-tracker/clusterer.js";
+import { storeTopics } from "./topic-tracker/store.js";
 
 initializeApp();
 
@@ -289,5 +291,167 @@ export const dataLifecycle = onSchedule(
     logger.info("Data lifecycle: starting daily run");
     const stats = await runDataLifecycle();
     logger.info("Data lifecycle complete:", stats);
+  }
+);
+
+// ─── Topic Tracker Pipeline ─────────────────────────────────────────────────
+
+export const topicTracker = onSchedule(
+  {
+    schedule: "0 8 * * *",
+    timeoutSeconds: 300,
+    memory: "512MiB",
+    secrets: [geminiApiKey],
+  },
+  async () => {
+    logger.info("Topic Tracker: starting daily run");
+    const runStartedAt = new Date();
+    const db = getFirestore();
+
+    try {
+      // Step 1: Read approved signals from last 7 days
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7);
+
+      const signalsSnap = await db
+        .collection("signals")
+        .where("status", "in", ["approved", "edited"])
+        .where("fetched_at", ">", cutoff)
+        .orderBy("fetched_at", "desc")
+        .get();
+
+      const signals = signalsSnap.docs.map((d) => ({
+        id: d.id,
+        title: d.data().title as string,
+        summary: d.data().summary as string,
+        risk_categories: (d.data().risk_categories as string[]) ?? [],
+        severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+        source_name: (d.data().source_name as string) ?? "",
+        published_date: (d.data().published_date as string) ?? "",
+      }));
+
+      // Build signal date map for firstSeenAt calculation
+      const signalDates = new Map<string, FirebaseFirestore.Timestamp>();
+      for (const d of signalsSnap.docs) {
+        const fetchedAt = d.data().fetched_at;
+        if (fetchedAt) {
+          signalDates.set(d.id, fetchedAt);
+        }
+      }
+
+      logger.info(`Read ${signals.length} approved signals from last 7 days`);
+
+      if (signals.length < 3) {
+        logger.info("Fewer than 3 signals — insufficient data for clustering. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "topic-tracker",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls: 0,
+            tokensInput: 0,
+            tokensOutput: 0,
+            firestoreReads: 1,
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      // Step 2: Read previous topics (from last 24h) for velocity comparison
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+      const prevTopicsSnap = await db
+        .collection("topics")
+        .where("createdAt", ">", oneDayAgo)
+        .orderBy("createdAt", "desc")
+        .limit(20)
+        .get();
+
+      const previousTopics = prevTopicsSnap.docs.map((d) => ({
+        name: d.data().name as string,
+        riskCategories: (d.data().riskCategories as string[]) ?? [],
+        velocity: (d.data().velocity as string) ?? "stable",
+        signalCount: (d.data().signalCount as number) ?? 0,
+      }));
+
+      logger.info(`Read ${previousTopics.length} previous topics for velocity comparison`);
+
+      // Step 3: Cluster with Gemini
+      const { topics, tokenUsage } = await clusterSignals(
+        signals,
+        previousTopics,
+        geminiApiKey.value()
+      );
+
+      if (topics.length === 0) {
+        logger.info("No topics produced. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "topic-tracker",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls: 1,
+            tokensInput: tokenUsage.input,
+            tokensOutput: tokenUsage.output,
+            firestoreReads: 1 + (prevTopicsSnap.size > 0 ? 1 : 0),
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      // Step 4: Generate a run ID and store topics
+      const runRef = db.collection("agents").doc("topic-tracker").collection("runs").doc();
+      const stored = await storeTopics(topics, signalDates, runRef.id);
+
+      logger.info(`Topic Tracker complete. Stored ${stored} topics from ${signals.length} signals.`);
+
+      // Step 5: Track health
+      const outcome = stored > 0 ? "success" : "partial";
+      await writeAgentRunSummary({
+        agentId: "topic-tracker",
+        startedAt: runStartedAt,
+        outcome,
+        error: null,
+        metrics: {
+          articlesFetched: signals.length,
+          signalsStored: stored,
+          geminiCalls: 1,
+          tokensInput: tokenUsage.input,
+          tokensOutput: tokenUsage.output,
+          firestoreReads: 1 + (prevTopicsSnap.size > 0 ? 1 : 0),
+          firestoreWrites: stored + 1,
+        },
+        sourcesUsed: [],
+      });
+    } catch (err) {
+      logger.error("Topic Tracker pipeline error:", err);
+      await writeAgentRunSummary({
+        agentId: "topic-tracker",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: {
+          articlesFetched: 0,
+          signalsStored: 0,
+          geminiCalls: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+          firestoreReads: 0,
+          firestoreWrites: 0,
+        },
+        sourcesUsed: [],
+      });
+    }
   }
 );
