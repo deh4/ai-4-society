@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AgentDetail from '../components/observatory/AgentDetail';
+import TopicsCard from '../components/observatory/TopicsCard';
 
 // --- Types ---
 
@@ -11,7 +12,7 @@ interface AgentRegistry {
     id: string;
     name: string;
     description: string;
-    tier: 'scout' | 'analyst' | 'sentinel';
+    tier: string;
     status: 'active' | 'paused' | 'not_deployed';
     functionName: string | null;
     schedule: string | null;
@@ -23,14 +24,12 @@ interface AgentHealth {
     lastRunOutcome: 'success' | 'partial' | 'empty' | 'error' | null;
     consecutiveErrors: number;
     consecutiveEmptyRuns: number;
-    lifetimeSignals: number;
-    articlesFetched: number;
-    signalsStored: number;
-    tokensIn: number;
-    tokensOut: number;
-    monthlyTokensIn: number;
-    monthlyTokensOut: number;
-    monthlyCostEstimate: number;
+    totalSignalsLifetime: number;
+    lastRunArticlesFetched: number;
+    lastRunSignalsStored: number;
+    lastRunTokens: { input: number; output: number } | null;
+    totalTokensMonth: { input: number; output: number };
+    estimatedCostMonth: number;
     lastError: string | null;
     lastErrorAt: { seconds: number } | null;
 }
@@ -39,11 +38,18 @@ type HealthStatus = 'green' | 'yellow' | 'red' | 'gray';
 
 // --- Helpers ---
 
-const TIER_ORDER: Record<string, number> = { scout: 0, analyst: 1, sentinel: 2 };
+const TIER_ORDER: Record<string, number> = { '1': 0, '2A': 1, '2B': 2, '2C': 3 };
+
+const TIER_LABEL: Record<string, string> = {
+    '1': 'Orchestrator',
+    '2A': 'Scout / Tracker',
+    '2B': 'Evaluator',
+    '2C': 'Quality',
+};
 
 function computeAgentStatus(agent: AgentRegistry, health: AgentHealth | null): HealthStatus {
     if (agent.status === 'not_deployed') return 'gray';
-    if (!health || !health.lastRunAt) return 'gray';
+    if (!health || !health.lastRunAt) return 'yellow'; // active but no runs yet
 
     const hoursAgo = (Date.now() - health.lastRunAt.seconds * 1000) / (1000 * 60 * 60);
 
@@ -61,7 +67,7 @@ const STATUS_DOT: Record<HealthStatus, string> = {
 
 const STATUS_LABEL: Record<HealthStatus, string> = {
     green: 'Healthy',
-    yellow: 'Warning',
+    yellow: 'Awaiting Data',
     red: 'Degraded',
     gray: 'Not Deployed',
 };
@@ -127,15 +133,15 @@ export default function Observatory() {
 
     // System summary
     const totalMonthlyTokens = Object.values(healthMap).reduce(
-        (sum, h) => sum + (h.monthlyTokensIn || 0) + (h.monthlyTokensOut || 0),
+        (sum, h) => sum + (h.totalTokensMonth?.input || 0) + (h.totalTokensMonth?.output || 0),
         0
     );
     const totalMonthlyCost = Object.values(healthMap).reduce(
-        (sum, h) => sum + (h.monthlyCostEstimate || 0),
+        (sum, h) => sum + (h.estimatedCostMonth || 0),
         0
     );
     const totalLifetimeSignals = Object.values(healthMap).reduce(
-        (sum, h) => sum + (h.lifetimeSignals || 0),
+        (sum, h) => sum + (h.totalSignalsLifetime || 0),
         0
     );
 
@@ -155,8 +161,8 @@ export default function Observatory() {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-white transition-colors">
-                        &larr; Home
+                    <button onClick={() => navigate('/admin')} className="text-sm text-gray-400 hover:text-white transition-colors">
+                        &larr; Admin
                     </button>
                     <h1 className="text-lg font-bold">Observatory</h1>
                     <span className="text-xs text-gray-500">
@@ -191,6 +197,9 @@ export default function Observatory() {
                     </div>
                 </div>
 
+                {/* Recent Topics */}
+                <TopicsCard />
+
                 {/* Agent Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {sortedAgents.map((agent) => {
@@ -209,7 +218,7 @@ export default function Observatory() {
                                 </div>
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 uppercase tracking-wider">
-                                        {agent.tier}
+                                        {TIER_LABEL[agent.tier] ?? agent.tier}
                                     </span>
                                     <span className="text-[10px] text-gray-500">{STATUS_LABEL[status]}</span>
                                 </div>
