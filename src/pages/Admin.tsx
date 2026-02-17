@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PipelineHealth from '../components/PipelineHealth';
+import RiskUpdatesTab from '../components/admin/RiskUpdatesTab';
 
 type SignalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
 
@@ -51,6 +52,7 @@ export default function Admin() {
     const [selected, setSelected] = useState<Signal | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
+    const [adminTab, setAdminTab] = useState<'signals' | 'risk-updates'>('signals');
 
     useEffect(() => {
         const constraints: QueryConstraint[] = [orderBy('fetched_at', 'desc')];
@@ -59,13 +61,23 @@ export default function Admin() {
         }
         const q = query(collection(db, 'signals'), ...constraints);
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const docs = snapshot.docs.map((d) => ({
-                id: d.id,
-                ...d.data(),
-            })) as Signal[];
-            setSignals(docs);
-        });
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const docs = snapshot.docs.map((d) => ({
+                    id: d.id,
+                    ...d.data(),
+                })) as Signal[];
+                setSignals(docs);
+            },
+            (error) => {
+                console.error('Firestore query error:', error);
+                // Fallback: try without status filter
+                if (filter !== 'all') {
+                    setFilter('all');
+                }
+            }
+        );
 
         return unsubscribe;
     }, [filter]);
@@ -104,13 +116,7 @@ export default function Admin() {
                     <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-white transition-colors">
                         &larr; Home
                     </button>
-                    <button onClick={() => navigate('/observatory')} className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
-                        Agent Observatory
-                    </button>
-                    <h1 className="text-lg font-bold">Signal Review</h1>
-                    <span className="text-xs text-gray-500">
-                        {signals.length} signal{signals.length !== 1 ? 's' : ''}
-                    </span>
+                    <h1 className="text-lg font-bold">Admin</h1>
                     <PipelineHealth />
                 </div>
                 <div className="flex items-center gap-4">
@@ -121,7 +127,40 @@ export default function Admin() {
                 </div>
             </div>
 
-            <div className="flex h-[calc(100vh-57px)]">
+            {/* Tabs */}
+            <div className="flex gap-6 px-6 border-b border-white/10">
+                <button
+                    onClick={() => setAdminTab('signals')}
+                    className={`py-3 text-sm transition-colors border-b-2 ${
+                        adminTab === 'signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                    }`}
+                >
+                    Signal Review
+                    <span className="ml-2 text-[10px] text-gray-500">{signals.length}</span>
+                </button>
+                <button
+                    onClick={() => setAdminTab('risk-updates')}
+                    className={`py-3 text-sm transition-colors border-b-2 ${
+                        adminTab === 'risk-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                    }`}
+                >
+                    Risk Updates
+                </button>
+                <button
+                    onClick={() => navigate('/observatory')}
+                    className="py-3 text-sm transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-300"
+                >
+                    Observatory
+                </button>
+            </div>
+
+            {adminTab === 'risk-updates' && (
+                <div className="h-[calc(100vh-105px)]">
+                    <RiskUpdatesTab />
+                </div>
+            )}
+
+            {adminTab === 'signals' && <div className="flex h-[calc(100vh-105px)]">
                 {/* Left: Filter + List */}
                 <div className="w-80 border-r border-white/10 flex flex-col">
                     {/* Filters */}
@@ -297,7 +336,7 @@ export default function Admin() {
                         </div>
                     )}
                 </div>
-            </div>
+            </div>}
         </div>
     );
 }
