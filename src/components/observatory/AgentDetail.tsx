@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, doc, onSnapshot, orderBy, query, limit, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
+import TopicsTab from './TopicsTab';
 
 // --- Types ---
 
@@ -9,7 +10,7 @@ interface AgentRegistry {
     id: string;
     name: string;
     description: string;
-    tier: 'scout' | 'analyst' | 'sentinel';
+    tier: string;
     status: 'active' | 'paused' | 'not_deployed';
     functionName: string | null;
     schedule: string | null;
@@ -21,20 +22,18 @@ interface AgentHealth {
     lastRunOutcome: 'success' | 'partial' | 'empty' | 'error' | null;
     consecutiveErrors: number;
     consecutiveEmptyRuns: number;
-    lifetimeSignals: number;
-    articlesFetched: number;
-    signalsStored: number;
-    tokensIn: number;
-    tokensOut: number;
-    monthlyTokensIn: number;
-    monthlyTokensOut: number;
-    monthlyCostEstimate: number;
+    totalSignalsLifetime: number;
+    lastRunArticlesFetched: number;
+    lastRunSignalsStored: number;
+    lastRunTokens: { input: number; output: number } | null;
+    totalTokensMonth: { input: number; output: number };
+    estimatedCostMonth: number;
     lastError: string | null;
     lastErrorAt: { seconds: number } | null;
 }
 
 interface AgentConfig {
-    dataSources: Record<string, { enabled: boolean; label?: string }>;
+    sources: Record<string, { enabled: boolean; name?: string }>;
     updatedAt?: { seconds: number } | null;
     updatedBy?: string | null;
 }
@@ -42,14 +41,17 @@ interface AgentConfig {
 interface RunRecord {
     id: string;
     startedAt: { seconds: number } | null;
-    endedAt: { seconds: number } | null;
+    completedAt: { seconds: number } | null;
+    duration: number;
     outcome: 'success' | 'partial' | 'empty' | 'error';
-    articlesFetched: number;
-    signalsStored: number;
-    tokensIn: number;
-    tokensOut: number;
+    metrics: {
+        articlesFetched: number;
+        signalsStored: number;
+        tokensInput: number;
+        tokensOutput: number;
+    };
     sourcesUsed: string[];
-    errorMessage: string | null;
+    error: string | null;
 }
 
 interface Props {
@@ -90,7 +92,7 @@ const OUTCOME_COLOR: Record<string, string> = {
 
 export default function AgentDetail({ agent, health, onBack }: Props) {
     const { user } = useAuth();
-    const [tab, setTab] = useState<'health' | 'config' | 'runs'>('health');
+    const [tab, setTab] = useState<'health' | 'config' | 'runs' | 'topics'>('health');
 
     // Not deployed: show info card only
     if (agent.status === 'not_deployed') {
@@ -114,7 +116,7 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
                         <div className="flex gap-8">
                             <div>
                                 <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Tier</div>
-                                <div className="text-sm text-cyan-400 capitalize">{agent.tier}</div>
+                                <div className="text-sm text-cyan-400">{agent.tier}</div>
                             </div>
                             <div>
                                 <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Overseer Role</div>
@@ -127,7 +129,9 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
         );
     }
 
-    const tabs = ['health', 'config', 'runs'] as const;
+    const tabs = agent.id === 'topic-tracker'
+        ? (['health', 'topics', 'runs'] as const)
+        : (['health', 'config', 'runs'] as const);
 
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
@@ -162,6 +166,7 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
             {/* Tab content */}
             <div className="p-6 max-w-4xl mx-auto">
                 {tab === 'health' && <HealthTab health={health} />}
+                {tab === 'topics' && <TopicsTab />}
                 {tab === 'config' && <ConfigTab agentId={agent.id} schedule={agent.schedule} functionName={agent.functionName} userId={user?.uid ?? null} />}
                 {tab === 'runs' && <RunsTab agentId={agent.id} />}
             </div>
@@ -202,7 +207,7 @@ function HealthTab({ health }: { health: AgentHealth | null }) {
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Lifetime Signals</div>
-                        <div className="text-sm font-bold">{health.lifetimeSignals.toLocaleString()}</div>
+                        <div className="text-sm font-bold">{(health.totalSignalsLifetime ?? 0).toLocaleString()}</div>
                     </div>
                 </div>
             </div>
@@ -213,19 +218,19 @@ function HealthTab({ health }: { health: AgentHealth | null }) {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                         <div className="text-[10px] text-gray-500">Articles Fetched</div>
-                        <div className="text-sm font-bold">{health.articlesFetched}</div>
+                        <div className="text-sm font-bold">{health.lastRunArticlesFetched ?? 0}</div>
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Signals Stored</div>
-                        <div className="text-sm font-bold">{health.signalsStored}</div>
+                        <div className="text-sm font-bold">{health.lastRunSignalsStored ?? 0}</div>
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Tokens In</div>
-                        <div className="text-sm font-bold">{health.tokensIn.toLocaleString()}</div>
+                        <div className="text-sm font-bold">{(health.lastRunTokens?.input ?? 0).toLocaleString()}</div>
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Tokens Out</div>
-                        <div className="text-sm font-bold">{health.tokensOut.toLocaleString()}</div>
+                        <div className="text-sm font-bold">{(health.lastRunTokens?.output ?? 0).toLocaleString()}</div>
                     </div>
                 </div>
             </div>
@@ -236,15 +241,15 @@ function HealthTab({ health }: { health: AgentHealth | null }) {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                         <div className="text-[10px] text-gray-500">Tokens In</div>
-                        <div className="text-sm font-bold">{health.monthlyTokensIn.toLocaleString()}</div>
+                        <div className="text-sm font-bold">{(health.totalTokensMonth?.input ?? 0).toLocaleString()}</div>
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Tokens Out</div>
-                        <div className="text-sm font-bold">{health.monthlyTokensOut.toLocaleString()}</div>
+                        <div className="text-sm font-bold">{(health.totalTokensMonth?.output ?? 0).toLocaleString()}</div>
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Est. Cost</div>
-                        <div className="text-sm font-bold">${health.monthlyCostEstimate.toFixed(4)}</div>
+                        <div className="text-sm font-bold">${(health.estimatedCostMonth ?? 0).toFixed(4)}</div>
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Consecutive Empty</div>
@@ -273,7 +278,7 @@ function HealthTab({ health }: { health: AgentHealth | null }) {
 
 function ConfigTab({ agentId, schedule, functionName, userId }: { agentId: string; schedule: string | null; functionName: string | null; userId: string | null }) {
     const [config, setConfig] = useState<AgentConfig | null>(null);
-    const [localSources, setLocalSources] = useState<Record<string, { enabled: boolean; label?: string }>>({});
+    const [localSources, setLocalSources] = useState<Record<string, { enabled: boolean; name?: string }>>({});
     const [hasChanges, setHasChanges] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -284,7 +289,7 @@ function ConfigTab({ agentId, schedule, functionName, userId }: { agentId: strin
                 if (snap.exists()) {
                     const data = snap.data() as AgentConfig;
                     setConfig(data);
-                    setLocalSources(JSON.parse(JSON.stringify(data.dataSources ?? {})));
+                    setLocalSources(JSON.parse(JSON.stringify(data.sources ?? {})));
                     setHasChanges(false);
                 }
             }
@@ -308,7 +313,7 @@ function ConfigTab({ agentId, schedule, functionName, userId }: { agentId: strin
         setSaving(true);
         try {
             await updateDoc(doc(db, 'agents', agentId, 'config', 'current'), {
-                dataSources: localSources,
+                sources: localSources,
                 updatedAt: serverTimestamp(),
                 updatedBy: userId,
             });
@@ -336,7 +341,7 @@ function ConfigTab({ agentId, schedule, functionName, userId }: { agentId: strin
                                 onChange={() => toggleSource(key)}
                                 className="accent-cyan-400"
                             />
-                            <span className="text-sm">{source.label ?? key}</span>
+                            <span className="text-sm">{source.name ?? key}</span>
                             <span className="text-[10px] text-gray-500 ml-auto">{key}</span>
                         </label>
                     ))}
@@ -409,10 +414,7 @@ function RunsTab({ agentId }: { agentId: string }) {
 
             {/* Rows */}
             {runs.map((run) => {
-                const duration =
-                    run.startedAt && run.endedAt
-                        ? Math.round((run.endedAt.seconds - run.startedAt.seconds))
-                        : null;
+                const durationSec = run.duration ? Math.round(run.duration / 1000) : null;
                 const isExpanded = expandedId === run.id;
 
                 return (
@@ -427,9 +429,9 @@ function RunsTab({ agentId }: { agentId: string }) {
                             <div className={OUTCOME_COLOR[run.outcome]}>
                                 {OUTCOME_ICON[run.outcome]} {run.outcome}
                             </div>
-                            <div className="text-gray-300">{duration !== null ? `${duration}s` : 'N/A'}</div>
-                            <div className="text-gray-300">{run.signalsStored}</div>
-                            <div className="text-gray-300">{(run.tokensIn + run.tokensOut).toLocaleString()}</div>
+                            <div className="text-gray-300">{durationSec !== null ? `${durationSec}s` : 'N/A'}</div>
+                            <div className="text-gray-300">{run.metrics?.signalsStored ?? 0}</div>
+                            <div className="text-gray-300">{((run.metrics?.tokensInput ?? 0) + (run.metrics?.tokensOutput ?? 0)).toLocaleString()}</div>
                         </div>
 
                         {/* Expanded detail */}
@@ -438,19 +440,19 @@ function RunsTab({ agentId }: { agentId: string }) {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                                     <div>
                                         <span className="text-gray-500">Articles Fetched:</span>{' '}
-                                        <span className="text-gray-300">{run.articlesFetched}</span>
+                                        <span className="text-gray-300">{run.metrics?.articlesFetched ?? 0}</span>
                                     </div>
                                     <div>
                                         <span className="text-gray-500">Signals Stored:</span>{' '}
-                                        <span className="text-gray-300">{run.signalsStored}</span>
+                                        <span className="text-gray-300">{run.metrics?.signalsStored ?? 0}</span>
                                     </div>
                                     <div>
                                         <span className="text-gray-500">Tokens In:</span>{' '}
-                                        <span className="text-gray-300">{run.tokensIn.toLocaleString()}</span>
+                                        <span className="text-gray-300">{(run.metrics?.tokensInput ?? 0).toLocaleString()}</span>
                                     </div>
                                     <div>
                                         <span className="text-gray-500">Tokens Out:</span>{' '}
-                                        <span className="text-gray-300">{run.tokensOut.toLocaleString()}</span>
+                                        <span className="text-gray-300">{(run.metrics?.tokensOutput ?? 0).toLocaleString()}</span>
                                     </div>
                                 </div>
                                 {run.sourcesUsed && run.sourcesUsed.length > 0 && (
@@ -459,15 +461,15 @@ function RunsTab({ agentId }: { agentId: string }) {
                                         <span className="text-gray-300">{run.sourcesUsed.join(', ')}</span>
                                     </div>
                                 )}
-                                {run.errorMessage && (
+                                {run.error && (
                                     <div className="text-xs text-red-400 font-mono break-all">
-                                        Error: {run.errorMessage}
+                                        Error: {run.error}
                                     </div>
                                 )}
                                 {run.startedAt && (
                                     <div className="text-[10px] text-gray-500">
                                         Started: {formatTime(run.startedAt.seconds)}
-                                        {run.endedAt && <> | Ended: {formatTime(run.endedAt.seconds)}</>}
+                                        {run.completedAt && <> | Ended: {formatTime(run.completedAt.seconds)}</>}
                                     </div>
                                 )}
                             </div>
