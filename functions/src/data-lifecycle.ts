@@ -15,6 +15,7 @@ interface LifecycleStats {
   deleted: number;
   evidenceMarkedStale: number;
   agentRunsDeleted: number;
+  topicsDeleted: number;
 }
 
 function daysAgo(days: number): Date {
@@ -29,7 +30,7 @@ function daysAgo(days: number): Date {
  */
 export async function runDataLifecycle(): Promise<LifecycleStats> {
   const db = getFirestore();
-  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0 };
+  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0, topicsDeleted: 0 };
 
   // 1. Archive approved/edited signals older than 90 days
   const archiveCutoff = daysAgo(RETENTION.approvedSignals);
@@ -124,6 +125,27 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
       if (runsSnap.size < BATCH_SIZE) break;
       runsSnap = await runsQuery.get();
     }
+  }
+
+  // 5. Delete old topics (>30 days — ephemeral analysis artifacts)
+  const topicCutoff = daysAgo(30);
+  const topicsQuery = db
+    .collection("topics")
+    .where("createdAt", "<", topicCutoff)
+    .limit(BATCH_SIZE);
+
+  let topicsSnap = await topicsQuery.get();
+  while (!topicsSnap.empty) {
+    const batch = db.batch();
+    for (const topicDoc of topicsSnap.docs) {
+      batch.delete(topicDoc.ref);
+      stats.topicsDeleted++;
+    }
+    await batch.commit();
+    logger.info(`Deleted ${topicsSnap.size} old topics`);
+
+    if (topicsSnap.size < BATCH_SIZE) break;
+    topicsSnap = await topicsQuery.get();
   }
 
   return stats;
