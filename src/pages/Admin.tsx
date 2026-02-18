@@ -5,6 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PipelineHealth from '../components/PipelineHealth';
 import RiskUpdatesTab from '../components/admin/RiskUpdatesTab';
+import SolutionUpdatesTab from '../components/admin/SolutionUpdatesTab';
 
 type SignalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
 
@@ -52,7 +53,7 @@ export default function Admin() {
     const [selected, setSelected] = useState<Signal | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
-    const [adminTab, setAdminTab] = useState<'signals' | 'risk-updates'>('signals');
+    const [adminTab, setAdminTab] = useState<'signals' | 'risk-updates' | 'solution-updates'>('signals');
 
     useEffect(() => {
         const constraints: QueryConstraint[] = [orderBy('fetched_at', 'desc')];
@@ -147,6 +148,14 @@ export default function Admin() {
                     Risk Updates
                 </button>
                 <button
+                    onClick={() => setAdminTab('solution-updates')}
+                    className={`py-3 text-sm transition-colors border-b-2 ${
+                        adminTab === 'solution-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                    }`}
+                >
+                    Solution Updates
+                </button>
+                <button
                     onClick={() => navigate('/observatory')}
                     className="py-3 text-sm transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-300"
                 >
@@ -157,6 +166,12 @@ export default function Admin() {
             {adminTab === 'risk-updates' && (
                 <div className="h-[calc(100vh-105px)]">
                     <RiskUpdatesTab />
+                </div>
+            )}
+
+            {adminTab === 'solution-updates' && (
+                <div className="h-[calc(100vh-105px)]">
+                    <SolutionUpdatesTab />
                 </div>
             )}
 
