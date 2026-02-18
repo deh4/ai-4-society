@@ -8,7 +8,7 @@ service cloud.firestore {
     }
     match /solutions/{solutionId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // Signals: public read for approved/edited, admin read for all, admin write
@@ -54,6 +54,12 @@ service cloud.firestore {
 
     // Risk updates: admin read + write (approve/reject staging collection)
     match /risk_updates/{updateId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Solution updates: admin read + write (approve/reject staging collection)
+    match /solution_updates/{updateId} {
       allow read: if isAdmin();
       allow write: if isAdmin();
     }
