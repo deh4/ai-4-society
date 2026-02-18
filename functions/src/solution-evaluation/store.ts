@@ -24,9 +24,9 @@ export async function storeSolutionUpdates(
 
   for (const update of updates) {
     const ref = db.collection("solution_updates").doc();
-    const scoreDelta = Math.abs(
-      update.evaluation.adoption_score_2026 - update.solution.adoption_score_2026
-    );
+    const signedDelta =
+      update.evaluation.adoption_score_2026 - update.solution.adoption_score_2026;
+    const scoreDelta = Math.abs(signedDelta);
     const stageChanged =
       update.evaluation.implementation_stage !== update.solution.implementation_stage;
 
@@ -57,6 +57,7 @@ export async function storeSolutionUpdates(
       signalCount: update.signalCount,
       riskUpdateIds: update.riskUpdateIds,
       scoreDelta,
+      signedDelta,
       stageChanged,
       requiresEscalation: scoreDelta >= 10 || stageChanged,
       createdAt: FieldValue.serverTimestamp(),

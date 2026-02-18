@@ -21,6 +21,7 @@ interface SolutionUpdate {
     reasoning: string;
     confidence: number;
     scoreDelta: number;
+    signedDelta: number;
     stageChanged: boolean;
     requiresEscalation: boolean;
     createdAt: { seconds: number } | null;
@@ -47,13 +48,19 @@ export default function ObservatorySolutionUpdatesTab() {
             orderBy('createdAt', 'desc'),
             limit(50)
         );
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const docs = snapshot.docs.map((d) => ({
-                id: d.id,
-                ...d.data(),
-            })) as SolutionUpdate[];
-            setUpdates(docs);
-        });
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const docs = snapshot.docs.map((d) => ({
+                    id: d.id,
+                    ...d.data(),
+                })) as SolutionUpdate[];
+                setUpdates(docs);
+            },
+            (error) => {
+                console.error('Solution updates query error:', error);
+            }
+        );
         return unsubscribe;
     }, []);
 
@@ -107,7 +114,7 @@ export default function ObservatorySolutionUpdatesTab() {
                                 <div className="flex items-center gap-2 text-[10px] text-gray-500">
                                     <span>
                                         adoption: {update.currentValues.adoption_score_2026} → {update.proposedChanges.adoption_score_2026}
-                                        ({update.scoreDelta >= 0 ? '+' : ''}{update.scoreDelta.toFixed(1)})
+                                        ({update.signedDelta >= 0 ? '+' : ''}{update.signedDelta.toFixed(1)})
                                     </span>
                                     <span>·</span>
                                     <span>stage: {update.currentValues.implementation_stage} → {update.proposedChanges.implementation_stage}</span>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, writeBatch, serverTimestamp, arrayUnion, type QueryConstraint } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, writeBatch, updateDoc, serverTimestamp, arrayUnion, type QueryConstraint } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
 
@@ -30,6 +30,7 @@ interface SolutionUpdate {
     reasoning: string;
     confidence: number;
     scoreDelta: number;
+    signedDelta: number;
     stageChanged: boolean;
     requiresEscalation: boolean;
     createdAt: { seconds: number } | null;
@@ -58,6 +59,7 @@ export default function SolutionUpdatesTab() {
     const [selected, setSelected] = useState<SolutionUpdate | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
@@ -86,6 +88,7 @@ export default function SolutionUpdatesTab() {
     const handleApprove = async (update: SolutionUpdate) => {
         if (!user) return;
         setProcessing(true);
+        setError(null);
         try {
             const batch = writeBatch(db);
 
@@ -121,6 +124,9 @@ export default function SolutionUpdatesTab() {
             await batch.commit();
             setSelected(null);
             setAdminNotes('');
+        } catch (err) {
+            console.error('Approve failed:', err);
+            setError(`Approve failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setProcessing(false);
         }
@@ -132,9 +138,9 @@ export default function SolutionUpdatesTab() {
             return;
         }
         setProcessing(true);
+        setError(null);
         try {
-            const { updateDoc: updateDocument } = await import('firebase/firestore');
-            await updateDocument(doc(db, 'solution_updates', update.id), {
+            await updateDoc(doc(db, 'solution_updates', update.id), {
                 status: 'rejected',
                 reviewedAt: serverTimestamp(),
                 reviewedBy: user.uid,
@@ -142,6 +148,9 @@ export default function SolutionUpdatesTab() {
             });
             setSelected(null);
             setAdminNotes('');
+        } catch (err) {
+            console.error('Reject failed:', err);
+            setError(`Reject failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setProcessing(false);
         }
@@ -166,6 +175,12 @@ export default function SolutionUpdatesTab() {
                         </button>
                     ))}
                 </div>
+                {error && (
+                    <div className="mx-3 mt-2 px-3 py-2 rounded bg-red-400/10 text-red-400 text-xs">
+                        {error}
+                        <button onClick={() => setError(null)} className="ml-2 underline">dismiss</button>
+                    </div>
+                )}
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {updates.map((update) => (
                         <div
@@ -186,7 +201,7 @@ export default function SolutionUpdatesTab() {
                                     {update.status}
                                 </span>
                                 <span className={`text-[10px] font-mono ${update.scoreDelta >= 10 ? 'text-red-400' : 'text-gray-400'}`}>
-                                    {update.scoreDelta >= 0 ? '+' : ''}{update.scoreDelta.toFixed(1)}
+                                    {update.signedDelta >= 0 ? '+' : ''}{update.signedDelta.toFixed(1)}
                                 </span>
                                 {update.stageChanged && (
                                     <span className="text-[9px] px-1 py-0.5 rounded bg-purple-400/10 text-purple-400">STAGE</span>
@@ -323,7 +338,7 @@ export default function SolutionUpdatesTab() {
                                     disabled={processing}
                                     className="px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
                                 >
-                                    Approve &amp; Apply
+                                    Approve & Apply
                                 </button>
                                 <button
                                     onClick={() => handleReject(selected)}
