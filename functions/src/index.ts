@@ -16,6 +16,10 @@ import { triageRisks } from "./risk-evaluation/triage.js";
 import { evaluateRisk } from "./risk-evaluation/evaluator.js";
 import { storeRiskUpdates } from "./risk-evaluation/store.js";
 import type { EvalRiskInput } from "./risk-evaluation/evaluator.js";
+import { triageSolutions } from "./solution-evaluation/triage.js";
+import { evaluateSolution } from "./solution-evaluation/evaluator.js";
+import { storeSolutionUpdates } from "./solution-evaluation/store.js";
+import type { EvalSolutionInput } from "./solution-evaluation/evaluator.js";
 
 initializeApp();
 
@@ -717,6 +721,340 @@ export const riskEvaluation = onSchedule(
       logger.error("Risk Evaluation pipeline error:", err);
       await writeAgentRunSummary({
         agentId: "risk-evaluation",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: {
+          articlesFetched: 0,
+          signalsStored: 0,
+          geminiCalls,
+          tokensInput: totalTokensInput,
+          tokensOutput: totalTokensOutput,
+          firestoreReads: 0,
+          firestoreWrites: 0,
+        },
+        sourcesUsed: [],
+      });
+    }
+  }
+);
+
+// ─── Solution Evaluation Pipeline ──────────────────────────────────────────
+
+export const solutionEvaluation = onSchedule(
+  {
+    schedule: "0 10 * * 1",
+    timeoutSeconds: 300,
+    memory: "512MiB",
+    secrets: [geminiApiKey],
+  },
+  async () => {
+    logger.info("Solution Evaluation: starting weekly run");
+    const runStartedAt = new Date();
+    const db = getFirestore();
+    let totalTokensInput = 0;
+    let totalTokensOutput = 0;
+    let geminiCalls = 0;
+
+    try {
+      // Step 1: Read approved signals from last 7 days
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7);
+
+      const signalsSnap = await db
+        .collection("signals")
+        .where("status", "in", ["approved", "edited"])
+        .where("fetched_at", ">", cutoff)
+        .orderBy("fetched_at", "desc")
+        .get();
+
+      const signals = signalsSnap.docs.map((d) => ({
+        id: d.id,
+        title: d.data().title as string,
+        summary: d.data().summary as string,
+        risk_categories: (d.data().risk_categories as string[]) ?? [],
+        severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+        source_name: (d.data().source_name as string) ?? "",
+        published_date: (d.data().published_date as string) ?? "",
+      }));
+
+      logger.info(`Read ${signals.length} approved signals from last 7 days`);
+
+      if (signals.length < 3) {
+        logger.info("Fewer than 3 signals — insufficient data for solution evaluation. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "solution-evaluation",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls: 0,
+            tokensInput: 0,
+            tokensOutput: 0,
+            firestoreReads: 1,
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      // Step 2: Read latest topics (last 7 days)
+      const topicsSnap = await db
+        .collection("topics")
+        .where("createdAt", ">", cutoff)
+        .orderBy("createdAt", "desc")
+        .limit(30)
+        .get();
+
+      const topics = topicsSnap.docs.map((d) => ({
+        id: d.id,
+        name: d.data().name as string,
+        description: (d.data().description as string) ?? "",
+        riskCategories: (d.data().riskCategories as string[]) ?? [],
+        velocity: (d.data().velocity as string) ?? "stable",
+        signalCount: (d.data().signalCount as number) ?? 0,
+      }));
+
+      logger.info(`Read ${topics.length} topics from last 7 days`);
+
+      // Step 3: Read approved risk updates from last 7 days
+      const riskUpdatesSnap = await db
+        .collection("risk_updates")
+        .where("status", "==", "approved")
+        .where("createdAt", ">", cutoff)
+        .orderBy("createdAt", "desc")
+        .get();
+
+      const riskUpdates = riskUpdatesSnap.docs.map((d) => ({
+        id: d.id,
+        riskId: (d.data().riskId as string) ?? "",
+        riskName: (d.data().riskName as string) ?? "",
+        scoreDelta: (d.data().scoreDelta as number) ?? 0,
+        velocity: (d.data().proposedChanges as Record<string, unknown>)?.velocity as string ?? "Medium",
+        reasoning: (d.data().reasoning as string) ?? "",
+      }));
+
+      logger.info(`Read ${riskUpdates.length} approved risk updates from last 7 days`);
+
+      // Step 4: Read current solution documents
+      const solutionsSnap = await db.collection("solutions").get();
+      const solutions = solutionsSnap.docs.map((d) => {
+        const data = d.data();
+        const narrative = (data.timeline_narrative ?? {}) as Record<string, string>;
+        return {
+          id: d.id,
+          solution_title: (data.solution_title as string) ?? d.id,
+          solution_type: (data.solution_type as string) ?? "",
+          parent_risk_id: (data.parent_risk_id as string) ?? "",
+          adoption_score_2026: (data.adoption_score_2026 as number) ?? 0,
+          adoption_score_2035: (data.adoption_score_2035 as number) ?? 0,
+          implementation_stage: (data.implementation_stage as string) ?? "Research",
+          key_players: (data.key_players as string[]) ?? [],
+          barriers: (data.barriers as string[]) ?? [],
+          timeline_narrative: {
+            near_term: narrative.near_term ?? "",
+            mid_term: narrative.mid_term ?? "",
+            long_term: narrative.long_term ?? "",
+          },
+        };
+      });
+
+      logger.info(`Read ${solutions.length} current solution documents`);
+
+      // Step 5: Read current risk documents (for parent risk context in Stage 2)
+      const risksSnap = await db.collection("risks").get();
+      const riskMap = new Map(
+        risksSnap.docs.map((d) => [
+          d.id,
+          {
+            id: d.id,
+            risk_name: (d.data().risk_name as string) ?? d.id,
+            score_2026: (d.data().score_2026 as number) ?? 50,
+            velocity: (d.data().velocity as string) ?? "Medium",
+          },
+        ])
+      );
+
+      // Step 6: Stage 1 — Triage
+      const triageSignals = signals.map((s) => ({
+        id: s.id,
+        title: s.title,
+        risk_categories: s.risk_categories,
+        severity_hint: s.severity_hint,
+      }));
+
+      const triageTopics = topics.map((t) => ({
+        id: t.id,
+        name: t.name,
+        riskCategories: t.riskCategories,
+        velocity: t.velocity,
+        signalCount: t.signalCount,
+      }));
+
+      const triageRiskUpdates = riskUpdates.map((r) => ({
+        id: r.id,
+        riskId: r.riskId,
+        riskName: r.riskName,
+        scoreDelta: r.scoreDelta,
+        velocity: r.velocity,
+      }));
+
+      const triageSolutionInput = solutions.map((s) => ({
+        id: s.id,
+        title: s.solution_title,
+        parentRiskId: s.parent_risk_id,
+        adoption_score_2026: s.adoption_score_2026,
+        implementation_stage: s.implementation_stage,
+      }));
+
+      const { flaggedSolutions, tokenUsage: triageTokens } = await triageSolutions(
+        triageSignals,
+        triageTopics,
+        triageRiskUpdates,
+        triageSolutionInput,
+        geminiApiKey.value()
+      );
+
+      totalTokensInput += triageTokens.input;
+      totalTokensOutput += triageTokens.output;
+      geminiCalls++;
+
+      if (flaggedSolutions.length === 0) {
+        logger.info("No solutions flagged for re-evaluation. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "solution-evaluation",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls,
+            tokensInput: totalTokensInput,
+            tokensOutput: totalTokensOutput,
+            firestoreReads: 1 + 1 + 1 + 1 + 1,
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      logger.info(`Stage 1: flagged ${flaggedSolutions.length} solutions: ${flaggedSolutions.map((s) => s.solutionId).join(", ")}`);
+
+      // Step 7: Stage 2 — Per-solution evaluation
+      const signalMap = new Map(signals.map((s) => [s.id, s]));
+      const topicMap = new Map(topics.map((t) => [t.id, t]));
+      const riskUpdateMap = new Map(riskUpdates.map((r) => [r.id, r]));
+      const solutionMap = new Map(solutions.map((s) => [s.id, s]));
+
+      const updates: Array<{
+        solution: EvalSolutionInput;
+        evaluation: Awaited<ReturnType<typeof evaluateSolution>>["evaluation"];
+        topicIds: string[];
+        riskUpdateIds: string[];
+        signalCount: number;
+      }> = [];
+
+      for (const flagged of flaggedSolutions) {
+        const solution = solutionMap.get(flagged.solutionId);
+        if (!solution) continue;
+
+        const parentRisk = riskMap.get(solution.parent_risk_id);
+        if (!parentRisk) {
+          logger.warn(`No parent risk found for ${flagged.solutionId} (parent: ${solution.parent_risk_id})`);
+          continue;
+        }
+
+        const relevantSignals = flagged.relevantSignalIds
+          .map((id) => signalMap.get(id))
+          .filter((s): s is NonNullable<typeof s> => s !== undefined);
+
+        const relevantTopics = flagged.relevantTopicIds
+          .map((id) => topicMap.get(id))
+          .filter((t): t is NonNullable<typeof t> => t !== undefined);
+
+        const relevantRiskUpdates = flagged.relevantRiskUpdateIds
+          .map((id) => riskUpdateMap.get(id))
+          .filter((r): r is NonNullable<typeof r> => r !== undefined);
+
+        try {
+          const { evaluation, tokenUsage: evalTokens } = await evaluateSolution(
+            solution,
+            parentRisk,
+            relevantSignals,
+            relevantTopics,
+            relevantRiskUpdates,
+            geminiApiKey.value()
+          );
+
+          totalTokensInput += evalTokens.input;
+          totalTokensOutput += evalTokens.output;
+          geminiCalls++;
+
+          updates.push({
+            solution,
+            evaluation,
+            topicIds: flagged.relevantTopicIds,
+            riskUpdateIds: flagged.relevantRiskUpdateIds,
+            signalCount: relevantSignals.length,
+          });
+        } catch (err) {
+          logger.error(`Failed to evaluate ${flagged.solutionId}, skipping:`, err);
+        }
+      }
+
+      if (updates.length === 0) {
+        logger.info("All per-solution evaluations failed or produced no results. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "solution-evaluation",
+          startedAt: runStartedAt,
+          outcome: "partial",
+          error: null,
+          metrics: {
+            articlesFetched: signals.length,
+            signalsStored: 0,
+            geminiCalls,
+            tokensInput: totalTokensInput,
+            tokensOutput: totalTokensOutput,
+            firestoreReads: 1 + 1 + 1 + 1 + 1,
+            firestoreWrites: 1,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      // Step 8: Store solution updates
+      const runRef = db.collection("agents").doc("solution-evaluation").collection("runs").doc();
+      const stored = await storeSolutionUpdates(updates, runRef.id);
+
+      logger.info(`Solution Evaluation complete. Stored ${stored} solution updates from ${signals.length} signals.`);
+
+      // Step 9: Track health
+      await writeAgentRunSummary({
+        agentId: "solution-evaluation",
+        startedAt: runStartedAt,
+        outcome: "success",
+        error: null,
+        metrics: {
+          articlesFetched: signals.length,
+          signalsStored: stored,
+          geminiCalls,
+          tokensInput: totalTokensInput,
+          tokensOutput: totalTokensOutput,
+          firestoreReads: 1 + 1 + 1 + 1 + 1,
+          firestoreWrites: stored + 1,
+        },
+        sourcesUsed: [],
+      });
+    } catch (err) {
+      logger.error("Solution Evaluation pipeline error:", err);
+      await writeAgentRunSummary({
+        agentId: "solution-evaluation",
         startedAt: runStartedAt,
         outcome: "error",
         error: err instanceof Error ? err.message : String(err),
