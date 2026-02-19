@@ -70,6 +70,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Changelogs: admin read, server write only (audit trail)
+    match /changelogs/{changelogId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Agent registry: public read for status badges
     match /agents/{agentId} {
       allow read: if true;
