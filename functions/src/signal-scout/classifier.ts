@@ -59,6 +59,7 @@ export interface ClassificationResult {
 }
 
 const BATCH_SIZE = 10;
+const RELEVANCE_THRESHOLD = 0.8;
 
 export async function classifyArticles(
   articles: RawArticle[],
@@ -113,6 +114,11 @@ export async function classifyArticles(
 
       for (const item of parsed) {
         if (!item.relevant) continue;
+        const confidence = item.confidence_score ?? 0.5;
+        if (confidence < RELEVANCE_THRESHOLD) {
+          logger.info(`Skipping low-confidence signal (${confidence.toFixed(2)}): ${batch[item.index]?.title}`);
+          continue;
+        }
         const article = batch[item.index];
         if (!article) continue;
 
@@ -125,7 +131,7 @@ export async function classifyArticles(
           risk_categories: item.risk_categories ?? [],
           severity_hint: item.severity_hint ?? "Emerging",
           affected_groups: item.affected_groups ?? [],
-          confidence_score: item.confidence_score ?? 0.5,
+          confidence_score: confidence,
         });
       }
 
