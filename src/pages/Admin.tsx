@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp, type QueryConstraint } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
@@ -23,6 +23,7 @@ interface Signal {
     status: SignalStatus;
     admin_notes?: string;
     fetched_at: { seconds: number } | null;
+    validationIssues?: Array<{ rule: string; severity: string; message: string; field: string }>;
 }
 
 const RISK_LABELS: Record<string, string> = {
@@ -54,8 +55,12 @@ export default function Admin() {
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
     const [adminTab, setAdminTab] = useState<'signals' | 'risk-updates' | 'solution-updates'>('signals');
+    const hasTriedFallback = useRef(false);
 
     useEffect(() => {
+        // Reset fallback flag when filter changes intentionally
+        hasTriedFallback.current = false;
+
         const constraints: QueryConstraint[] = [orderBy('fetched_at', 'desc')];
         if (filter !== 'all') {
             constraints.unshift(where('status', '==', filter));
@@ -73,8 +78,9 @@ export default function Admin() {
             },
             (error) => {
                 console.error('Firestore query error:', error);
-                // Fallback: try without status filter
-                if (filter !== 'all') {
+                // Fallback: try without status filter, but only once
+                if (filter !== 'all' && !hasTriedFallback.current) {
+                    hasTriedFallback.current = true;
                     setFilter('all');
                 }
             }
@@ -132,26 +138,23 @@ export default function Admin() {
             <div className="flex gap-6 px-6 border-b border-white/10">
                 <button
                     onClick={() => setAdminTab('signals')}
-                    className={`py-3 text-sm transition-colors border-b-2 ${
-                        adminTab === 'signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
-                    }`}
+                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                        }`}
                 >
                     Signal Review
                     <span className="ml-2 text-[10px] text-gray-500">{signals.length}</span>
                 </button>
                 <button
                     onClick={() => setAdminTab('risk-updates')}
-                    className={`py-3 text-sm transition-colors border-b-2 ${
-                        adminTab === 'risk-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
-                    }`}
+                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'risk-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                        }`}
                 >
                     Risk Updates
                 </button>
                 <button
                     onClick={() => setAdminTab('solution-updates')}
-                    className={`py-3 text-sm transition-colors border-b-2 ${
-                        adminTab === 'solution-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
-                    }`}
+                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'solution-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                        }`}
                 >
                     Solution Updates
                 </button>
@@ -184,11 +187,10 @@ export default function Admin() {
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-2 py-1 rounded text-xs capitalize transition-colors ${
-                                    filter === f
-                                        ? 'bg-white/10 text-white'
-                                        : 'text-gray-500 hover:text-white'
-                                }`}
+                                className={`px-2 py-1 rounded text-xs capitalize transition-colors ${filter === f
+                                    ? 'bg-white/10 text-white'
+                                    : 'text-gray-500 hover:text-white'
+                                    }`}
                             >
                                 {f}
                             </button>
@@ -201,11 +203,10 @@ export default function Admin() {
                             <div
                                 key={signal.id}
                                 onClick={() => { setSelected(signal); setAdminNotes(signal.admin_notes ?? ''); }}
-                                className={`p-3 rounded cursor-pointer transition-all ${
-                                    selected?.id === signal.id
-                                        ? 'bg-cyan-950/50 border-l-2 border-cyan-400'
-                                        : 'hover:bg-white/5'
-                                }`}
+                                className={`p-3 rounded cursor-pointer transition-all ${selected?.id === signal.id
+                                    ? 'bg-cyan-950/50 border-l-2 border-cyan-400'
+                                    : 'hover:bg-white/5'
+                                    }`}
                             >
                                 <div className="text-sm font-medium line-clamp-2">{signal.title}</div>
                                 <div className="flex items-center gap-2 mt-1">
@@ -215,6 +216,15 @@ export default function Admin() {
                                     </span>
                                     {signal.confidence_score >= 0.9 && (
                                         <span className="text-[9px] text-green-400">HIGH</span>
+                                    )}
+                                    {signal.validationIssues && signal.validationIssues.length > 0 && (
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                                            signal.validationIssues.some((i) => i.severity === 'critical')
+                                                ? 'bg-red-400/10 text-red-400'
+                                                : 'bg-yellow-400/10 text-yellow-400'
+                                        }`}>
+                                            {signal.validationIssues.length} issue{signal.validationIssues.length > 1 ? 's' : ''}
+                                        </span>
                                     )}
                                 </div>
                             </div>
@@ -291,6 +301,26 @@ export default function Admin() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Validation Issues */}
+                            {selected.validationIssues && selected.validationIssues.length > 0 && (
+                                <div className="bg-red-400/5 border border-red-400/20 rounded p-4 mb-6">
+                                    <h3 className="text-xs uppercase tracking-widest text-red-400 mb-2">Validation Issues</h3>
+                                    <div className="space-y-1">
+                                        {selected.validationIssues.map((issue, i) => (
+                                            <div key={i} className="flex items-start gap-2 text-sm">
+                                                <span className={`text-[9px] px-1 py-0.5 rounded mt-0.5 ${
+                                                    issue.severity === 'critical' ? 'bg-red-400/10 text-red-400' : 'bg-yellow-400/10 text-yellow-400'
+                                                }`}>
+                                                    {issue.severity}
+                                                </span>
+                                                <span className="text-gray-300">{issue.message}</span>
+                                                <span className="text-gray-600 text-xs">({issue.field})</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Admin Notes */}
                             <div className="mb-4">

@@ -41,6 +41,7 @@ interface RiskUpdate {
     createdAt: { seconds: number } | null;
     reviewedAt?: { seconds: number } | null;
     adminNotes?: string;
+    validationIssues?: Array<{ rule: string; severity: string; message: string; field: string }>;
 }
 
 const STATUS_COLORS: Record<UpdateStatus, string> = {
@@ -200,6 +201,15 @@ export default function RiskUpdatesTab() {
                                 {update.requiresEscalation && (
                                     <span className="text-[9px] px-1 py-0.5 rounded bg-red-400/10 text-red-400">ESCALATION</span>
                                 )}
+                                {update.validationIssues && update.validationIssues.length > 0 && (
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                                        update.validationIssues.some((i) => i.severity === 'critical')
+                                            ? 'bg-red-400/10 text-red-400'
+                                            : 'bg-yellow-400/10 text-yellow-400'
+                                    }`}>
+                                        {update.validationIssues.length} issue{update.validationIssues.length > 1 ? 's' : ''}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -276,6 +286,26 @@ export default function RiskUpdatesTab() {
                                                     <> · <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Source</a></>
                                                 )}
                                             </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Validation Issues */}
+                        {selected.validationIssues && selected.validationIssues.length > 0 && (
+                            <div className="bg-red-400/5 border border-red-400/20 rounded p-4 mb-6">
+                                <h3 className="text-xs uppercase tracking-widest text-red-400 mb-2">Validation Issues</h3>
+                                <div className="space-y-1">
+                                    {selected.validationIssues.map((issue, i) => (
+                                        <div key={i} className="flex items-start gap-2 text-sm">
+                                            <span className={`text-[9px] px-1 py-0.5 rounded mt-0.5 ${
+                                                issue.severity === 'critical' ? 'bg-red-400/10 text-red-400' : 'bg-yellow-400/10 text-yellow-400'
+                                            }`}>
+                                                {issue.severity}
+                                            </span>
+                                            <span className="text-gray-300">{issue.message}</span>
+                                            <span className="text-gray-600 text-xs">({issue.field})</span>
                                         </div>
                                     ))}
                                 </div>
