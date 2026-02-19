@@ -26,6 +26,8 @@ import { validateSolutionUpdate } from "./validation/solution-update-rules.js";
 import { validateTopic } from "./validation/topic-rules.js";
 import { checkUrls } from "./validation/url-checker.js";
 import type { CollectionStats, TopicStats, UrlCheckStats } from "./validation/types.js";
+import { processChangelogs } from "./consolidation/changelog.js";
+import { processNarratives } from "./consolidation/narrative.js";
 
 initializeApp();
 
@@ -1326,6 +1328,111 @@ export const validationAgent = onSchedule(
           articlesFetched: 0, signalsStored: 0, geminiCalls: 0,
           tokensInput: 0, tokensOutput: 0,
           firestoreReads, firestoreWrites,
+        },
+        sourcesUsed: [],
+      });
+    }
+  }
+);
+
+// ─── Consolidation Agent: Changelog Pipeline ────────────────────────────────
+
+export const consolidationChangelog = onSchedule(
+  {
+    schedule: "0 12 * * *",
+    timeoutSeconds: 300,
+    memory: "256MiB",
+  },
+  async () => {
+    logger.info("Consolidation Changelog: starting daily run");
+    const runStartedAt = new Date();
+
+    try {
+      const stats = await processChangelogs();
+
+      const totalWritten = stats.riskChangelogsWritten + stats.solutionChangelogsWritten;
+      await writeAgentRunSummary({
+        agentId: "consolidation",
+        startedAt: runStartedAt,
+        outcome: totalWritten > 0 ? "success" : "empty",
+        error: null,
+        metrics: {
+          articlesFetched: totalWritten,
+          signalsStored: stats.skippedNoChanges,
+          geminiCalls: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+          firestoreReads: 0,
+          firestoreWrites: totalWritten * 3,
+        },
+        sourcesUsed: [],
+      });
+
+      logger.info(`Consolidation Changelog complete: ${stats.riskChangelogsWritten} risk + ${stats.solutionChangelogsWritten} solution changelogs, ${stats.skippedNoChanges} skipped`);
+    } catch (err) {
+      logger.error("Consolidation Changelog failed:", err);
+      await writeAgentRunSummary({
+        agentId: "consolidation",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: {
+          articlesFetched: 0, signalsStored: 0, geminiCalls: 0,
+          tokensInput: 0, tokensOutput: 0,
+          firestoreReads: 0, firestoreWrites: 0,
+        },
+        sourcesUsed: [],
+      });
+    }
+  }
+);
+
+// ─── Consolidation Agent: Narrative Pipeline ────────────────────────────────
+
+export const consolidationNarrative = onSchedule(
+  {
+    schedule: "0 14 * * 2",
+    timeoutSeconds: 300,
+    memory: "512MiB",
+    secrets: [geminiApiKey],
+  },
+  async () => {
+    logger.info("Consolidation Narrative: starting weekly run");
+    const runStartedAt = new Date();
+
+    try {
+      const stats = await processNarratives(geminiApiKey.value());
+
+      const totalRefreshed = stats.risksRefreshed + stats.solutionsRefreshed;
+      await writeAgentRunSummary({
+        agentId: "consolidation",
+        startedAt: runStartedAt,
+        outcome: totalRefreshed > 0 ? "success" : "empty",
+        error: null,
+        metrics: {
+          articlesFetched: totalRefreshed,
+          signalsStored: stats.skippedInsignificant,
+          geminiCalls: stats.geminiCalls,
+          tokensInput: stats.tokensInput,
+          tokensOutput: stats.tokensOutput,
+          firestoreReads: 0,
+          firestoreWrites: totalRefreshed,
+        },
+        sourcesUsed: [],
+      });
+
+      logger.info(`Consolidation Narrative complete: ${stats.risksRefreshed} risks + ${stats.solutionsRefreshed} solutions refreshed, ${stats.skippedInsignificant} skipped`);
+    } catch (err) {
+      logger.error("Consolidation Narrative failed:", err);
+      await writeAgentRunSummary({
+        agentId: "consolidation",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: {
+          articlesFetched: 0, signalsStored: 0, geminiCalls: 0,
+          tokensInput: 0, tokensOutput: 0,
+          firestoreReads: 0, firestoreWrites: 0,
         },
         sourcesUsed: [],
       });
