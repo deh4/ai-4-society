@@ -3,7 +3,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions/v2";
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { fetchAllSources } from "./signal-scout/fetcher.js";
 import { classifyArticles } from "./signal-scout/classifier.js";
 import { storeSignals } from "./signal-scout/store.js";
@@ -20,6 +20,12 @@ import { triageSolutions } from "./solution-evaluation/triage.js";
 import { evaluateSolution } from "./solution-evaluation/evaluator.js";
 import { storeSolutionUpdates } from "./solution-evaluation/store.js";
 import type { EvalSolutionInput } from "./solution-evaluation/evaluator.js";
+import { validateSignal } from "./validation/signal-rules.js";
+import { validateRiskUpdate } from "./validation/risk-update-rules.js";
+import { validateSolutionUpdate } from "./validation/solution-update-rules.js";
+import { validateTopic } from "./validation/topic-rules.js";
+import { checkUrls } from "./validation/url-checker.js";
+import type { CollectionStats, TopicStats, UrlCheckStats } from "./validation/types.js";
 
 initializeApp();
 
@@ -1066,6 +1072,260 @@ export const solutionEvaluation = onSchedule(
           tokensOutput: totalTokensOutput,
           firestoreReads: 0,
           firestoreWrites: 0,
+        },
+        sourcesUsed: [],
+      });
+    }
+  }
+);
+
+// ─── Validation Agent Pipeline ──────────────────────────────────────────────
+
+export const validationAgent = onSchedule(
+  {
+    schedule: "0 6 * * *",
+    timeoutSeconds: 300,
+    memory: "256MiB",
+  },
+  async () => {
+    logger.info("Validation Agent: starting daily run");
+    const runStartedAt = new Date();
+    const db = getFirestore();
+    let firestoreReads = 0;
+    let firestoreWrites = 0;
+
+    const signalStats: CollectionStats = { scanned: 0, passed: 0, rejected: 0, flagged: 0 };
+    const riskUpdateStats: CollectionStats = { scanned: 0, passed: 0, rejected: 0, flagged: 0 };
+    const solutionUpdateStats: CollectionStats = { scanned: 0, passed: 0, rejected: 0, flagged: 0 };
+    const topicStats: TopicStats = { scanned: 0, flagged: 0 };
+    let urlCheckStats: UrlCheckStats = { total: 0, reachable: 0, unreachable: 0, timeouts: 0 };
+
+    try {
+      // ── Step 1: Read all pending items ──────────────────────────────────
+
+      const pendingSignalsSnap = await db.collection("signals")
+        .where("status", "==", "pending")
+        .get();
+      firestoreReads++;
+
+      const pendingRiskUpdatesSnap = await db.collection("risk_updates")
+        .where("status", "==", "pending")
+        .get();
+      firestoreReads++;
+
+      const pendingSolutionUpdatesSnap = await db.collection("solution_updates")
+        .where("status", "==", "pending")
+        .get();
+      firestoreReads++;
+
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      const recentTopicsSnap = await db.collection("topics")
+        .where("createdAt", ">", oneDayAgo)
+        .get();
+      firestoreReads++;
+
+      const totalPending = pendingSignalsSnap.size + pendingRiskUpdatesSnap.size
+        + pendingSolutionUpdatesSnap.size + recentTopicsSnap.size;
+
+      if (totalPending === 0) {
+        logger.info("No pending items to validate. Ending run.");
+        await writeAgentRunSummary({
+          agentId: "validation",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: {
+            articlesFetched: 0, signalsStored: 0, geminiCalls: 0,
+            tokensInput: 0, tokensOutput: 0,
+            firestoreReads, firestoreWrites,
+          },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      logger.info(`Found ${pendingSignalsSnap.size} signals, ${pendingRiskUpdatesSnap.size} risk updates, ${pendingSolutionUpdatesSnap.size} solution updates, ${recentTopicsSnap.size} topics to validate`);
+
+      // ── Step 2: Build reference sets ────────────────────────────────────
+
+      const allSignalIds = new Set<string>();
+      const allSignalsSnap = await db.collection("signals").select().get();
+      for (const d of allSignalsSnap.docs) allSignalIds.add(d.id);
+      firestoreReads++;
+
+      const approvedRiskUpdateIds = new Set<string>();
+      const approvedRuSnap = await db.collection("risk_updates")
+        .where("status", "==", "approved")
+        .select()
+        .get();
+      for (const d of approvedRuSnap.docs) approvedRiskUpdateIds.add(d.id);
+      firestoreReads++;
+
+      // ── Step 3: Validate signals ────────────────────────────────────────
+
+      const signalUrls = pendingSignalsSnap.docs
+        .map((d) => d.data().source_url as string)
+        .filter((url) => typeof url === "string" && url.startsWith("https://"));
+
+      const { results: urlResults, stats: urlStats } = await checkUrls(signalUrls);
+      urlCheckStats = urlStats;
+
+      for (const docSnap of pendingSignalsSnap.docs) {
+        signalStats.scanned++;
+        const data = docSnap.data();
+        const urlResult = urlResults.get(data.source_url as string);
+        const issues = validateSignal(data as Record<string, unknown>, urlResult);
+
+        if (issues.length === 0) {
+          signalStats.passed++;
+          continue;
+        }
+
+        const hasCritical = issues.some((i) => i.severity === "critical");
+        const update: Record<string, unknown> = { validationIssues: issues };
+        if (hasCritical) {
+          update.status = "rejected";
+          update.reviewedBy = "validation-agent";
+          update.reviewedAt = FieldValue.serverTimestamp();
+          signalStats.rejected++;
+        } else {
+          signalStats.flagged++;
+        }
+
+        await docSnap.ref.update(update);
+        firestoreWrites++;
+      }
+
+      logger.info(`Signals: ${signalStats.scanned} scanned, ${signalStats.passed} passed, ${signalStats.rejected} rejected, ${signalStats.flagged} flagged`);
+
+      // ── Step 4: Validate risk updates ───────────────────────────────────
+
+      for (const docSnap of pendingRiskUpdatesSnap.docs) {
+        riskUpdateStats.scanned++;
+        const data = docSnap.data();
+        const issues = validateRiskUpdate(data as Record<string, unknown>, allSignalIds);
+
+        if (issues.length === 0) {
+          riskUpdateStats.passed++;
+          continue;
+        }
+
+        const hasCritical = issues.some((i) => i.severity === "critical");
+        const update: Record<string, unknown> = { validationIssues: issues };
+        if (hasCritical) {
+          update.status = "rejected";
+          update.reviewedBy = "validation-agent";
+          update.reviewedAt = FieldValue.serverTimestamp();
+          riskUpdateStats.rejected++;
+        } else {
+          riskUpdateStats.flagged++;
+        }
+
+        await docSnap.ref.update(update);
+        firestoreWrites++;
+      }
+
+      logger.info(`Risk updates: ${riskUpdateStats.scanned} scanned, ${riskUpdateStats.passed} passed, ${riskUpdateStats.rejected} rejected, ${riskUpdateStats.flagged} flagged`);
+
+      // ── Step 5: Validate solution updates ───────────────────────────────
+
+      for (const docSnap of pendingSolutionUpdatesSnap.docs) {
+        solutionUpdateStats.scanned++;
+        const data = docSnap.data();
+        const issues = validateSolutionUpdate(data as Record<string, unknown>, approvedRiskUpdateIds);
+
+        if (issues.length === 0) {
+          solutionUpdateStats.passed++;
+          continue;
+        }
+
+        const hasCritical = issues.some((i) => i.severity === "critical");
+        const update: Record<string, unknown> = { validationIssues: issues };
+        if (hasCritical) {
+          update.status = "rejected";
+          update.reviewedBy = "validation-agent";
+          update.reviewedAt = FieldValue.serverTimestamp();
+          solutionUpdateStats.rejected++;
+        } else {
+          solutionUpdateStats.flagged++;
+        }
+
+        await docSnap.ref.update(update);
+        firestoreWrites++;
+      }
+
+      logger.info(`Solution updates: ${solutionUpdateStats.scanned} scanned, ${solutionUpdateStats.passed} passed, ${solutionUpdateStats.rejected} rejected, ${solutionUpdateStats.flagged} flagged`);
+
+      // ── Step 6: Audit topics ────────────────────────────────────────────
+
+      for (const docSnap of recentTopicsSnap.docs) {
+        topicStats.scanned++;
+        const data = docSnap.data();
+        const issues = validateTopic(data as Record<string, unknown>, allSignalIds);
+
+        if (issues.length === 0) continue;
+
+        topicStats.flagged++;
+        await docSnap.ref.update({ validationIssues: issues });
+        firestoreWrites++;
+      }
+
+      logger.info(`Topics: ${topicStats.scanned} scanned, ${topicStats.flagged} flagged`);
+
+      // ── Step 7: Write validation report ─────────────────────────────────
+
+      await db.collection("validation_reports").doc().set({
+        runId: `val-${runStartedAt.getTime()}`,
+        startedAt: runStartedAt,
+        completedAt: FieldValue.serverTimestamp(),
+        duration: Date.now() - runStartedAt.getTime(),
+        signals: signalStats,
+        riskUpdates: riskUpdateStats,
+        solutionUpdates: solutionUpdateStats,
+        topics: topicStats,
+        urlChecks: urlCheckStats,
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: "validation",
+      });
+      firestoreWrites++;
+
+      // ── Step 8: Track health ────────────────────────────────────────────
+
+      const totalValidated = signalStats.scanned + riskUpdateStats.scanned
+        + solutionUpdateStats.scanned + topicStats.scanned;
+      const totalRejected = signalStats.rejected + riskUpdateStats.rejected
+        + solutionUpdateStats.rejected;
+
+      await writeAgentRunSummary({
+        agentId: "validation",
+        startedAt: runStartedAt,
+        outcome: totalRejected > 0 ? "partial" : "success",
+        error: null,
+        metrics: {
+          articlesFetched: totalValidated,
+          signalsStored: totalRejected,
+          geminiCalls: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+          firestoreReads,
+          firestoreWrites,
+        },
+        sourcesUsed: [],
+      });
+
+      logger.info(`Validation complete: ${totalValidated} validated, ${totalRejected} rejected`);
+    } catch (err) {
+      logger.error("Validation Agent failed:", err);
+      await writeAgentRunSummary({
+        agentId: "validation",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: {
+          articlesFetched: 0, signalsStored: 0, geminiCalls: 0,
+          tokensInput: 0, tokensOutput: 0,
+          firestoreReads, firestoreWrites,
         },
         sourcesUsed: [],
       });
