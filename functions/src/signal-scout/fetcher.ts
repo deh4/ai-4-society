@@ -55,10 +55,13 @@ export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<R
       continue;
     }
     try {
-      const articles =
+      let articles =
         source.type === "rss"
           ? await fetchRSS(source)
           : await fetchGDELT(source);
+      if (source.maxItems && articles.length > source.maxItems) {
+        articles = articles.slice(0, source.maxItems);
+      }
       results.push(...articles);
       logger.info(`Fetched ${articles.length} articles from ${source.name}`);
     } catch (err) {

@@ -135,6 +135,21 @@ const signalScoutSources: Record<string, SourceConfig> = {
         type: 'rss',
         enabled: true,
     },
+    'tldr-ai': {
+        name: 'TLDR AI',
+        type: 'rss',
+        enabled: true,
+    },
+    'import-ai': {
+        name: 'Import AI',
+        type: 'rss',
+        enabled: true,
+    },
+    'last-week-in-ai': {
+        name: 'Last Week in AI',
+        type: 'rss',
+        enabled: true,
+    },
     'gdelt-ai': {
         name: 'GDELT DOC API',
         type: 'api',
@@ -185,7 +200,7 @@ async function seedAgents() {
             updatedAt: FieldValue.serverTimestamp(),
             updatedBy: 'seed-script',
         });
-    console.log('  Signal Scout config doc created (7 sources).');
+    console.log(`  Signal Scout config doc created (${Object.keys(signalScoutSources).length} sources).`);
 
     // 3. Create Signal Scout health baseline (only if it doesn't exist)
     const healthRef = db.collection('agents').doc('signal-scout').collection('health').doc('latest');

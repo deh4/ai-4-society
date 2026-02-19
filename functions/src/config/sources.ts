@@ -4,16 +4,20 @@ export interface DataSource {
   type: "rss" | "api";
   url: string;
   category?: string;
+  maxItems?: number; // Per-source cap for feed balancing
 }
 
 export const DATA_SOURCES: DataSource[] = [
+  // ── Research ────────────────────────────────────────────────
   {
     id: "arxiv-ai",
     name: "arXiv CS.AI",
     type: "rss",
     url: "https://rss.arxiv.org/rss/cs.AI",
     category: "Research",
+    maxItems: 15,
   },
+  // ── Journalism ──────────────────────────────────────────────
   {
     id: "mit-tech-review",
     name: "MIT Technology Review",
@@ -49,6 +53,30 @@ export const DATA_SOURCES: DataSource[] = [
     url: "https://www.wired.com/feed/tag/ai/latest/rss",
     category: "Journalism",
   },
+  // ── Newsletters ─────────────────────────────────────────────
+  {
+    id: "tldr-ai",
+    name: "TLDR AI",
+    type: "rss",
+    url: "https://bullrich.dev/tldr-rss/ai.rss",
+    category: "Newsletter",
+    maxItems: 20,
+  },
+  {
+    id: "import-ai",
+    name: "Import AI",
+    type: "rss",
+    url: "https://importai.substack.com/feed",
+    category: "Newsletter",
+  },
+  {
+    id: "last-week-in-ai",
+    name: "Last Week in AI",
+    type: "rss",
+    url: "https://lastweekin.ai/feed",
+    category: "Newsletter",
+  },
+  // ── Global Events ───────────────────────────────────────────
   {
     id: "gdelt-ai",
     name: "GDELT DOC API",
