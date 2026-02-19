@@ -6,6 +6,7 @@ import TopicsTab from './TopicsTab';
 import ObservatoryRiskUpdatesTab from './RiskUpdatesTab';
 import ObservatorySolutionUpdatesTab from './SolutionUpdatesTab';
 import ValidationReportsTab from './ValidationReportsTab';
+import ChangelogsTab from './ChangelogsTab';
 
 // --- Types ---
 
@@ -95,7 +96,7 @@ const OUTCOME_COLOR: Record<string, string> = {
 
 export default function AgentDetail({ agent, health, onBack }: Props) {
     const { user } = useAuth();
-    const [tab, setTab] = useState<'health' | 'config' | 'runs' | 'topics' | 'risk-updates' | 'solution-updates' | 'validation-reports'>('health');
+    const [tab, setTab] = useState<'health' | 'config' | 'runs' | 'topics' | 'risk-updates' | 'solution-updates' | 'validation-reports' | 'changelogs'>('health');
 
     // Not deployed: show info card only
     if (agent.status === 'not_deployed') {
@@ -140,6 +141,8 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
         ? (['health', 'solution-updates', 'runs'] as const)
         : agent.id === 'validation'
         ? (['health', 'validation-reports', 'runs'] as const)
+        : agent.id === 'consolidation'
+        ? (['health', 'changelogs', 'runs'] as const)
         : (['health', 'config', 'runs'] as const);
 
     return (
@@ -179,6 +182,7 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
                 {tab === 'risk-updates' && <ObservatoryRiskUpdatesTab />}
                 {tab === 'solution-updates' && <ObservatorySolutionUpdatesTab />}
                 {tab === 'validation-reports' && <ValidationReportsTab />}
+                {tab === 'changelogs' && <ChangelogsTab />}
                 {tab === 'config' && <ConfigTab agentId={agent.id} schedule={agent.schedule} functionName={agent.functionName} userId={user?.uid ?? null} />}
                 {tab === 'runs' && <RunsTab agentId={agent.id} />}
             </div>
