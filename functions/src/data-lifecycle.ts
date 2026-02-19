@@ -19,6 +19,7 @@ interface LifecycleStats {
   riskUpdatesDeleted: number;
   solutionUpdatesDeleted: number;
   validationReportsDeleted: number;
+  changelogsDeleted: number;
 }
 
 function daysAgo(days: number): Date {
@@ -33,7 +34,7 @@ function daysAgo(days: number): Date {
  */
 export async function runDataLifecycle(): Promise<LifecycleStats> {
   const db = getFirestore();
-  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0, topicsDeleted: 0, riskUpdatesDeleted: 0, solutionUpdatesDeleted: 0, validationReportsDeleted: 0 };
+  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0, topicsDeleted: 0, riskUpdatesDeleted: 0, solutionUpdatesDeleted: 0, validationReportsDeleted: 0, changelogsDeleted: 0 };
 
   // 1. Archive approved/edited signals older than 90 days
   const archiveCutoff = daysAgo(RETENTION.approvedSignals);
@@ -212,6 +213,27 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
 
     if (validationReportsSnap.size < BATCH_SIZE) break;
     validationReportsSnap = await validationReportsQuery.get();
+  }
+
+  // 9. Delete old changelogs (>180 days — longer retention for audit trail)
+  const changelogCutoff = daysAgo(180);
+  const changelogsQuery = db
+    .collection("changelogs")
+    .where("createdAt", "<", changelogCutoff)
+    .limit(BATCH_SIZE);
+
+  let changelogsSnap = await changelogsQuery.get();
+  while (!changelogsSnap.empty) {
+    const batch = db.batch();
+    for (const changelogDoc of changelogsSnap.docs) {
+      batch.delete(changelogDoc.ref);
+      stats.changelogsDeleted++;
+    }
+    await batch.commit();
+    logger.info(`Deleted ${changelogsSnap.size} old changelogs`);
+
+    if (changelogsSnap.size < BATCH_SIZE) break;
+    changelogsSnap = await changelogsQuery.get();
   }
 
   return stats;
