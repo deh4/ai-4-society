@@ -64,6 +64,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Validation reports: admin read, server write only
+    match /validation_reports/{reportId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Agent registry: public read for status badges
     match /agents/{agentId} {
       allow read: if true;
