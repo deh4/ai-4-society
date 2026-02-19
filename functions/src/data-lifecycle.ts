@@ -18,6 +18,7 @@ interface LifecycleStats {
   topicsDeleted: number;
   riskUpdatesDeleted: number;
   solutionUpdatesDeleted: number;
+  validationReportsDeleted: number;
 }
 
 function daysAgo(days: number): Date {
@@ -32,7 +33,7 @@ function daysAgo(days: number): Date {
  */
 export async function runDataLifecycle(): Promise<LifecycleStats> {
   const db = getFirestore();
-  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0, topicsDeleted: 0, riskUpdatesDeleted: 0, solutionUpdatesDeleted: 0 };
+  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0, topicsDeleted: 0, riskUpdatesDeleted: 0, solutionUpdatesDeleted: 0, validationReportsDeleted: 0 };
 
   // 1. Archive approved/edited signals older than 90 days
   const archiveCutoff = daysAgo(RETENTION.approvedSignals);
@@ -190,6 +191,27 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
 
     if (solutionUpdatesSnap.size < BATCH_SIZE) break;
     solutionUpdatesSnap = await solutionUpdatesQuery.get();
+  }
+
+  // 8. Delete old validation reports (>30 days)
+  const validationReportCutoff = daysAgo(30);
+  const validationReportsQuery = db
+    .collection("validation_reports")
+    .where("createdAt", "<", validationReportCutoff)
+    .limit(BATCH_SIZE);
+
+  let validationReportsSnap = await validationReportsQuery.get();
+  while (!validationReportsSnap.empty) {
+    const batch = db.batch();
+    for (const reportDoc of validationReportsSnap.docs) {
+      batch.delete(reportDoc.ref);
+      stats.validationReportsDeleted++;
+    }
+    await batch.commit();
+    logger.info(`Deleted ${validationReportsSnap.size} old validation reports`);
+
+    if (validationReportsSnap.size < BATCH_SIZE) break;
+    validationReportsSnap = await validationReportsQuery.get();
   }
 
   return stats;
