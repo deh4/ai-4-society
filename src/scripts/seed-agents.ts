@@ -76,12 +76,12 @@ const agents: Record<string, AgentRegistryDoc> = {
     },
     'consolidation': {
         name: 'Consolidation',
-        description: 'Aggregates updates from all agents, resolves conflicts between overlapping data, and maintains versioning for risk/solution document history.',
+        description: 'Aggregates approved updates, writes changelogs with version tracking, and refreshes risk/solution narratives using Gemini.',
         tier: '2C',
-        status: 'not_deployed',
-        deployedAt: null,
-        functionName: null,
-        schedule: null,
+        status: 'active',
+        deployedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+        functionName: 'consolidationChangelog,consolidationNarrative',
+        schedule: '0 12 * * * / 0 14 * * 2',
         overseerRole: 'Forecast Scribe',
     },
     'orchestrator': {
