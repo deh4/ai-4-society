@@ -5,45 +5,35 @@ import Contribute from './pages/Contribute';
 import Admin from './pages/Admin';
 import Observatory from './pages/Observatory';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { useEffect, useState } from 'react';
 import { RiskProvider } from './store/RiskContext';
 import { AuthProvider } from './store/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
-  const [themeMode, setThemeMode] = useState<'monitor' | 'solution'>('monitor');
-
-  useEffect(() => {
-    if (themeMode === 'solution') {
-      document.body.setAttribute('data-theme', 'solution');
-    } else {
-      document.body.removeAttribute('data-theme');
-    }
-  }, [themeMode]);
-
   return (
-    <RiskProvider>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<HeroPage />} />
-            <Route
-              path="/dashboard"
-              element={<Dashboard themeMode={themeMode} setThemeMode={setThemeMode} />}
-            />
-            <Route path="/contribute" element={<Contribute />} />
-            <Route path="/admin" element={
-              <ProtectedRoute>
-                <Admin />
-              </ProtectedRoute>
-            } />
-            <Route path="/observatory" element={
-              <ProtectedRoute>
-                <Observatory />
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </Router>
-      </AuthProvider>
-    </RiskProvider>
+    <ErrorBoundary>
+      <RiskProvider>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<HeroPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/:riskId" element={<Dashboard />} />
+              <Route path="/contribute" element={<Contribute />} />
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <Admin />
+                </ProtectedRoute>
+              } />
+              <Route path="/observatory" element={
+                <ProtectedRoute>
+                  <Observatory />
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </RiskProvider>
+    </ErrorBoundary>
   );
 }
