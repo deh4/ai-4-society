@@ -79,7 +79,7 @@
           "order": "DESCENDING"
         }
       ]
-    }
+    },
     {
       "collectionGroup": "risk_updates",
       "queryScope": "COLLECTION",
