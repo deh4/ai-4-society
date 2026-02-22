@@ -35,7 +35,9 @@ export async function storeSignals(signals: ClassifiedSignal[]): Promise<number>
         source_url: signal.source_url,
         source_name: signal.source_name,
         published_date: signal.published_date,
+        signal_type: signal.signal_type,       // NEW
         risk_categories: signal.risk_categories,
+        solution_ids: signal.solution_ids,     // NEW
         severity_hint: signal.severity_hint,
         affected_groups: signal.affected_groups,
         confidence_score: signal.confidence_score,
