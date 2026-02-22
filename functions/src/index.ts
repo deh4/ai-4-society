@@ -28,6 +28,8 @@ import { checkUrls } from "./validation/url-checker.js";
 import type { CollectionStats, TopicStats, UrlCheckStats } from "./validation/types.js";
 import { processChangelogs } from "./consolidation/changelog.js";
 import { processNarratives } from "./consolidation/narrative.js";
+import { analyzeSignals } from "./discovery-agent/analyzer.js";
+import { storeDiscoveryProposals } from "./discovery-agent/store.js";
 
 initializeApp();
 
@@ -1434,6 +1436,118 @@ export const consolidationNarrative = onSchedule(
           tokensInput: 0, tokensOutput: 0,
           firestoreReads: 0, firestoreWrites: 0,
         },
+        sourcesUsed: [],
+      });
+    }
+  }
+);
+
+
+// ─── Discovery Agent Pipeline ────────────────────────────────────────────────
+
+export const discoveryAgent = onSchedule(
+  {
+    schedule: "0 10 * * 0",  // Weekly, Sunday 10:00 UTC
+    timeoutSeconds: 300,
+    memory: "512MiB",
+    secrets: [geminiApiKey],
+  },
+  async () => {
+    logger.info("Discovery Agent: starting weekly run");
+    const runStartedAt = new Date();
+    const db = getFirestore();
+
+    try {
+      // Step 1: Read approved signals from last 30 days
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+
+      const signalsSnap = await db
+        .collection("signals")
+        .where("status", "in", ["approved", "edited"])
+        .where("fetched_at", ">", cutoff)
+        .orderBy("fetched_at", "desc")
+        .get();
+
+      const signals = signalsSnap.docs.map((d) => ({
+        id: d.id,
+        title: (d.data().title as string) ?? "",
+        summary: (d.data().summary as string) ?? "",
+        signal_type: (d.data().signal_type as string) ?? "risk",
+        risk_categories: (d.data().risk_categories as string[]) ?? [],
+        solution_ids: (d.data().solution_ids as string[]) ?? [],
+        severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+        source_name: (d.data().source_name as string) ?? "",
+        published_date: (d.data().published_date as string) ?? "",
+      }));
+
+      logger.info(`Discovery: ${signals.length} approved signals in last 30 days`);
+
+      if (signals.length < 5) {
+        logger.info("Discovery: insufficient signals (<5), skipping Gemini call");
+        await writeAgentRunSummary({
+          agentId: "discovery-agent",
+          startedAt: runStartedAt,
+          outcome: "empty",
+          error: null,
+          metrics: { articlesFetched: signals.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 0 },
+          sourcesUsed: [],
+        });
+        return;
+      }
+
+      // Step 2: Read current registry (name + description only)
+      const [risksSnap, solutionsSnap] = await Promise.all([
+        db.collection("risks").get(),
+        db.collection("solutions").get(),
+      ]);
+
+      const risks = risksSnap.docs.map((d) => ({
+        id: d.id,
+        name: (d.data().risk_name as string) ?? d.id,
+        description: (d.data().summary as string) ?? "",
+      }));
+
+      const solutions = solutionsSnap.docs.map((d) => ({
+        id: d.id,
+        name: (d.data().solution_title as string) ?? d.id,
+        description: (d.data().summary as string) ?? "",
+      }));
+
+      // Step 3: Analyze with Gemini 2.5 Pro
+      const { proposals, tokenUsage } = await analyzeSignals(
+        signals, risks, solutions, geminiApiKey.value()
+      );
+
+      // Step 4: Store proposals
+      const stored = await storeDiscoveryProposals(proposals);
+
+      await writeAgentRunSummary({
+        agentId: "discovery-agent",
+        startedAt: runStartedAt,
+        outcome: stored > 0 ? "success" : "empty",
+        error: null,
+        metrics: {
+          articlesFetched: signals.length,
+          signalsStored: stored,
+          geminiCalls: 1,
+          tokensInput: tokenUsage.input,
+          tokensOutput: tokenUsage.output,
+          firestoreReads: 3,
+          firestoreWrites: stored,
+        },
+        sourcesUsed: [],
+      });
+
+      logger.info(`Discovery Agent complete: ${stored} proposals stored`);
+    } catch (err) {
+      logger.error("Discovery Agent failed:", err);
+      await writeAgentRunSummary({
+        agentId: "discovery-agent",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 0, firestoreWrites: 0 },
         sourcesUsed: [],
       });
     }
