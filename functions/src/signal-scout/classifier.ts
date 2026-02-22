@@ -8,7 +8,9 @@ export interface ClassifiedSignal {
   source_url: string;
   source_name: string;
   published_date: string;
+  signal_type: "risk" | "solution" | "both";
   risk_categories: string[];
+  solution_ids: string[];
   severity_hint: "Critical" | "Emerging" | "Horizon";
   affected_groups: string[];
   confidence_score: number;
@@ -28,25 +30,54 @@ Risk taxonomy for classification:
 - R10: Model Collapse & Data Scarcity (training data exhaustion, synthetic data loops)
 `;
 
+const SOLUTION_TAXONOMY = `
+Solution taxonomy for classification:
+- S01: Algorithmic Auditing & Fairness Certification Standards (addresses R01)
+- S02: Privacy-Preserving AI: Federated Learning & On-Device Processing (addresses R02)
+- S03: Digital Content Provenance (C2PA) Standards (addresses R03)
+- S04: Universal Basic Services & AI-Era Workforce Transition Programs (addresses R04)
+- S05: International AI Arms Control Treaties (addresses R05)
+- S06: Open-Source AI & Antitrust Enforcement (addresses R06)
+- S07: Green AI Standards & Carbon-Aware Computing (addresses R07)
+- S08: Human Autonomy Frameworks & Digital Wellbeing Laws (addresses R08)
+- S09: Democratic AI Oversight & Surveillance Moratoriums (addresses R09)
+- S10: Synthetic Data Standards & Data Commons (addresses R10)
+`;
+
 const SYSTEM_PROMPT = `You are a signal analyst for the AI 4 Society Observatory, a platform tracking how AI affects human society.
 
 ${RISK_TAXONOMY}
 
+${SOLUTION_TAXONOMY}
+
 For each article provided, determine:
-1. Is this article about a societal risk or impact of AI? (not just AI product news)
+1. Is this article about a societal risk OR a solution/countermeasure related to AI's impact?
 2. If yes, classify it.
+
+signal_type rules:
+- "risk": article is primarily about a risk, harm, or negative trend (maps to R-codes)
+- "solution": article is primarily about a countermeasure, policy, or mitigation gaining traction (maps to S-codes)
+- "both": article covers both a risk and a response/solution to it
 
 Respond with a JSON array. For irrelevant articles, include them with "relevant": false.
 For relevant articles, provide:
 {
   "index": <number>,
   "relevant": true,
+  "signal_type": "risk" | "solution" | "both",
   "summary": "<2-3 sentence summary focused on the societal impact>",
   "risk_categories": ["R01", ...],
+  "solution_ids": ["S03", ...],
   "severity_hint": "Critical" | "Emerging" | "Horizon",
   "affected_groups": ["<group 1>", ...],
   "confidence_score": <0.0-1.0>
 }
+
+Rules:
+- risk_categories must be empty [] if signal_type is "solution"
+- solution_ids must be empty [] if signal_type is "risk"
+- Both arrays must be non-empty if signal_type is "both"
+- Only include R/S codes you are confident about
 
 For irrelevant articles:
 { "index": <number>, "relevant": false }
@@ -105,8 +136,10 @@ export async function classifyArticles(
       const parsed: Array<{
         index: number;
         relevant: boolean;
+        signal_type?: "risk" | "solution" | "both";
         summary?: string;
         risk_categories?: string[];
+        solution_ids?: string[];
         severity_hint?: "Critical" | "Emerging" | "Horizon";
         affected_groups?: string[];
         confidence_score?: number;
@@ -122,13 +155,40 @@ export async function classifyArticles(
         const article = batch[item.index];
         if (!article) continue;
 
+        const signalType = item.signal_type ?? "risk";
+        const riskCats = item.risk_categories ?? [];
+        const solutionIds = item.solution_ids ?? [];
+
+        // Inline validation: drop signals with invalid taxonomy codes
+        const validRisks = ["R01","R02","R03","R04","R05","R06","R07","R08","R09","R10"];
+        const validSolutions = ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10"];
+
+        if ((signalType === "risk" || signalType === "both") && riskCats.length === 0) {
+          logger.info(`Dropping signal with no risk_categories: ${batch[item.index]?.title}`);
+          continue;
+        }
+        if ((signalType === "solution" || signalType === "both") && solutionIds.length === 0) {
+          logger.info(`Dropping signal with no solution_ids: ${batch[item.index]?.title}`);
+          continue;
+        }
+        if (riskCats.some((c) => !validRisks.includes(c))) {
+          logger.info(`Dropping signal with invalid risk code: ${batch[item.index]?.title}`);
+          continue;
+        }
+        if (solutionIds.some((s) => !validSolutions.includes(s))) {
+          logger.info(`Dropping signal with invalid solution code: ${batch[item.index]?.title}`);
+          continue;
+        }
+
         results.push({
           title: article.title,
           summary: item.summary ?? "",
           source_url: article.url,
           source_name: article.source_name,
           published_date: article.published_date,
-          risk_categories: item.risk_categories ?? [],
+          signal_type: signalType,
+          risk_categories: riskCats,
+          solution_ids: solutionIds,
           severity_hint: item.severity_hint ?? "Emerging",
           affected_groups: item.affected_groups ?? [],
           confidence_score: confidence,
