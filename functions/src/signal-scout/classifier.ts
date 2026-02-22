@@ -44,6 +44,9 @@ Solution taxonomy for classification:
 - S10: Synthetic Data Standards & Data Commons (addresses R10)
 `;
 
+const VALID_RISK_CODES = ["R01","R02","R03","R04","R05","R06","R07","R08","R09","R10"];
+const VALID_SOLUTION_CODES = ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10"];
+
 const SYSTEM_PROMPT = `You are a signal analyst for the AI 4 Society Observatory, a platform tracking how AI affects human society.
 
 ${RISK_TAXONOMY}
@@ -160,8 +163,6 @@ export async function classifyArticles(
         const solutionIds = item.solution_ids ?? [];
 
         // Inline validation: drop signals with invalid taxonomy codes
-        const validRisks = ["R01","R02","R03","R04","R05","R06","R07","R08","R09","R10"];
-        const validSolutions = ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10"];
 
         if ((signalType === "risk" || signalType === "both") && riskCats.length === 0) {
           logger.info(`Dropping signal with no risk_categories: ${batch[item.index]?.title}`);
@@ -171,11 +172,11 @@ export async function classifyArticles(
           logger.info(`Dropping signal with no solution_ids: ${batch[item.index]?.title}`);
           continue;
         }
-        if (riskCats.some((c) => !validRisks.includes(c))) {
+        if (riskCats.some((c) => !VALID_RISK_CODES.includes(c))) {
           logger.info(`Dropping signal with invalid risk code: ${batch[item.index]?.title}`);
           continue;
         }
-        if (solutionIds.some((s) => !validSolutions.includes(s))) {
+        if (solutionIds.some((s) => !VALID_SOLUTION_CODES.includes(s))) {
           logger.info(`Dropping signal with invalid solution code: ${batch[item.index]?.title}`);
           continue;
         }
