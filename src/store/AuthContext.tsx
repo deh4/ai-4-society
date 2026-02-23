@@ -3,6 +3,10 @@ import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, type 
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
+// Admin status is determined solely by the Firestore `admins/{uid}` document.
+// To add a new admin, create their document in Firestore (manually or via seed script).
+// Firestore rules enforce that only whitelisted emails can self-provision via the client.
+
 interface AuthContextType {
     user: User | null;
     isAdmin: boolean;
@@ -24,8 +28,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser);
             if (firebaseUser) {
-                const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.uid));
-                setIsAdmin(adminDoc.exists());
+                try {
+                    const adminRef = doc(db, 'admins', firebaseUser.uid);
+                    const adminSnap = await getDoc(adminRef);
+                    setIsAdmin(adminSnap.exists());
+                } catch (err) {
+                    console.error('Failed to check admin status:', err);
+                    setIsAdmin(false);
+                }
             } else {
                 setIsAdmin(false);
             }

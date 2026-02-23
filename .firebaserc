@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "ai-4-society"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

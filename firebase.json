@@ -37,5 +37,13 @@
     "ui": {
       "enabled": true
     }
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "AI 4 Society Observatory",
+        "supportEmail": "dehakuran@gmail.com"
+      }
+    }
   }
 }

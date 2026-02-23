@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import sourceSentinelAvatar from '../assets/source-sentinel.png';
-import causalityCartographerAvatar from '../assets/casuality-cartographer.png';
-import severityStewardAvatar from '../assets/severity-steaward.png';
+import causalityCartographerAvatar from '../assets/causality-cartographer.png';
+import severityStewardAvatar from '../assets/severity-steward.png';
 import forecastScribeAvatar from '../assets/forecast-scribe.png';
 import gapEngineerAvatar from '../assets/gap-engineer.png';
 import greenlightGardenerAvatar from '../assets/greenlight-gardener.png';
-import observatoryStewardAvatar from '../assets/observatory-steaward.png';
+import observatoryStewardAvatar from '../assets/observatory-steward.png';
 
 export default function Contribute() {
     const navigate = useNavigate();
@@ -20,7 +20,7 @@ export default function Contribute() {
         <div className="min-h-screen bg-[#0a0f1a] text-white flex flex-col">
             {/* Header */}
             <header className="h-14 shrink-0 border-b border-[#1a2035] flex items-center justify-between px-4 md:px-8">
-                <button 
+                <button
                     onClick={() => navigate('/')}
                     className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                 >
@@ -32,7 +32,7 @@ export default function Contribute() {
                         <span className="text-[9px] uppercase tracking-[0.2em] text-gray-500">Observatory</span>
                     </div>
                 </button>
-                
+
                 <button
                     onClick={() => navigate('/')}
                     className="text-xs uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
@@ -53,7 +53,7 @@ export default function Contribute() {
                             Integrated with the Agentic Risk Intelligence Framework
                         </p>
                         <p className="text-sm text-gray-400 max-w-2xl mx-auto">
-                            Volunteers are <strong className="text-white">not free-floating contributors</strong>. 
+                            Volunteers are <strong className="text-white">not free-floating contributors</strong>.
                             They act as <strong className="text-cyan-400">explicit human oversight layers</strong> for specific agents and workflow transitions.
                         </p>
                     </div>
@@ -164,7 +164,7 @@ export default function Contribute() {
                                 onClick={() => toggleRole('sentinel')}
                                 className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left"
                             >
-                                <img 
+                                <img
                                     src={sourceSentinelAvatar}
                                     alt="Source Sentinel"
                                     className="w-16 h-16 rounded-full flex-shrink-0 object-cover"
@@ -181,7 +181,7 @@ export default function Contribute() {
                                     <div className="space-y-3 text-sm">
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">What they supervise:</h4>
-                                            <p className="text-gray-300">• Validation Agent outputs<br/>• Signal Scout extractions before downstream use</p>
+                                            <p className="text-gray-300">• Validation Agent outputs<br />• Signal Scout extractions before downstream use</p>
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Responsibilities:</h4>
@@ -189,7 +189,7 @@ export default function Contribute() {
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Authority:</h4>
-                                            <p className="text-gray-300">✅ Approve signals into "validated" pool<br/>❌ Cannot change risk scores or narratives</p>
+                                            <p className="text-gray-300">✅ Approve signals into "validated" pool<br />❌ Cannot change risk scores or narratives</p>
                                         </div>
                                         <div className="pt-3 border-t border-gray-800">
                                             <p className="text-xs text-gray-500"><strong>Effort:</strong> 30–60 min/week • <strong>SLA:</strong> 48h • <strong>No response:</strong> signal stays quarantined</p>
@@ -205,7 +205,7 @@ export default function Contribute() {
                                 onClick={() => toggleRole('cartographer')}
                                 className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left"
                             >
-                                <img 
+                                <img
                                     src={causalityCartographerAvatar}
                                     alt="Causality Cartographer"
                                     className="w-16 h-16 rounded-full flex-shrink-0 object-cover"
@@ -230,7 +230,7 @@ export default function Contribute() {
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Authority:</h4>
-                                            <p className="text-gray-300">✅ Approve relationships into canonical dependency graph<br/>❌ Cannot finalize new risk categories alone</p>
+                                            <p className="text-gray-300">✅ Approve relationships into canonical dependency graph<br />❌ Cannot finalize new risk categories alone</p>
                                         </div>
                                         <div className="pt-3 border-t border-gray-800">
                                             <p className="text-xs text-gray-500"><strong>Effort:</strong> 1–2 h/week • <strong>SLA:</strong> 7 days • <strong>Inactive:</strong> proposals expire</p>
@@ -246,7 +246,7 @@ export default function Contribute() {
                                 onClick={() => toggleRole('steward')}
                                 className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left"
                             >
-                                <img 
+                                <img
                                     src={severityStewardAvatar}
                                     alt="Severity Steward"
                                     className="w-16 h-16 rounded-full flex-shrink-0 object-cover"
@@ -271,7 +271,7 @@ export default function Contribute() {
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Authority:</h4>
-                                            <p className="text-gray-300">✅ Approve small/moderate changes<br/>⛔ Large jumps require Observatory Steward sign-off</p>
+                                            <p className="text-gray-300">✅ Approve small/moderate changes<br />⛔ Large jumps require Observatory Steward sign-off</p>
                                         </div>
                                         <div className="pt-3 border-t border-gray-800">
                                             <p className="text-xs text-gray-500"><strong>Effort:</strong> 1–2 h/week • <strong>SLA:</strong> Critical 24–48h, Others 7 days • <strong>No response:</strong> small deltas expire, critical escalate</p>
@@ -287,7 +287,7 @@ export default function Contribute() {
                                 onClick={() => toggleRole('scribe')}
                                 className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left"
                             >
-                                <img 
+                                <img
                                     src={forecastScribeAvatar}
                                     alt="Forecast Scribe"
                                     className="w-16 h-16 rounded-full flex-shrink-0 object-cover"
@@ -312,7 +312,7 @@ export default function Contribute() {
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Authority:</h4>
-                                            <p className="text-gray-300">✅ Publish narratives<br/>❌ Cannot alter scores or causal graph</p>
+                                            <p className="text-gray-300">✅ Publish narratives<br />❌ Cannot alter scores or causal graph</p>
                                         </div>
                                         <div className="pt-3 border-t border-gray-800">
                                             <p className="text-xs text-gray-500"><strong>Effort:</strong> 1–3 h/week • <strong>SLA:</strong> 7 days • <strong>Inactive:</strong> old narrative remains, flagged "out of date"</p>
@@ -328,7 +328,7 @@ export default function Contribute() {
                                 onClick={() => toggleRole('engineer')}
                                 className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left"
                             >
-                                <img 
+                                <img
                                     src={gapEngineerAvatar}
                                     alt="Gap Engineer"
                                     className="w-16 h-16 rounded-full flex-shrink-0 object-cover"
@@ -353,7 +353,7 @@ export default function Contribute() {
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Authority:</h4>
-                                            <p className="text-gray-300">✅ Approve perception inputs<br/>❌ Cannot modify expert severity scores</p>
+                                            <p className="text-gray-300">✅ Approve perception inputs<br />❌ Cannot modify expert severity scores</p>
                                         </div>
                                         <div className="pt-3 border-t border-gray-800">
                                             <p className="text-xs text-gray-500"><strong>Effort:</strong> 1–2 h/week • <strong>SLA:</strong> weekly • <strong>Inactive:</strong> conservative default weights</p>
@@ -369,7 +369,7 @@ export default function Contribute() {
                                 onClick={() => toggleRole('gardener')}
                                 className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left"
                             >
-                                <img 
+                                <img
                                     src={greenlightGardenerAvatar}
                                     alt="Greenlight Gardener"
                                     className="w-16 h-16 rounded-full flex-shrink-0 object-cover"
@@ -394,7 +394,7 @@ export default function Contribute() {
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Authority:</h4>
-                                            <p className="text-gray-300">✅ Approve solution entries<br/>❌ Cannot remove risks or downgrade severity</p>
+                                            <p className="text-gray-300">✅ Approve solution entries<br />❌ Cannot remove risks or downgrade severity</p>
                                         </div>
                                         <div className="pt-3 border-t border-gray-800">
                                             <p className="text-xs text-gray-500"><strong>Effort:</strong> 1–2 h/week • <strong>SLA:</strong> 14 days • <strong>Inactive:</strong> solution marked "stale / unverified"</p>
@@ -410,7 +410,7 @@ export default function Contribute() {
                                 onClick={() => toggleRole('observatory')}
                                 className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors text-left"
                             >
-                                <img 
+                                <img
                                     src={observatoryStewardAvatar}
                                     alt="Observatory Steward"
                                     className="w-16 h-16 rounded-full flex-shrink-0 object-cover"
@@ -435,7 +435,7 @@ export default function Contribute() {
                                         </div>
                                         <div>
                                             <h4 className="text-white font-semibold mb-2">Authority:</h4>
-                                            <p className="text-gray-300">✅ Final sign-off power<br/>⛔ Still bound by audit logs & reversibility</p>
+                                            <p className="text-gray-300">✅ Final sign-off power<br />⛔ Still bound by audit logs & reversibility</p>
                                         </div>
                                         <div className="pt-3 border-t border-gray-800">
                                             <p className="text-xs text-gray-500"><strong>Effort:</strong> 2–5 h/week • <strong>SLA:</strong> policy-defined • <strong>Inactive:</strong> policy changes freeze, emergencies reroute</p>

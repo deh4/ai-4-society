@@ -15,13 +15,12 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-if (location.hostname === "localhost") {
+// Only connect to emulators when explicitly enabled (run: VITE_USE_EMULATORS=true npm run dev)
+if (import.meta.env.VITE_USE_EMULATORS === "true") {
     try {
-        console.log("Attempting to connect to Firestore Emulator...");
         connectFirestoreEmulator(db, 'localhost', 8080);
-        console.log("Connected to Firestore Emulator at localhost:8080");
         connectAuthEmulator(auth, 'http://localhost:9099');
-        console.log("Connected to Auth Emulator at localhost:9099");
+        console.log("Connected to emulators (Firestore :8080, Auth :9099)");
     } catch (e) {
         console.error("Error connecting to emulator", e);
     }
