@@ -4,8 +4,8 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PipelineHealth from '../components/PipelineHealth';
-import RiskUpdatesTab from '../components/admin/RiskUpdatesTab';
-import SolutionUpdatesTab from '../components/admin/SolutionUpdatesTab';
+import DiscoveryTab from '../components/admin/DiscoveryTab';
+import ValidationTab from '../components/admin/ValidationTab';
 
 type SignalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
 
@@ -56,7 +56,7 @@ export default function Admin() {
     const [selected, setSelected] = useState<Signal | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
-    const [adminTab, setAdminTab] = useState<'risk-signals' | 'solution-signals' | 'risk-updates' | 'solution-updates'>('risk-signals');
+    const [adminTab, setAdminTab] = useState<'risk-signals' | 'solution-signals' | 'discovery' | 'validation'>('risk-signals');
     const hasTriedFallback = useRef(false);
 
     useEffect(() => {
@@ -162,18 +162,16 @@ export default function Admin() {
                     <span className="ml-2 text-[10px] text-gray-500">{adminTab === 'solution-signals' ? signals.length : ''}</span>
                 </button>
                 <button
-                    onClick={() => setAdminTab('risk-updates')}
-                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'risk-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
-                        }`}
+                    onClick={() => setAdminTab('discovery')}
+                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'discovery' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
                 >
-                    Risk Updates
+                    Discovery
                 </button>
                 <button
-                    onClick={() => setAdminTab('solution-updates')}
-                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'solution-updates' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
-                        }`}
+                    onClick={() => setAdminTab('validation')}
+                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'validation' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
                 >
-                    Solution Updates
+                    Validation
                 </button>
                 <button
                     onClick={() => navigate('/observatory')}
@@ -183,16 +181,12 @@ export default function Admin() {
                 </button>
             </div>
 
-            {adminTab === 'risk-updates' && (
-                <div className="h-[calc(100vh-105px)]">
-                    <RiskUpdatesTab />
-                </div>
+            {adminTab === 'discovery' && (
+                <DiscoveryTab />
             )}
 
-            {adminTab === 'solution-updates' && (
-                <div className="h-[calc(100vh-105px)]">
-                    <SolutionUpdatesTab />
-                </div>
+            {adminTab === 'validation' && (
+                <ValidationTab />
             )}
 
             {(adminTab === 'risk-signals' || adminTab === 'solution-signals') && <div className="flex h-[calc(100vh-105px)]">
