@@ -15,11 +15,9 @@ interface LifecycleStats {
   deleted: number;
   evidenceMarkedStale: number;
   agentRunsDeleted: number;
-  topicsDeleted: number;
-  riskUpdatesDeleted: number;
-  solutionUpdatesDeleted: number;
-  validationReportsDeleted: number;
   changelogsDeleted: number;
+  rejectedDiscoveryProposalsDeleted: number;
+  validationProposalsDeleted: number;
 }
 
 function daysAgo(days: number): Date {
@@ -34,7 +32,7 @@ function daysAgo(days: number): Date {
  */
 export async function runDataLifecycle(): Promise<LifecycleStats> {
   const db = getFirestore();
-  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0, topicsDeleted: 0, riskUpdatesDeleted: 0, solutionUpdatesDeleted: 0, validationReportsDeleted: 0, changelogsDeleted: 0 };
+  const stats: LifecycleStats = { archived: 0, deleted: 0, evidenceMarkedStale: 0, agentRunsDeleted: 0, changelogsDeleted: 0, rejectedDiscoveryProposalsDeleted: 0, validationProposalsDeleted: 0 };
 
   // 1. Archive approved/edited signals older than 90 days
   const archiveCutoff = daysAgo(RETENTION.approvedSignals);
@@ -131,91 +129,7 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
     }
   }
 
-  // 5. Delete old topics (>30 days — ephemeral analysis artifacts)
-  const topicCutoff = daysAgo(30);
-  const topicsQuery = db
-    .collection("topics")
-    .where("createdAt", "<", topicCutoff)
-    .limit(BATCH_SIZE);
-
-  let topicsSnap = await topicsQuery.get();
-  while (!topicsSnap.empty) {
-    const batch = db.batch();
-    for (const topicDoc of topicsSnap.docs) {
-      batch.delete(topicDoc.ref);
-      stats.topicsDeleted++;
-    }
-    await batch.commit();
-    logger.info(`Deleted ${topicsSnap.size} old topics`);
-
-    if (topicsSnap.size < BATCH_SIZE) break;
-    topicsSnap = await topicsQuery.get();
-  }
-
-  // 6. Delete old risk updates (>30 days — ephemeral staging artifacts)
-  const riskUpdateCutoff = daysAgo(30);
-  const riskUpdatesQuery = db
-    .collection("risk_updates")
-    .where("createdAt", "<", riskUpdateCutoff)
-    .limit(BATCH_SIZE);
-
-  let riskUpdatesSnap = await riskUpdatesQuery.get();
-  while (!riskUpdatesSnap.empty) {
-    const batch = db.batch();
-    for (const updateDoc of riskUpdatesSnap.docs) {
-      batch.delete(updateDoc.ref);
-      stats.riskUpdatesDeleted++;
-    }
-    await batch.commit();
-    logger.info(`Deleted ${riskUpdatesSnap.size} old risk updates`);
-
-    if (riskUpdatesSnap.size < BATCH_SIZE) break;
-    riskUpdatesSnap = await riskUpdatesQuery.get();
-  }
-
-  // 7. Delete old solution updates (>30 days — ephemeral staging artifacts)
-  const solutionUpdateCutoff = daysAgo(30);
-  const solutionUpdatesQuery = db
-    .collection("solution_updates")
-    .where("createdAt", "<", solutionUpdateCutoff)
-    .limit(BATCH_SIZE);
-
-  let solutionUpdatesSnap = await solutionUpdatesQuery.get();
-  while (!solutionUpdatesSnap.empty) {
-    const batch = db.batch();
-    for (const updateDoc of solutionUpdatesSnap.docs) {
-      batch.delete(updateDoc.ref);
-      stats.solutionUpdatesDeleted++;
-    }
-    await batch.commit();
-    logger.info(`Deleted ${solutionUpdatesSnap.size} old solution updates`);
-
-    if (solutionUpdatesSnap.size < BATCH_SIZE) break;
-    solutionUpdatesSnap = await solutionUpdatesQuery.get();
-  }
-
-  // 8. Delete old validation reports (>30 days)
-  const validationReportCutoff = daysAgo(30);
-  const validationReportsQuery = db
-    .collection("validation_reports")
-    .where("createdAt", "<", validationReportCutoff)
-    .limit(BATCH_SIZE);
-
-  let validationReportsSnap = await validationReportsQuery.get();
-  while (!validationReportsSnap.empty) {
-    const batch = db.batch();
-    for (const reportDoc of validationReportsSnap.docs) {
-      batch.delete(reportDoc.ref);
-      stats.validationReportsDeleted++;
-    }
-    await batch.commit();
-    logger.info(`Deleted ${validationReportsSnap.size} old validation reports`);
-
-    if (validationReportsSnap.size < BATCH_SIZE) break;
-    validationReportsSnap = await validationReportsQuery.get();
-  }
-
-  // 9. Delete old changelogs (>180 days — longer retention for audit trail)
+  // 5. Delete old changelogs (>180 days — longer retention for audit trail)
   const changelogCutoff = daysAgo(180);
   const changelogsQuery = db
     .collection("changelogs")
@@ -234,6 +148,41 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
 
     if (changelogsSnap.size < BATCH_SIZE) break;
     changelogsSnap = await changelogsQuery.get();
+  }
+
+  // ── discovery_proposals: delete rejected after 90 days ───────────────────────
+  const discoveryRejectedCutoff = new Date();
+  discoveryRejectedCutoff.setDate(discoveryRejectedCutoff.getDate() - 90);
+
+  const rejectedDiscoverySnap = await db.collection("discovery_proposals")
+    .where("status", "==", "rejected")
+    .where("created_at", "<", discoveryRejectedCutoff)
+    .limit(200)
+    .get();
+
+  if (rejectedDiscoverySnap.size > 0) {
+    const discoveryBatch = db.batch();
+    rejectedDiscoverySnap.docs.forEach((d) => discoveryBatch.delete(d.ref));
+    await discoveryBatch.commit();
+    stats.rejectedDiscoveryProposalsDeleted += rejectedDiscoverySnap.size;
+    logger.info(`Data lifecycle: deleted ${rejectedDiscoverySnap.size} old rejected discovery proposals`);
+  }
+
+  // ── validation_proposals: delete after 30 days ───────────────────────────────
+  const validationProposalCutoff = new Date();
+  validationProposalCutoff.setDate(validationProposalCutoff.getDate() - 30);
+
+  const oldValidationSnap = await db.collection("validation_proposals")
+    .where("created_at", "<", validationProposalCutoff)
+    .limit(200)
+    .get();
+
+  if (oldValidationSnap.size > 0) {
+    const validationBatch = db.batch();
+    oldValidationSnap.docs.forEach((d) => validationBatch.delete(d.ref));
+    await validationBatch.commit();
+    stats.validationProposalsDeleted += oldValidationSnap.size;
+    logger.info(`Data lifecycle: deleted ${oldValidationSnap.size} old validation proposals`);
   }
 
   return stats;
