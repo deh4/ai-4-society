@@ -4,7 +4,6 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AgentDetail from '../components/observatory/AgentDetail';
-import TopicsCard from '../components/observatory/TopicsCard';
 
 // --- Types ---
 
@@ -197,8 +196,6 @@ export default function Observatory() {
                     </div>
                 </div>
 
-                {/* Recent Topics */}
-                <TopicsCard />
 
                 {/* Agent Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
