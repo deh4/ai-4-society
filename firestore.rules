@@ -100,6 +100,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Discovery proposals: admin read + write
+    match /discovery_proposals/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Validation proposals: admin read + write
+    match /validation_proposals/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
     function isAdmin() {
       return request.auth != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
