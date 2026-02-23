@@ -1,5 +1,5 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions/v2";
 import { initializeApp } from "firebase-admin/app";
@@ -1684,5 +1684,89 @@ export const validatorAgent = onSchedule(
         sourcesUsed: [],
       });
     }
+  }
+);
+
+// ─── Callable: Apply Validation Proposal ─────────────────────────────────────
+
+export const applyValidationProposal = onCall(
+  { memory: "256MiB", timeoutSeconds: 30 },
+  async (request) => {
+    // Auth check
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+    const uid = request.auth.uid;
+
+    const proposalId = request.data.proposalId as string | undefined;
+    if (!proposalId) throw new HttpsError("invalid-argument", "proposalId required");
+
+    const db = getFirestore();
+    const proposalRef = db.collection("validation_proposals").doc(proposalId);
+
+    return db.runTransaction(async (tx) => {
+      const proposalSnap = await tx.get(proposalRef);
+      if (!proposalSnap.exists) throw new HttpsError("not-found", "Proposal not found");
+
+      const proposal = proposalSnap.data()!;
+      if (proposal.status !== "pending") {
+        throw new HttpsError("failed-precondition", `Proposal is already ${proposal.status as string}`);
+      }
+
+      const docType = proposal.document_type as "risk" | "solution";
+      const docId = proposal.document_id as string;
+      const proposedChanges = proposal.proposed_changes as Record<string, { proposed_value: unknown }>;
+
+      // Build update object from proposed changes
+      const updates: Record<string, unknown> = {};
+      const changeLog: Array<{ field: string; old_value: unknown; new_value: unknown }> = [];
+
+      const docRef = db.collection(docType === "risk" ? "risks" : "solutions").doc(docId);
+      const docSnap = await tx.get(docRef);
+      if (!docSnap.exists) throw new HttpsError("not-found", `${docType} ${docId} not found`);
+
+      const currentDoc = docSnap.data()!;
+
+      for (const [field, change] of Object.entries(proposedChanges)) {
+        updates[field] = change.proposed_value;
+        changeLog.push({
+          field,
+          old_value: currentDoc[field] ?? null,
+          new_value: change.proposed_value,
+        });
+      }
+
+      const currentVersion = (currentDoc.version as number) ?? 0;
+      updates.version = currentVersion + 1;
+      updates.lastUpdated = FieldValue.serverTimestamp();
+      updates.lastUpdatedBy = uid;
+
+      // Write updated document
+      tx.update(docRef, updates);
+
+      // Write changelog entry
+      const changelogRef = db.collection("changelogs").doc();
+      tx.set(changelogRef, {
+        document_type: docType,
+        document_id: docId,
+        document_name: proposal.document_name,
+        version: currentVersion + 1,
+        changes: changeLog,
+        proposal_id: proposalId,
+        reviewed_by: uid,
+        reviewed_at: FieldValue.serverTimestamp(),
+        overall_reasoning: proposal.overall_reasoning,
+        confidence: proposal.confidence,
+        created_at: FieldValue.serverTimestamp(),
+        created_by: "validator-agent",
+      });
+
+      // Mark proposal approved
+      tx.update(proposalRef, {
+        status: "approved",
+        reviewed_at: FieldValue.serverTimestamp(),
+        reviewed_by: uid,
+      });
+
+      return { success: true, changesApplied: changeLog.length };
+    });
   }
 );
