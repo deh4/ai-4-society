@@ -30,6 +30,8 @@ import { processChangelogs } from "./consolidation/changelog.js";
 import { processNarratives } from "./consolidation/narrative.js";
 import { analyzeSignals } from "./discovery-agent/analyzer.js";
 import { storeDiscoveryProposals } from "./discovery-agent/store.js";
+import { assessRisk, assessSolution } from "./validator-agent/assessor.js";
+import { storeValidationProposal } from "./validator-agent/store.js";
 
 initializeApp();
 
@@ -1548,6 +1550,137 @@ export const discoveryAgent = onSchedule(
         outcome: "error",
         error: err instanceof Error ? err.message : String(err),
         metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 0, firestoreWrites: 0 },
+        sourcesUsed: [],
+      });
+    }
+  }
+);
+
+// ─── Validator Agent Pipeline ─────────────────────────────────────────────────
+
+export const validatorAgent = onSchedule(
+  {
+    schedule: "0 9 * * 1",  // Weekly, Monday 09:00 UTC
+    timeoutSeconds: 540,
+    memory: "512MiB",
+    secrets: [geminiApiKey],
+  },
+  async () => {
+    logger.info("Validator Agent: starting weekly run");
+    const runStartedAt = new Date();
+    const db = getFirestore();
+    let totalTokensInput = 0;
+    let totalTokensOutput = 0;
+    let geminiCalls = 0;
+    let proposalsStored = 0;
+
+    try {
+      // Step 1: Read all risks and solutions
+      const [risksSnap, solutionsSnap] = await Promise.all([
+        db.collection("risks").get(),
+        db.collection("solutions").get(),
+      ]);
+
+      // Step 2: Read approved signals from last 30 days
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+      const signalsSnap = await db
+        .collection("signals")
+        .where("status", "in", ["approved", "edited"])
+        .where("fetched_at", ">", cutoff)
+        .get();
+
+      const allSignals = signalsSnap.docs.map((d) => ({
+        id: d.id,
+        title: (d.data().title as string) ?? "",
+        summary: (d.data().summary as string) ?? "",
+        severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+        source_name: (d.data().source_name as string) ?? "",
+        published_date: (d.data().published_date as string) ?? "",
+        risk_categories: (d.data().risk_categories as string[]) ?? [],
+        solution_ids: (d.data().solution_ids as string[]) ?? [],
+      }));
+
+      logger.info(`Validator: ${risksSnap.size} risks, ${solutionsSnap.size} solutions, ${allSignals.length} signals`);
+
+      // Step 3: Build risk map for parent-risk lookups
+      const riskMap = new Map(risksSnap.docs.map((d) => [d.id, d.data() as Record<string, unknown>]));
+
+      // Step 4: Assess each risk
+      for (const riskDoc of risksSnap.docs) {
+        const riskId = riskDoc.id;
+        const relevantSignals = allSignals.filter((s) => s.risk_categories.includes(riskId));
+
+        const { result, tokenUsage } = await assessRisk(
+          riskId,
+          riskDoc.data() as Record<string, unknown>,
+          relevantSignals,
+          geminiApiKey.value()
+        );
+
+        totalTokensInput += tokenUsage.input;
+        totalTokensOutput += tokenUsage.output;
+        geminiCalls++;
+
+        if (result) {
+          const docName = (riskDoc.data().risk_name as string) ?? riskId;
+          await storeValidationProposal("risk", riskId, docName, result, relevantSignals.map((s) => s.id));
+          proposalsStored++;
+        }
+      }
+
+      // Step 5: Assess each solution
+      for (const solutionDoc of solutionsSnap.docs) {
+        const solutionId = solutionDoc.id;
+        const parentRiskId = solutionDoc.data().parent_risk_id as string | undefined;
+        const parentRisk = parentRiskId ? (riskMap.get(parentRiskId) ?? null) : null;
+        const relevantSignals = allSignals.filter((s) => s.solution_ids.includes(solutionId));
+
+        const { result, tokenUsage } = await assessSolution(
+          solutionId,
+          solutionDoc.data() as Record<string, unknown>,
+          parentRisk,
+          relevantSignals,
+          geminiApiKey.value()
+        );
+
+        totalTokensInput += tokenUsage.input;
+        totalTokensOutput += tokenUsage.output;
+        geminiCalls++;
+
+        if (result) {
+          const docName = (solutionDoc.data().solution_title as string) ?? solutionId;
+          await storeValidationProposal("solution", solutionId, docName, result, relevantSignals.map((s) => s.id));
+          proposalsStored++;
+        }
+      }
+
+      await writeAgentRunSummary({
+        agentId: "validator-agent",
+        startedAt: runStartedAt,
+        outcome: "success",
+        error: null,
+        metrics: {
+          articlesFetched: allSignals.length,
+          signalsStored: proposalsStored,
+          geminiCalls,
+          tokensInput: totalTokensInput,
+          tokensOutput: totalTokensOutput,
+          firestoreReads: 3,
+          firestoreWrites: proposalsStored,
+        },
+        sourcesUsed: [],
+      });
+
+      logger.info(`Validator Agent complete: ${proposalsStored} proposals from ${geminiCalls} Gemini calls`);
+    } catch (err) {
+      logger.error("Validator Agent failed:", err);
+      await writeAgentRunSummary({
+        agentId: "validator-agent",
+        startedAt: runStartedAt,
+        outcome: "error",
+        error: err instanceof Error ? err.message : String(err),
+        metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls, tokensInput: totalTokensInput, tokensOutput: totalTokensOutput, firestoreReads: 0, firestoreWrites: 0 },
         sourcesUsed: [],
       });
     }
