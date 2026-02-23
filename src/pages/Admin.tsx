@@ -24,6 +24,8 @@ interface Signal {
     admin_notes?: string;
     fetched_at: { seconds: number } | null;
     validationIssues?: Array<{ rule: string; severity: string; message: string; field: string }>;
+    signal_type?: "risk" | "solution" | "both";
+    solution_ids?: string[];
 }
 
 const RISK_LABELS: Record<string, string> = {
@@ -54,14 +56,23 @@ export default function Admin() {
     const [selected, setSelected] = useState<Signal | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
-    const [adminTab, setAdminTab] = useState<'signals' | 'risk-updates' | 'solution-updates'>('signals');
+    const [adminTab, setAdminTab] = useState<'risk-signals' | 'solution-signals' | 'risk-updates' | 'solution-updates'>('risk-signals');
     const hasTriedFallback = useRef(false);
 
     useEffect(() => {
-        // Reset fallback flag when filter changes intentionally
+        if (adminTab !== 'risk-signals' && adminTab !== 'solution-signals') return;
+
+        // Reset fallback flag when filter or tab changes intentionally
         hasTriedFallback.current = false;
 
-        const constraints: QueryConstraint[] = [orderBy('fetched_at', 'desc')];
+        const signalTypeValues = adminTab === 'risk-signals'
+            ? ['risk', 'both']
+            : ['solution', 'both'];
+
+        const constraints: QueryConstraint[] = [
+            where('signal_type', 'in', signalTypeValues),
+            orderBy('fetched_at', 'desc'),
+        ];
         if (filter !== 'all') {
             constraints.unshift(where('status', '==', filter));
         }
@@ -87,7 +98,7 @@ export default function Admin() {
         );
 
         return unsubscribe;
-    }, [filter]);
+    }, [filter, adminTab]);
 
     const updateSignal = async (id: string, status: SignalStatus) => {
         if (status === 'rejected' && !adminNotes.trim()) {
@@ -137,12 +148,18 @@ export default function Admin() {
             {/* Tabs */}
             <div className="flex gap-6 px-6 border-b border-white/10">
                 <button
-                    onClick={() => setAdminTab('signals')}
-                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
-                        }`}
+                    onClick={() => setAdminTab('risk-signals')}
+                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'risk-signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
                 >
-                    Signal Review
-                    <span className="ml-2 text-[10px] text-gray-500">{signals.length}</span>
+                    Risk Signals
+                    <span className="ml-2 text-[10px] text-gray-500">{adminTab === 'risk-signals' ? signals.length : ''}</span>
+                </button>
+                <button
+                    onClick={() => setAdminTab('solution-signals')}
+                    className={`py-3 text-sm transition-colors border-b-2 ${adminTab === 'solution-signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                >
+                    Solution Signals
+                    <span className="ml-2 text-[10px] text-gray-500">{adminTab === 'solution-signals' ? signals.length : ''}</span>
                 </button>
                 <button
                     onClick={() => setAdminTab('risk-updates')}
@@ -178,7 +195,7 @@ export default function Admin() {
                 </div>
             )}
 
-            {adminTab === 'signals' && <div className="flex h-[calc(100vh-105px)]">
+            {(adminTab === 'risk-signals' || adminTab === 'solution-signals') && <div className="flex h-[calc(100vh-105px)]">
                 {/* Left: Filter + List */}
                 <div className="w-80 border-r border-white/10 flex flex-col">
                     {/* Filters */}
@@ -226,6 +243,13 @@ export default function Admin() {
                                             {signal.validationIssues.length} issue{signal.validationIssues.length > 1 ? 's' : ''}
                                         </span>
                                     )}
+                                    {signal.signal_type === 'both' && (
+                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-400/10 text-purple-400">
+                                            {adminTab === 'risk-signals'
+                                                ? (signal.solution_ids ?? []).join(', ')
+                                                : (signal.risk_categories ?? []).join(', ')}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -264,16 +288,61 @@ export default function Admin() {
                             <div className="bg-white/5 rounded p-4 mb-6 space-y-3">
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">Gemini Classification</h3>
 
-                                <div>
-                                    <span className="text-[10px] text-gray-500">Risk Categories</span>
-                                    <div className="flex gap-1 mt-1">
-                                        {selected.risk_categories.map((rc) => (
-                                            <span key={rc} className="text-xs px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400">
-                                                {rc}: {RISK_LABELS[rc] ?? rc}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
+                                {adminTab === 'risk-signals' && (
+                                    <>
+                                        <div>
+                                            <span className="text-[10px] text-gray-500">Risk Categories</span>
+                                            <div className="flex gap-1 mt-1">
+                                                {selected.risk_categories.map((rc) => (
+                                                    <span key={rc} className="text-xs px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400">
+                                                        {rc}: {RISK_LABELS[rc] ?? rc}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {selected.signal_type === 'both' && selected.solution_ids && selected.solution_ids.length > 0 && (
+                                            <div>
+                                                <span className="text-[10px] text-gray-500">Also linked to Solutions</span>
+                                                <div className="flex gap-1 mt-1">
+                                                    {selected.solution_ids.map((sid) => (
+                                                        <span key={sid} className="text-xs px-2 py-0.5 rounded bg-purple-400/10 text-purple-400">
+                                                            {sid}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {adminTab === 'solution-signals' && (
+                                    <>
+                                        {selected.solution_ids && selected.solution_ids.length > 0 && (
+                                            <div>
+                                                <span className="text-[10px] text-gray-500">Solution IDs</span>
+                                                <div className="flex gap-1 mt-1">
+                                                    {selected.solution_ids.map((sid) => (
+                                                        <span key={sid} className="text-xs px-2 py-0.5 rounded bg-purple-400/10 text-purple-400">
+                                                            {sid}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selected.signal_type === 'both' && selected.risk_categories.length > 0 && (
+                                            <div>
+                                                <span className="text-[10px] text-gray-500">Also linked to Risk Categories</span>
+                                                <div className="flex gap-1 mt-1">
+                                                    {selected.risk_categories.map((rc) => (
+                                                        <span key={rc} className="text-xs px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400">
+                                                            {rc}: {RISK_LABELS[rc] ?? rc}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
 
                                 <div className="flex gap-6">
                                     <div>
