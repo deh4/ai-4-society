@@ -621,3 +621,151 @@ export const applyValidationProposal = onCall(
     });
   }
 );
+
+// ─── Callable: Trigger Agent Run ──────────────────────────────────────────────
+
+export const triggerAgentRun = onCall(
+  { memory: "512MiB", timeoutSeconds: 540, secrets: [geminiApiKey] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
+    const agentId = request.data.agentId as string | undefined;
+    if (!agentId) throw new HttpsError("invalid-argument", "agentId required");
+
+    const validAgents = ["signal-scout", "discovery-agent", "validator-agent"];
+    if (!validAgents.includes(agentId)) {
+      throw new HttpsError("invalid-argument", `Unknown agent: ${agentId}. Valid agents: ${validAgents.join(", ")}`);
+    }
+
+    logger.info(`Manual trigger: ${agentId} by ${request.auth.uid}`);
+    const db = getFirestore();
+
+    // Log the manual trigger
+    await db.collection("agents").doc(agentId).collection("runs").add({
+      trigger: "manual",
+      triggered_by: request.auth.uid,
+      started_at: FieldValue.serverTimestamp(),
+    });
+
+    try {
+      if (agentId === "signal-scout") {
+        // Inline the signal scout pipeline logic
+        const runStartedAt = new Date();
+
+        let enabledSourceIds: Set<string> | undefined;
+        try {
+          const configSnap = await db.collection("agents").doc("signal-scout").collection("config").doc("current").get();
+          if (configSnap.exists) {
+            const config = configSnap.data()!;
+            const sources = config.sources as Record<string, { enabled: boolean }>;
+            enabledSourceIds = new Set(
+              Object.entries(sources).filter(([, v]) => v.enabled).map(([k]) => k)
+            );
+          }
+        } catch (err) {
+          logger.warn("Failed to read agent config:", err);
+        }
+
+        const articles = await fetchAllSources(enabledSourceIds);
+        const enabledSourcesList = enabledSourceIds ? [...enabledSourceIds] : DATA_SOURCES.map((s) => s.id);
+
+        if (articles.length === 0) {
+          await updatePipelineHealth("empty", { articlesFetched: 0, signalsStored: 0 });
+          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
+          return { success: true, message: "Signal Scout completed (no articles found)" };
+        }
+
+        const { signals, tokenUsage } = await classifyArticles(articles, geminiApiKey.value());
+        const geminiCalls = Math.ceil(articles.length / BATCH_SIZE);
+
+        if (signals.length === 0) {
+          await updatePipelineHealth("empty", { articlesFetched: articles.length, signalsStored: 0 });
+          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
+          return { success: true, message: `Signal Scout completed: ${articles.length} articles, 0 relevant signals` };
+        }
+
+        const stored = await storeSignals(signals);
+        const outcome = stored > 0 ? "success" : "partial";
+        await updatePipelineHealth(outcome, { articlesFetched: articles.length, signalsStored: stored });
+        await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome, error: null, metrics: { articlesFetched: articles.length, signalsStored: stored, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + signals.length, firestoreWrites: stored + 3 }, sourcesUsed: enabledSourcesList });
+        return { success: true, message: `Signal Scout completed: ${articles.length} articles, ${stored} signals stored` };
+
+      } else if (agentId === "discovery-agent") {
+        const runStartedAt = new Date();
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+
+        const signalsSnap = await db.collection("signals").where("status", "in", ["approved", "edited"]).where("fetched_at", ">", cutoff).orderBy("fetched_at", "desc").get();
+        const signals = signalsSnap.docs.map((d) => ({
+          id: d.id, title: (d.data().title as string) ?? "", summary: (d.data().summary as string) ?? "",
+          signal_type: (d.data().signal_type as string) ?? "risk", risk_categories: (d.data().risk_categories as string[]) ?? [],
+          solution_ids: (d.data().solution_ids as string[]) ?? [], severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+          source_name: (d.data().source_name as string) ?? "", published_date: (d.data().published_date as string) ?? "",
+        }));
+
+        if (signals.length < 5) {
+          await writeAgentRunSummary({ agentId: "discovery-agent", startedAt: runStartedAt, outcome: "empty", error: null, metrics: { articlesFetched: signals.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 0 }, sourcesUsed: [] });
+          return { success: true, message: `Discovery Agent: insufficient signals (${signals.length} < 5)` };
+        }
+
+        const [risksSnap, solutionsSnap] = await Promise.all([db.collection("risks").get(), db.collection("solutions").get()]);
+        const risks = risksSnap.docs.map((d) => ({ id: d.id, name: (d.data().risk_name as string) ?? d.id, description: (d.data().summary as string) ?? "" }));
+        const solutions = solutionsSnap.docs.map((d) => ({ id: d.id, name: (d.data().solution_title as string) ?? d.id, description: (d.data().summary as string) ?? "" }));
+
+        const { proposals, tokenUsage } = await analyzeSignals(signals, risks, solutions, geminiApiKey.value());
+        const stored = await storeDiscoveryProposals(proposals);
+
+        await writeAgentRunSummary({ agentId: "discovery-agent", startedAt: runStartedAt, outcome: stored > 0 ? "success" : "empty", error: null, metrics: { articlesFetched: signals.length, signalsStored: stored, geminiCalls: 1, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 3, firestoreWrites: stored }, sourcesUsed: [] });
+        return { success: true, message: `Discovery Agent completed: ${stored} proposals from ${signals.length} signals` };
+
+      } else {
+        // validator-agent
+        const runStartedAt = new Date();
+        let totalTokensInput = 0, totalTokensOutput = 0, geminiCalls = 0, proposalsStored = 0;
+
+        const [risksSnap, solutionsSnap] = await Promise.all([db.collection("risks").get(), db.collection("solutions").get()]);
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+        const signalsSnap = await db.collection("signals").where("status", "in", ["approved", "edited"]).where("fetched_at", ">", cutoff).get();
+        const allSignals = signalsSnap.docs.map((d) => ({
+          id: d.id, title: (d.data().title as string) ?? "", summary: (d.data().summary as string) ?? "",
+          severity_hint: (d.data().severity_hint as string) ?? "Emerging", source_name: (d.data().source_name as string) ?? "",
+          published_date: (d.data().published_date as string) ?? "", risk_categories: (d.data().risk_categories as string[]) ?? [],
+          solution_ids: (d.data().solution_ids as string[]) ?? [],
+        }));
+
+        const riskMap = new Map(risksSnap.docs.map((d) => [d.id, d.data() as Record<string, unknown>]));
+
+        for (const riskDoc of risksSnap.docs) {
+          const riskId = riskDoc.id;
+          const relevantSignals = allSignals.filter((s) => s.risk_categories.includes(riskId));
+          const { result, tokenUsage } = await assessRisk(riskId, riskDoc.data() as Record<string, unknown>, relevantSignals, geminiApiKey.value());
+          totalTokensInput += tokenUsage.input; totalTokensOutput += tokenUsage.output; geminiCalls++;
+          if (result) {
+            await storeValidationProposal("risk", riskId, (riskDoc.data().risk_name as string) ?? riskId, result, relevantSignals.map((s) => s.id));
+            proposalsStored++;
+          }
+        }
+
+        for (const solutionDoc of solutionsSnap.docs) {
+          const solutionId = solutionDoc.id;
+          const parentRiskId = solutionDoc.data().parent_risk_id as string | undefined;
+          const parentRisk = parentRiskId ? (riskMap.get(parentRiskId) ?? null) : null;
+          const relevantSignals = allSignals.filter((s) => s.solution_ids.includes(solutionId));
+          const { result, tokenUsage } = await assessSolution(solutionId, solutionDoc.data() as Record<string, unknown>, parentRisk, relevantSignals, geminiApiKey.value());
+          totalTokensInput += tokenUsage.input; totalTokensOutput += tokenUsage.output; geminiCalls++;
+          if (result) {
+            await storeValidationProposal("solution", solutionId, (solutionDoc.data().solution_title as string) ?? solutionId, result, relevantSignals.map((s) => s.id));
+            proposalsStored++;
+          }
+        }
+
+        await writeAgentRunSummary({ agentId: "validator-agent", startedAt: runStartedAt, outcome: "success", error: null, metrics: { articlesFetched: allSignals.length, signalsStored: proposalsStored, geminiCalls, tokensInput: totalTokensInput, tokensOutput: totalTokensOutput, firestoreReads: 3, firestoreWrites: proposalsStored }, sourcesUsed: [] });
+        return { success: true, message: `Validator Agent completed: ${proposalsStored} proposals from ${geminiCalls} assessments` };
+      }
+    } catch (err) {
+      logger.error(`Manual trigger ${agentId} failed:`, err);
+      throw new HttpsError("internal", err instanceof Error ? err.message : "Agent run failed");
+    }
+  }
+);

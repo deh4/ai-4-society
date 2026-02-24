@@ -111,9 +111,9 @@ export default function ValidationTab() {
     const changeCount = selected ? Object.keys(selected.proposed_changes).length : 0;
 
     return (
-        <div className="flex h-[calc(100vh-105px)]">
-            {/* Left: proposal list */}
-            <div className="w-80 border-r border-white/10 flex flex-col">
+        <div className="flex flex-col md:flex-row h-[calc(100vh-105px)]">
+            {/* Left: proposal list (full width on mobile, hidden when detail selected) */}
+            <div className={`${selected ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-white/10 flex-col`}>
                 <div className="flex gap-1 p-3 border-b border-white/10">
                     {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
                         <button key={f} onClick={() => setFilter(f)}
@@ -146,85 +146,95 @@ export default function ValidationTab() {
                 </div>
             </div>
 
-            {/* Right: detail + editable changes */}
-            <div className="flex-1 overflow-y-auto p-6">
+            {/* Right: detail + editable changes (full-screen overlay on mobile) */}
+            <div className={`${selected ? 'flex' : 'hidden md:flex'} flex-1 flex-col overflow-y-auto`}>
                 {selected ? (
-                    <div className="max-w-2xl space-y-6">
-                        <div className="flex items-center gap-3">
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${selected.document_type === 'risk' ? 'bg-red-400/10 text-red-400' : 'bg-green-400/10 text-green-400'}`}>
-                                {selected.document_type.toUpperCase()}
-                            </span>
-                            <h2 className="text-xl font-bold">{selected.document_name}</h2>
-                            <span className="text-sm text-gray-500">{Math.round(selected.confidence * 100)}% confidence</span>
-                        </div>
+                    <div className="p-4 md:p-6">
+                        {/* Mobile back button */}
+                        <button
+                            onClick={() => setSelected(null)}
+                            className="mb-4 text-sm text-gray-400 hover:text-white transition-colors md:hidden"
+                        >
+                            &larr; Back to list
+                        </button>
 
-                        <div className="bg-white/5 rounded p-4">
-                            <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">Overall Reasoning</h3>
-                            <p className="text-sm text-gray-300">{selected.overall_reasoning}</p>
-                            <p className="text-[10px] text-gray-500 mt-2">{selected.supporting_signal_ids.length} supporting signals</p>
-                        </div>
+                        <div className="max-w-2xl space-y-6">
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${selected.document_type === 'risk' ? 'bg-red-400/10 text-red-400' : 'bg-green-400/10 text-green-400'}`}>
+                                    {selected.document_type.toUpperCase()}
+                                </span>
+                                <h2 className="text-xl font-bold">{selected.document_name}</h2>
+                                <span className="text-sm text-gray-500">{Math.round(selected.confidence * 100)}% confidence</span>
+                            </div>
 
-                        <div className="space-y-4">
-                            <h3 className="text-xs uppercase tracking-widest text-gray-400">{changeCount} Proposed Change{changeCount !== 1 ? 's' : ''}</h3>
-                            {Object.entries(selected.proposed_changes).map(([field, change]) => (
-                                <div key={field} className="bg-white/5 rounded p-4 space-y-2">
-                                    <div className="text-xs font-mono text-cyan-400">{field}</div>
-                                    <div className="flex gap-4 text-sm">
-                                        <div className="flex-1">
-                                            <div className="text-[10px] text-gray-500 mb-1">Current</div>
-                                            <div className="text-gray-400 bg-white/5 rounded p-2 text-xs font-mono whitespace-pre-wrap">
-                                                {formatValue(change.current_value)}
+                            <div className="bg-white/5 rounded p-4">
+                                <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">Overall Reasoning</h3>
+                                <p className="text-sm text-gray-300">{selected.overall_reasoning}</p>
+                                <p className="text-[10px] text-gray-500 mt-2">{selected.supporting_signal_ids.length} supporting signals</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-xs uppercase tracking-widest text-gray-400">{changeCount} Proposed Change{changeCount !== 1 ? 's' : ''}</h3>
+                                {Object.entries(selected.proposed_changes).map(([field, change]) => (
+                                    <div key={field} className="bg-white/5 rounded p-4 space-y-2">
+                                        <div className="text-xs font-mono text-cyan-400">{field}</div>
+                                        <div className="flex flex-col gap-3 text-sm md:flex-row md:gap-4">
+                                            <div className="flex-1">
+                                                <div className="text-[10px] text-gray-500 mb-1">Current</div>
+                                                <div className="text-gray-400 bg-white/5 rounded p-2 text-xs font-mono whitespace-pre-wrap">
+                                                    {formatValue(change.current_value)}
+                                                </div>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="text-[10px] text-gray-500 mb-1">Proposed (editable)</div>
+                                                <textarea
+                                                    value={typeof editedChanges[field] === 'object'
+                                                        ? JSON.stringify(editedChanges[field], null, 2)
+                                                        : String(editedChanges[field] ?? '')}
+                                                    onChange={(e) => {
+                                                        try {
+                                                            setEditedChanges((prev) => ({ ...prev, [field]: JSON.parse(e.target.value) }));
+                                                        } catch {
+                                                            setEditedChanges((prev) => ({ ...prev, [field]: e.target.value }));
+                                                        }
+                                                    }}
+                                                    rows={3}
+                                                    disabled={selected.status !== 'pending'}
+                                                    className="w-full bg-white/5 border border-white/10 rounded p-2 text-xs font-mono text-white resize-none focus:outline-none focus:border-cyan-400/50 disabled:opacity-50"
+                                                />
                                             </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="text-[10px] text-gray-500 mb-1">Proposed (editable)</div>
-                                            <textarea
-                                                value={typeof editedChanges[field] === 'object'
-                                                    ? JSON.stringify(editedChanges[field], null, 2)
-                                                    : String(editedChanges[field] ?? '')}
-                                                onChange={(e) => {
-                                                    try {
-                                                        setEditedChanges((prev) => ({ ...prev, [field]: JSON.parse(e.target.value) }));
-                                                    } catch {
-                                                        setEditedChanges((prev) => ({ ...prev, [field]: e.target.value }));
-                                                    }
-                                                }}
-                                                rows={3}
-                                                disabled={selected.status !== 'pending'}
-                                                className="w-full bg-white/5 border border-white/10 rounded p-2 text-xs font-mono text-white resize-none focus:outline-none focus:border-cyan-400/50 disabled:opacity-50"
-                                            />
-                                        </div>
+                                        <p className="text-[10px] text-gray-500">{change.reasoning}</p>
                                     </div>
-                                    <p className="text-[10px] text-gray-500">{change.reasoning}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        {error && <div className="text-red-400 text-sm bg-red-400/10 rounded p-3">{error}</div>}
-
-                        <div>
-                            <label className="text-xs text-gray-400 block mb-1">Admin Notes</label>
-                            <textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={3}
-                                className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white resize-none focus:outline-none focus:border-cyan-400/50" />
-                        </div>
-
-                        {selected.status === 'pending' && (
-                            <div className="flex gap-3">
-                                <button onClick={handleApprove} disabled={saving}
-                                    className="px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
-                                    {saving ? 'Applying…' : 'Approve & Apply'}
-                                </button>
-                                <button onClick={handleReject} disabled={saving}
-                                    className="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
-                                    Reject
-                                </button>
+                                ))}
                             </div>
-                        )}
-                        {selected.status !== 'pending' && (
-                            <span className={`text-sm px-3 py-1 rounded ${selected.status === 'approved' ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>
-                                {selected.status}
-                            </span>
-                        )}
+
+                            {error && <div className="text-red-400 text-sm bg-red-400/10 rounded p-3">{error}</div>}
+
+                            <div>
+                                <label className="text-xs text-gray-400 block mb-1">Admin Notes</label>
+                                <textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={3}
+                                    className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white resize-none focus:outline-none focus:border-cyan-400/50" />
+                            </div>
+
+                            {selected.status === 'pending' && (
+                                <div className="flex gap-3 flex-wrap">
+                                    <button onClick={handleApprove} disabled={saving}
+                                        className="px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
+                                        {saving ? 'Applying...' : 'Approve & Apply'}
+                                    </button>
+                                    <button onClick={handleReject} disabled={saving}
+                                        className="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
+                                        Reject
+                                    </button>
+                                </div>
+                            )}
+                            {selected.status !== 'pending' && (
+                                <span className={`text-sm px-3 py-1 rounded ${selected.status === 'approved' ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>
+                                    {selected.status}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 ) : (
                     <div className="flex items-center justify-center h-full text-gray-500 text-sm">Select a proposal to review</div>

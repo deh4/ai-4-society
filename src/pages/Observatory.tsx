@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -87,6 +88,8 @@ export default function Observatory() {
     const [agents, setAgents] = useState<AgentRegistry[]>([]);
     const [healthMap, setHealthMap] = useState<Record<string, AgentHealth>>({});
     const [selectedAgent, setSelectedAgent] = useState<AgentRegistry | null>(null);
+    const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
+    const [runResults, setRunResults] = useState<Record<string, { type: 'success' | 'error'; message: string }>>({});
 
     // Subscribe to agents collection
     useEffect(() => {
@@ -119,6 +122,22 @@ export default function Observatory() {
 
         return () => unsubscribes.forEach((u) => u());
     }, [agents]);
+
+    const triggerAgent = async (agentId: string) => {
+        setRunningAgents(prev => new Set(prev).add(agentId));
+        setRunResults(prev => { const next = { ...prev }; delete next[agentId]; return next; });
+
+        try {
+            const functions = getFunctions();
+            const trigger = httpsCallable<{ agentId: string }, { success: boolean; message: string }>(functions, 'triggerAgentRun');
+            const result = await trigger({ agentId });
+            setRunResults(prev => ({ ...prev, [agentId]: { type: 'success', message: result.data.message } }));
+        } catch (err) {
+            setRunResults(prev => ({ ...prev, [agentId]: { type: 'error', message: err instanceof Error ? err.message : 'Run failed' } }));
+        } finally {
+            setRunningAgents(prev => { const next = new Set(prev); next.delete(agentId); return next; });
+        }
+    };
 
     // Sort: active first, then by tier
     const sortedAgents = [...agents].sort((a, b) => {
@@ -158,25 +177,25 @@ export default function Observatory() {
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/admin')} className="text-sm text-gray-400 hover:text-white transition-colors">
+            <div className="flex flex-col gap-2 px-4 py-3 border-b border-white/10 md:flex-row md:items-center md:justify-between md:px-6 md:py-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <button onClick={() => navigate('/admin')} className="text-sm text-gray-400 hover:text-white transition-colors shrink-0">
                         &larr; Admin
                     </button>
-                    <h1 className="text-lg font-bold">Observatory</h1>
+                    <h1 className="text-lg font-bold shrink-0">Observatory</h1>
                     <span className="text-xs text-gray-500">
                         {activeCount} active agent{activeCount !== 1 ? 's' : ''}
                     </span>
                 </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-xs text-gray-500">{user?.email}</span>
-                    <button onClick={logOut} className="text-xs text-gray-400 hover:text-white transition-colors">
+                <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500 truncate">{user?.email}</span>
+                    <button onClick={logOut} className="text-xs text-gray-400 hover:text-white transition-colors shrink-0">
                         Sign Out
                     </button>
                 </div>
             </div>
 
-            <div className="p-6 max-w-7xl mx-auto space-y-6">
+            <div className="p-4 max-w-7xl mx-auto space-y-6 md:p-6">
                 {/* System Summary */}
                 <div className="bg-white/5 rounded-lg border border-white/10 p-4">
                     <h2 className="text-xs uppercase tracking-widest text-gray-400 mb-3">System Summary</h2>
@@ -202,6 +221,8 @@ export default function Observatory() {
                     {sortedAgents.map((agent) => {
                         const health = healthMap[agent.id] ?? null;
                         const status = computeAgentStatus(agent, health);
+                        const isRunning = runningAgents.has(agent.id);
+                        const runResult = runResults[agent.id];
 
                         return (
                             <div
@@ -219,11 +240,34 @@ export default function Observatory() {
                                     </span>
                                     <span className="text-[10px] text-gray-500">{STATUS_LABEL[status]}</span>
                                 </div>
-                                <div className="text-[10px] text-gray-500">
+                                <div className="text-[10px] text-gray-500 mb-2">
                                     {health?.lastRunAt
                                         ? `Last run ${timeAgo(health.lastRunAt.seconds)}`
                                         : 'No runs yet'}
                                 </div>
+
+                                {/* Run Now button (only for deployed agents) */}
+                                {agent.status !== 'not_deployed' && (
+                                    <div className="mt-2 pt-2 border-t border-white/5">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); triggerAgent(agent.id); }}
+                                            disabled={isRunning}
+                                            className="px-3 py-1 rounded text-[10px] font-medium bg-cyan-400/10 text-cyan-400 hover:bg-cyan-400/20 transition-colors disabled:opacity-50"
+                                        >
+                                            {isRunning ? (
+                                                <span className="flex items-center gap-1.5">
+                                                    <span className="w-3 h-3 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                                                    Running...
+                                                </span>
+                                            ) : 'Run Now'}
+                                        </button>
+                                        {runResult && (
+                                            <div className={`mt-1.5 text-[9px] ${runResult.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                                {runResult.message}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
