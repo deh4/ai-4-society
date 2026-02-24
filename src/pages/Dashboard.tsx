@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRisks } from '../store/RiskContext';
 import { useAuth } from '../store/AuthContext';
-import RiskOverview from '../components/dashboard/RiskOverview';
+import TimelineView from '../components/dashboard/TimelineView';
 import RiskDetailPanel from '../components/dashboard/RiskDetailPanel';
 
 export default function Dashboard() {
@@ -96,8 +96,9 @@ export default function Dashboard() {
                         </button>
                     </div>
                 ) : (
-                    <RiskOverview
+                    <TimelineView
                         risks={risks}
+                        solutions={solutions}
                         loading={loading}
                         error={error}
                         onSelectRisk={handleSelectRisk}
