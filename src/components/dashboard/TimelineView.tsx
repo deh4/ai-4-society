@@ -1,5 +1,5 @@
-import { useMemo, useRef } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import type { Risk, Solution } from '../../store/RiskContext';
 import { buildTimelineItems } from '../../lib/derivePeakYear';
 import type { TimelineItem } from '../../lib/derivePeakYear';
@@ -58,7 +58,19 @@ function handlePinClick(item: TimelineItem, onSelectRisk: (id: string) => void) 
 
 export default function TimelineView({ risks, solutions, loading, error, onSelectRisk }: TimelineViewProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const dragX = useMotionValue(0);
+    const [containerWidth, setContainerWidth] = useState(800);
+
+    const measureContainer = useCallback(() => {
+        if (containerRef.current) {
+            setContainerWidth(containerRef.current.clientWidth);
+        }
+    }, []);
+
+    useEffect(() => {
+        measureContainer();
+        window.addEventListener('resize', measureContainer);
+        return () => window.removeEventListener('resize', measureContainer);
+    }, [measureContainer]);
 
     const items = useMemo(
         () => buildTimelineItems(risks, solutions),
@@ -101,9 +113,9 @@ export default function TimelineView({ risks, solutions, loading, error, onSelec
             <div className="hidden md:block overflow-hidden" ref={containerRef}>
                 <motion.div
                     drag="x"
-                    dragConstraints={{ left: -(totalWidth - 800), right: 100 }}
+                    dragConstraints={{ left: -(totalWidth - containerWidth), right: 0 }}
                     dragElastic={0.1}
-                    style={{ x: dragX, width: totalWidth }}
+                    style={{ width: totalWidth }}
                     className="relative cursor-grab active:cursor-grabbing"
                 >
                     {/* Risk pins (above axis) */}
