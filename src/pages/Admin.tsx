@@ -3,10 +3,13 @@ import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTi
 import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { canAccessTab } from '../lib/roles';
+import type { UserRole } from '../lib/roles';
 import PipelineHealth from '../components/PipelineHealth';
 import DiscoveryTab from '../components/admin/DiscoveryTab';
 import ValidationTab from '../components/admin/ValidationTab';
 import MilestonesTab from '../components/admin/MilestonesTab';
+import UsersTab from '../components/admin/UsersTab';
 
 type SignalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
 
@@ -50,18 +53,39 @@ const STATUS_COLORS: Record<SignalStatus, string> = {
 };
 
 export default function Admin() {
-    const { user, logOut } = useAuth();
+    const { user, userDoc, logOut } = useAuth();
     const navigate = useNavigate();
     const [allSignals, setAllSignals] = useState<Signal[]>([]);
     const [filter, setFilter] = useState<SignalStatus | 'all'>('pending');
     const [selected, setSelected] = useState<Signal | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
-    const [adminTab, setAdminTab] = useState<'risk-signals' | 'solution-signals' | 'discovery' | 'validation' | 'milestones'>('risk-signals');
+    type AdminTab = 'risk-signals' | 'solution-signals' | 'discovery' | 'validation' | 'milestones' | 'users';
+
+    const TAB_CONFIG: Record<AdminTab, { label: string; accent: string }> = {
+        'risk-signals': { label: 'Risk Signals', accent: 'border-cyan-400' },
+        'solution-signals': { label: 'Solution Signals', accent: 'border-cyan-400' },
+        'discovery': { label: 'Discovery', accent: 'border-cyan-400' },
+        'validation': { label: 'Validation', accent: 'border-cyan-400' },
+        'milestones': { label: 'Milestones', accent: 'border-yellow-400' },
+        'users': { label: 'Users', accent: 'border-emerald-400' },
+    };
+
+    const ALL_TABS: AdminTab[] = ['risk-signals', 'solution-signals', 'discovery', 'validation', 'milestones', 'users'];
+    const userRoles: UserRole[] = userDoc?.roles ?? [];
+    const visibleTabs = ALL_TABS.filter(tab => canAccessTab(userRoles, tab));
+
+    const [adminTab, setAdminTab] = useState<AdminTab>('risk-signals');
     const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
     const [bulkRejectDay, setBulkRejectDay] = useState<string | null>(null);
     const [bulkRejectNote, setBulkRejectNote] = useState('');
     const [bulkRejecting, setBulkRejecting] = useState(false);
+
+    useEffect(() => {
+        if (visibleTabs.length > 0 && !visibleTabs.includes(adminTab)) {
+            setAdminTab(visibleTabs[0]!);
+        }
+    }, [visibleTabs, adminTab]);
 
     // Client-side filter by signal_type — avoids composite index dependency
     const signalTypeValues = adminTab === 'risk-signals' ? ['risk', 'both'] : ['solution', 'both'];
@@ -198,38 +222,22 @@ export default function Admin() {
 
             {/* Tabs — horizontally scrollable on mobile */}
             <div className="flex gap-4 px-4 border-b border-white/10 overflow-x-auto md:gap-6 md:px-6">
-                <button
-                    onClick={() => setAdminTab('risk-signals')}
-                    className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${adminTab === 'risk-signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    Risk Signals
-                    <span className="ml-2 text-[10px] text-gray-500">{adminTab === 'risk-signals' ? signals.length : ''}</span>
-                </button>
-                <button
-                    onClick={() => setAdminTab('solution-signals')}
-                    className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${adminTab === 'solution-signals' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    Solution Signals
-                    <span className="ml-2 text-[10px] text-gray-500">{adminTab === 'solution-signals' ? signals.length : ''}</span>
-                </button>
-                <button
-                    onClick={() => setAdminTab('discovery')}
-                    className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${adminTab === 'discovery' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    Discovery
-                </button>
-                <button
-                    onClick={() => setAdminTab('validation')}
-                    className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${adminTab === 'validation' ? 'border-cyan-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    Validation
-                </button>
-                <button
-                    onClick={() => setAdminTab('milestones')}
-                    className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${adminTab === 'milestones' ? 'border-yellow-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    Milestones
-                </button>
+                {visibleTabs.map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setAdminTab(tab)}
+                        className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${
+                            adminTab === tab
+                                ? `${TAB_CONFIG[tab].accent} text-white`
+                                : 'border-transparent text-gray-500 hover:text-gray-300'
+                        }`}
+                    >
+                        {TAB_CONFIG[tab].label}
+                        {(tab === 'risk-signals' || tab === 'solution-signals') && adminTab === tab && (
+                            <span className="ml-2 text-[10px] text-gray-500">{signals.length}</span>
+                        )}
+                    </button>
+                ))}
                 <button
                     onClick={() => navigate('/observatory')}
                     className="py-3 text-sm transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-300 whitespace-nowrap"
@@ -248,6 +256,10 @@ export default function Admin() {
 
             {adminTab === 'milestones' && (
                 <MilestonesTab />
+            )}
+
+            {adminTab === 'users' && (
+                <UsersTab />
             )}
 
             {(adminTab === 'risk-signals' || adminTab === 'solution-signals') && (
