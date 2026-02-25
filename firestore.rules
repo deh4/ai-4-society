@@ -11,6 +11,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Milestones: public read, admin write
+    match /milestones/{milestoneId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Signals: public read for approved/edited, admin read for all, admin write
     match /signals/{signalId} {
       allow read: if resource.data.status in ['approved', 'edited']

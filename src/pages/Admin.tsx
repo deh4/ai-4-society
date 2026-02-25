@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import PipelineHealth from '../components/PipelineHealth';
 import DiscoveryTab from '../components/admin/DiscoveryTab';
 import ValidationTab from '../components/admin/ValidationTab';
+import MilestonesTab from '../components/admin/MilestonesTab';
 
 type SignalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
 
@@ -56,7 +57,7 @@ export default function Admin() {
     const [selected, setSelected] = useState<Signal | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
-    const [adminTab, setAdminTab] = useState<'risk-signals' | 'solution-signals' | 'discovery' | 'validation'>('risk-signals');
+    const [adminTab, setAdminTab] = useState<'risk-signals' | 'solution-signals' | 'discovery' | 'validation' | 'milestones'>('risk-signals');
     const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
     const [bulkRejectDay, setBulkRejectDay] = useState<string | null>(null);
     const [bulkRejectNote, setBulkRejectNote] = useState('');
@@ -224,6 +225,12 @@ export default function Admin() {
                     Validation
                 </button>
                 <button
+                    onClick={() => setAdminTab('milestones')}
+                    className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${adminTab === 'milestones' ? 'border-yellow-400 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                >
+                    Milestones
+                </button>
+                <button
                     onClick={() => navigate('/observatory')}
                     className="py-3 text-sm transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-300 whitespace-nowrap"
                 >
@@ -237,6 +244,10 @@ export default function Admin() {
 
             {adminTab === 'validation' && (
                 <ValidationTab />
+            )}
+
+            {adminTab === 'milestones' && (
+                <MilestonesTab />
             )}
 
             {(adminTab === 'risk-signals' || adminTab === 'solution-signals') && (
