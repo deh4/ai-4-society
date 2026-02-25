@@ -9,6 +9,27 @@ interface SignalCardProps {
 }
 
 export default function SignalCard({ item, risk, solution, onTuneIn }: SignalCardProps) {
+    if (item.type === 'milestone') {
+        return (
+            <div className="flex flex-col gap-4 p-6 font-mono">
+                <div>
+                    <div className="text-[10px] uppercase tracking-widest text-gray-600 mb-1">
+                        MILESTONE
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold tracking-widest text-yellow-400">
+                            {item.peakYear}
+                        </span>
+                        <span className="text-base text-white">{item.name}</span>
+                    </div>
+                </div>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                    {item.description}
+                </p>
+            </div>
+        );
+    }
+
     const isRisk = item.type === 'risk';
     const summary = isRisk ? risk?.summary : solution?.summary;
     const category = isRisk ? risk?.category : solution?.solution_type;

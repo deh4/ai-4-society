@@ -6,7 +6,7 @@ import RiskDetailPanel from '../components/dashboard/RiskDetailPanel';
 
 export default function Dashboard() {
     const { riskId } = useParams<{ riskId?: string }>();
-    const { risks, solutions, loading, error } = useRisks();
+    const { risks, solutions, milestones, loading, error } = useRisks();
     const { user, isAdmin, signIn, logOut } = useAuth();
     const navigate = useNavigate();
 
@@ -99,6 +99,7 @@ export default function Dashboard() {
                     <TimelineView
                         risks={risks}
                         solutions={solutions}
+                        milestones={milestones}
                         loading={loading}
                         error={error}
                         onSelectRisk={handleSelectRisk}

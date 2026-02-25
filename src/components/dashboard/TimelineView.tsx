@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
-import type { Risk, Solution } from '../../store/RiskContext';
+import type { Risk, Solution, Milestone } from '../../store/RiskContext';
 import { buildTimelineItems } from '../../lib/derivePeakYear';
 import type { TimelineItem } from '../../lib/derivePeakYear';
 import FrequencyStrip, { yearToPx, YEAR_WIDTH_PX } from './FrequencyStrip';
@@ -10,6 +10,7 @@ import TimelineLegend from './TimelineLegend';
 interface TimelineViewProps {
     risks: Risk[];
     solutions: Solution[];
+    milestones: Milestone[];
     loading: boolean;
     error: string | null;
     onSelectRisk: (id: string) => void;
@@ -17,7 +18,7 @@ interface TimelineViewProps {
 
 const APPROACH_THRESHOLD_PX = YEAR_WIDTH_PX;
 
-export default function TimelineView({ risks, solutions, loading, error, onSelectRisk }: TimelineViewProps) {
+export default function TimelineView({ risks, solutions, milestones, loading, error, onSelectRisk }: TimelineViewProps) {
     const [snapTarget, setSnapTarget] = useState<TimelineItem | null>(null);
     const [screenState, setScreenState] = useState<ScreenState>('idle');
     const [activeIndex, setActiveIndex] = useState(0);
@@ -25,8 +26,8 @@ export default function TimelineView({ risks, solutions, loading, error, onSelec
     screenStateRef.current = screenState;
 
     const items = useMemo(
-        () => buildTimelineItems(risks, solutions),
-        [risks, solutions]
+        () => buildTimelineItems(risks, solutions, milestones),
+        [risks, solutions, milestones]
     );
 
     const itemsByYear = useMemo(() => {
@@ -111,6 +112,7 @@ export default function TimelineView({ risks, solutions, loading, error, onSelec
 
     const handleTuneIn = useCallback(() => {
         if (!activeItem) return;
+        if (activeItem.type === 'milestone') return; // milestones have no detail page
         if (activeItem.type === 'risk') {
             onSelectRisk(activeItem.id);
         } else if (activeItem.parentRiskId) {

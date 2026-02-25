@@ -1,4 +1,4 @@
-import type { Risk, Solution } from '../store/RiskContext';
+import type { Risk, Solution, Milestone } from '../store/RiskContext';
 
 const VELOCITY_OFFSET: Record<string, number> = {
     Critical: 0,
@@ -26,9 +26,10 @@ export interface TimelineItem {
     name: string;
     score: number;
     peakYear: number;
-    type: 'risk' | 'solution';
+    type: 'risk' | 'solution' | 'milestone';
     velocity: string;
     parentRiskId?: string;
+    description?: string;
 }
 
 export function deriveRiskPeakYear(risk: Risk): number {
@@ -43,9 +44,28 @@ export function deriveSolutionPeakYear(solution: Solution): number {
     return clamp(2026 + base + trend, 2026, 2038);
 }
 
-export function buildTimelineItems(risks: Risk[], solutions: Solution[]): TimelineItem[] {
+function milestoneToTimelineItem(m: Milestone): TimelineItem {
+    return {
+        id: m.id,
+        label: m.id,
+        name: m.title,
+        score: 0,
+        peakYear: m.year,
+        type: 'milestone',
+        velocity: '',
+        description: m.description,
+    };
+}
+
+export function buildTimelineItems(risks: Risk[], solutions: Solution[], milestones: Milestone[]): TimelineItem[] {
     const items: TimelineItem[] = [];
 
+    // Milestones (historical)
+    for (const milestone of milestones) {
+        items.push(milestoneToTimelineItem(milestone));
+    }
+
+    // Risks (future)
     for (const risk of risks) {
         items.push({
             id: risk.id,
@@ -58,6 +78,7 @@ export function buildTimelineItems(risks: Risk[], solutions: Solution[]): Timeli
         });
     }
 
+    // Solutions (future)
     for (const solution of solutions) {
         items.push({
             id: solution.id,

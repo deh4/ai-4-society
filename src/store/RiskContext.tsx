@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react';
 import { collection, getDocs, query, where, onSnapshot, type QuerySnapshot, type DocumentData } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { AI_MILESTONES } from '../lib/milestones';
 
 export interface SignalEvidence {
     date: string;
@@ -60,9 +61,17 @@ interface LiveSignal {
     risk_categories: string[];
 }
 
+export interface Milestone {
+    id: string;
+    year: number;
+    title: string;
+    description: string;
+}
+
 interface RiskContextType {
     risks: Risk[];
     solutions: Solution[];
+    milestones: Milestone[];
     loading: boolean;
     error: string | null;
 }
@@ -72,6 +81,7 @@ const RiskContext = createContext<RiskContextType | undefined>(undefined);
 export function RiskProvider({ children }: { children: ReactNode }) {
     const [baseRisks, setBaseRisks] = useState<Risk[]>([]);
     const [solutions, setSolutions] = useState<Solution[]>([]);
+    const [milestones, setMilestones] = useState<Milestone[]>([]);
     const [liveSignals, setLiveSignals] = useState<LiveSignal[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -93,6 +103,14 @@ export function RiskProvider({ children }: { children: ReactNode }) {
                     fetchedSolutions.push({ id: doc.id, ...doc.data() } as Solution);
                 });
                 setSolutions(fetchedSolutions);
+
+                const milestonesSnapshot: QuerySnapshot<DocumentData> = await getDocs(collection(db, 'milestones'));
+                const fetchedMilestones: Milestone[] = [];
+                milestonesSnapshot.forEach((doc) => {
+                    fetchedMilestones.push({ id: doc.id, ...doc.data() } as Milestone);
+                });
+                // Fall back to hardcoded milestones if Firestore collection is empty
+                setMilestones(fetchedMilestones.length > 0 ? fetchedMilestones : AI_MILESTONES);
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : 'Failed to fetch data';
                 console.error("Error fetching data:", err);
@@ -155,7 +173,7 @@ export function RiskProvider({ children }: { children: ReactNode }) {
     }, [baseRisks, liveSignals]);
 
     return (
-        <RiskContext.Provider value={{ risks, solutions, loading, error }}>
+        <RiskContext.Provider value={{ risks, solutions, milestones, loading, error }}>
             {children}
         </RiskContext.Provider>
     );

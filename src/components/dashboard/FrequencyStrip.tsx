@@ -10,16 +10,25 @@ interface FrequencyStripProps {
     activeItemId: string | null;
 }
 
-const MIN_YEAR = 2026;
+const MIN_YEAR = 1950;
 const MAX_YEAR = 2038;
-const YEAR_COUNT = MAX_YEAR - MIN_YEAR + 1;
+const PIVOT_YEAR = 2026;
 export const YEAR_WIDTH_PX = 120;
+const HISTORY_YEAR_WIDTH_PX = 30;
 const CURRENT_YEAR = 2026;
 const SNAP_THRESHOLD_PX = 30;
 const FADE_RANGE = 5;
 
+// Historical section is compressed, future section is full width
+const HISTORY_WIDTH = (PIVOT_YEAR - MIN_YEAR) * HISTORY_YEAR_WIDTH_PX;
+const FUTURE_WIDTH = (MAX_YEAR - PIVOT_YEAR + 1) * YEAR_WIDTH_PX;
+const TOTAL_WIDTH = HISTORY_WIDTH + FUTURE_WIDTH;
+
 export function yearToPx(year: number): number {
-    return (year - MIN_YEAR) * YEAR_WIDTH_PX + YEAR_WIDTH_PX / 2;
+    if (year < PIVOT_YEAR) {
+        return (year - MIN_YEAR) * HISTORY_YEAR_WIDTH_PX + HISTORY_YEAR_WIDTH_PX / 2;
+    }
+    return HISTORY_WIDTH + (year - PIVOT_YEAR) * YEAR_WIDTH_PX + YEAR_WIDTH_PX / 2;
 }
 
 function computeTickPositions(items: TimelineItem[]): Map<string, number> {
@@ -58,7 +67,7 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
     const initializedRef = useRef(false);
     const dragX = useMotionValue(0);
 
-    const totalWidth = YEAR_COUNT * YEAR_WIDTH_PX;
+    const totalWidth = TOTAL_WIDTH;
 
     const tickPositions = useMemo(() => computeTickPositions(items), [items]);
 
@@ -115,7 +124,11 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
 
     const years = useMemo(() => {
         const arr: number[] = [];
-        for (let y = MIN_YEAR; y <= MAX_YEAR; y++) arr.push(y);
+        for (let y = MIN_YEAR; y <= MAX_YEAR; y++) {
+            // Before 2026: show every 10 years only (compressed section)
+            // From 2026+: show every year (full-width section)
+            if (y < PIVOT_YEAR ? y % 10 === 0 : true) arr.push(y);
+        }
         return arr;
     }, []);
 
@@ -160,6 +173,31 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
                                         {item.label}
                                     </span>
                                     <div className={`w-0.5 ${isActive ? 'h-[18px] bg-red-400 shadow-[0_0_6px_rgba(239,68,68,0.6)]' : 'h-3 bg-red-500/40'} rounded-full transition-all`} />
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Milestone ticks (on axis) */}
+                    <div className="relative h-4">
+                        {items.filter(it => it.type === 'milestone').map((item) => {
+                            const px = tickPositions.get(item.id) ?? 0;
+                            const isActive = item.id === activeItemId;
+                            return (
+                                <button
+                                    key={item.id}
+                                    aria-label={`Milestone ${item.name}`}
+                                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center"
+                                    style={{
+                                        left: px,
+                                        opacity: calcTickOpacity(px, centerPx),
+                                    }}
+                                    onClick={() => {
+                                        animate(dragX, -(px - containerWidth / 2), { type: 'spring', stiffness: 300, damping: 30 });
+                                        onSnap(item);
+                                    }}
+                                >
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.6)]' : 'bg-yellow-500/50'} transition-all`} />
                                 </button>
                             );
                         })}
