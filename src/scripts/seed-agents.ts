@@ -32,7 +32,7 @@ const agents: Record<string, AgentRegistryDoc> = {
         deployedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
         functionName: 'signalScout',
         schedule: 'every 6 hours',
-        overseerRole: 'Source Sentinel',
+        overseerRole: 'Signal Reviewer',
     },
     'discovery-agent': {
         name: 'Discovery Agent',
@@ -42,7 +42,7 @@ const agents: Record<string, AgentRegistryDoc> = {
         deployedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
         functionName: 'discoveryAgent',
         schedule: '0 10 * * 0',
-        overseerRole: 'Causality Cartographer',
+        overseerRole: 'Discovery Reviewer',
     },
     'validator-agent': {
         name: 'Validator Agent',
@@ -52,7 +52,7 @@ const agents: Record<string, AgentRegistryDoc> = {
         deployedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
         functionName: 'validatorAgent',
         schedule: '0 9 * * 1',
-        overseerRole: 'Severity Steward',
+        overseerRole: 'Scoring Reviewer',
     },
     'orchestrator': {
         name: 'Orchestrator',
@@ -62,7 +62,7 @@ const agents: Record<string, AgentRegistryDoc> = {
         deployedAt: null,
         functionName: null,
         schedule: null,
-        overseerRole: 'Observatory Steward',
+        overseerRole: 'Lead',
     },
 };
 
