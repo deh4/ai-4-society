@@ -17,6 +17,29 @@ import { storeValidationProposal } from "./validator-agent/store.js";
 
 initializeApp();
 
+/** Check if the calling user has one of the required roles */
+async function requireRole(uid: string, requiredRoles: string[]): Promise<void> {
+    const db = getFirestore();
+    const userSnap = await db.collection('users').doc(uid).get();
+
+    if (!userSnap.exists) {
+        // Fallback: check legacy admins collection during migration
+        const adminSnap = await db.collection('admins').doc(uid).get();
+        if (adminSnap.exists) return; // Legacy admin, allow
+        throw new HttpsError('permission-denied', 'No user profile found');
+    }
+
+    const userData = userSnap.data()!;
+    if (userData.status !== 'active') {
+        throw new HttpsError('permission-denied', 'User account is not active');
+    }
+
+    const userRoles = userData.roles as string[];
+    if (!requiredRoles.some(r => userRoles.includes(r))) {
+        throw new HttpsError('permission-denied', `Requires one of: ${requiredRoles.join(', ')}`);
+    }
+}
+
 // ─── Signal Scout Pipeline ──────────────────────────────────────────────────
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -546,6 +569,7 @@ export const applyValidationProposal = onCall(
     // Auth check
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
     const uid = request.auth.uid;
+    await requireRole(uid, ['scoring-reviewer', 'lead']);
 
     const proposalId = request.data.proposalId as string | undefined;
     if (!proposalId) throw new HttpsError("invalid-argument", "proposalId required");
@@ -617,6 +641,15 @@ export const applyValidationProposal = onCall(
         reviewed_by: uid,
       });
 
+      // Increment reviewer's totalReviews counter
+      const reviewerRef = db.collection('users').doc(uid);
+      const reviewerSnap = await tx.get(reviewerRef);
+      if (reviewerSnap.exists) {
+          tx.update(reviewerRef, {
+              totalReviews: FieldValue.increment(1),
+          });
+      }
+
       return { success: true, changesApplied: changeLog.length };
     });
   }
@@ -628,6 +661,7 @@ export const triggerAgentRun = onCall(
   { memory: "512MiB", timeoutSeconds: 540, secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+    await requireRole(request.auth.uid, ['lead']);
 
     const agentId = request.data.agentId as string | undefined;
     if (!agentId) throw new HttpsError("invalid-argument", "agentId required");
