@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, where, type QueryConstraint } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, where, increment, type QueryConstraint } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
 
@@ -81,6 +81,11 @@ export default function DiscoveryTab() {
                 admin_notes: adminNotes || null,
                 new_document_id: newDocId.trim(),
             });
+            // Increment reviewer's totalReviews
+            if (user?.uid) {
+                const userRef = doc(db, 'users', user.uid);
+                updateDoc(userRef, { totalReviews: increment(1) }).catch(() => {});
+            }
             setSelected(null);
         } finally {
             setSaving(false);
@@ -98,6 +103,11 @@ export default function DiscoveryTab() {
                 reviewed_by: user.uid,
                 admin_notes: adminNotes,
             });
+            // Increment reviewer's totalReviews
+            if (user?.uid) {
+                const userRef = doc(db, 'users', user.uid);
+                updateDoc(userRef, { totalReviews: increment(1) }).catch(() => {});
+            }
             setSelected(null);
         } finally {
             setSaving(false);

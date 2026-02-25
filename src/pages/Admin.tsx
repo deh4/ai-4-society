@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp, type QueryConstraint } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp, increment, type QueryConstraint } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -145,6 +145,11 @@ export default function Admin() {
                 reviewed_at: serverTimestamp(),
                 reviewed_by: user?.uid ?? null,
             });
+            // Increment reviewer's totalReviews
+            if (user?.uid) {
+                const userRef = doc(db, 'users', user.uid);
+                updateDoc(userRef, { totalReviews: increment(1) }).catch(() => {});
+            }
             setSelected(null);
             setAdminNotes('');
         } finally {
@@ -180,6 +185,11 @@ export default function Admin() {
                     reviewed_by: user?.uid ?? null,
                 })
             ));
+            // Increment reviewer's totalReviews by number of rejected signals
+            if (user?.uid) {
+                const userRef = doc(db, 'users', user.uid);
+                updateDoc(userRef, { totalReviews: increment(pendingInGroup.length) }).catch(() => {});
+            }
             setBulkRejectDay(null);
             setBulkRejectNote('');
             if (selected && pendingInGroup.some(s => s.id === selected.id)) {
