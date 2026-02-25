@@ -26,7 +26,7 @@ export default function App() {
                 </ProtectedRoute>
               } />
               <Route path="/observatory" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['lead']}>
                   <Observatory />
                 </ProtectedRoute>
               } />
