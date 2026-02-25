@@ -1,5 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../store/AuthContext';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import type { UserRole } from '../lib/roles';
 import sourceSentinelAvatar from '../assets/source-sentinel.png';
 import causalityCartographerAvatar from '../assets/causality-cartographer.png';
 import severityStewardAvatar from '../assets/severity-steward.png';
@@ -116,6 +120,65 @@ const ROLES: Role[] = [
 export default function Contribute() {
     const navigate = useNavigate();
     const [openRole, setOpenRole] = useState<string | null>(null);
+    const { user, userDoc, signIn } = useAuth();
+    const [applying, setApplying] = useState(false);
+    const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
+    const [applicationNote, setApplicationNote] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [existingStatus, setExistingStatus] = useState<string | null>(null);
+
+    // Check if user already has a /users doc
+    useEffect(() => {
+        if (!user) { setExistingStatus(null); return; }
+        if (userDoc) {
+            setExistingStatus(userDoc.status);
+        }
+    }, [user, userDoc]);
+
+    const handleApply = async (roleId: string) => {
+        if (!user) {
+            await signIn();
+            return;
+        }
+        if (existingStatus) return; // Already applied or active
+        setSelectedRoles([roleId as UserRole]);
+        setApplying(true);
+    };
+
+    const toggleApplyRole = (role: UserRole) => {
+        setSelectedRoles(prev =>
+            prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+        );
+    };
+
+    const submitApplication = async () => {
+        if (!user || selectedRoles.length === 0 || !applicationNote.trim()) return;
+        setSubmitting(true);
+        try {
+            await setDoc(doc(db, 'users', user.uid), {
+                email: user.email ?? '',
+                displayName: user.displayName ?? '',
+                photoURL: user.photoURL ?? null,
+                roles: [],
+                status: 'pending',
+                appliedRoles: selectedRoles,
+                applicationNote: applicationNote.trim(),
+                appliedAt: serverTimestamp(),
+                approvedAt: null,
+                approvedBy: null,
+                lastActiveAt: null,
+                totalReviews: 0,
+            });
+            setSubmitted(true);
+            setApplying(false);
+        } catch (err) {
+            console.error('Application failed:', err);
+            alert('Failed to submit application. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#0a0f1a] text-white flex flex-col">
@@ -268,6 +331,37 @@ export default function Contribute() {
                                             <div className="text-xs text-gray-500 bg-white/5 rounded p-3">
                                                 <strong className="text-gray-400">If you're unavailable:</strong> {role.ifInactive}
                                             </div>
+
+                                            {/* Apply button */}
+                                            <div className="pt-2">
+                                                {!user ? (
+                                                    <button
+                                                        onClick={() => handleApply(role.id)}
+                                                        className="w-full px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded transition-colors"
+                                                    >
+                                                        Sign in to Apply
+                                                    </button>
+                                                ) : existingStatus === 'active' ? (
+                                                    <div className="text-xs text-green-400 bg-green-400/10 rounded p-2 text-center">
+                                                        You're an active contributor
+                                                    </div>
+                                                ) : existingStatus === 'pending' ? (
+                                                    <div className="text-xs text-yellow-400 bg-yellow-400/10 rounded p-2 text-center">
+                                                        Your application is pending review
+                                                    </div>
+                                                ) : existingStatus === 'disabled' ? (
+                                                    <div className="text-xs text-red-400 bg-red-400/10 rounded p-2 text-center">
+                                                        Your access has been revoked
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleApply(role.id)}
+                                                        className="w-full px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded transition-colors"
+                                                    >
+                                                        Apply for this Role
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -300,26 +394,133 @@ export default function Contribute() {
 
                     {/* CTA */}
                     <div className="bg-cyan-950/30 border border-cyan-800/50 rounded-lg p-6 text-center">
-                        <h2 className="text-xl font-bold text-cyan-300 mb-2">Interested?</h2>
-                        <p className="text-sm text-gray-400 mb-4">
-                            We're building the onboarding platform now. Reach out and we'll get you started.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                            <a
-                                href="mailto:contribute@ai4society.org"
-                                className="px-8 py-3 border-2 border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-white text-sm font-semibold tracking-wider uppercase rounded transition-colors"
-                            >
-                                Get in touch
-                            </a>
+                        {!user ? (
+                            <>
+                                <h2 className="text-xl font-bold text-cyan-300 mb-2">Ready to contribute?</h2>
+                                <p className="text-sm text-gray-400 mb-4">
+                                    Sign in with Google and apply for the role that fits you best.
+                                </p>
+                                <button
+                                    onClick={signIn}
+                                    className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold tracking-wider uppercase rounded transition-colors"
+                                >
+                                    Sign in with Google
+                                </button>
+                            </>
+                        ) : submitted || existingStatus === 'pending' ? (
+                            <>
+                                <h2 className="text-xl font-bold text-yellow-300 mb-2">Application Pending</h2>
+                                <p className="text-sm text-gray-400">
+                                    We've received your application. A Lead will review it shortly.
+                                </p>
+                            </>
+                        ) : existingStatus === 'active' ? (
+                            <>
+                                <h2 className="text-xl font-bold text-green-300 mb-2">You're a contributor!</h2>
+                                <p className="text-sm text-gray-400 mb-4">
+                                    Head to the admin console to start reviewing.
+                                </p>
+                                <button
+                                    onClick={() => navigate('/admin')}
+                                    className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold tracking-wider uppercase rounded transition-colors"
+                                >
+                                    Go to Admin Console
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <h2 className="text-xl font-bold text-cyan-300 mb-2">Ready to contribute?</h2>
+                                <p className="text-sm text-gray-400 mb-4">
+                                    Pick a role above and apply — it takes less than a minute.
+                                </p>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Application Form Overlay */}
+                {applying && (
+                    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+                        <div className="bg-[#0d1526] border border-[#1a2035] rounded-lg max-w-md w-full p-6 space-y-4">
+                            <h3 className="text-lg font-bold text-white">Apply to Contribute</h3>
+                            <p className="text-sm text-gray-400">
+                                Select the role(s) you'd like and tell us why you're interested.
+                            </p>
+
+                            {/* Role selection */}
+                            <div className="space-y-2">
+                                <div className="text-[10px] uppercase tracking-wider text-gray-500">Roles</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {ROLES.map(role => (
+                                        <button
+                                            key={role.id}
+                                            onClick={() => toggleApplyRole(role.id as UserRole)}
+                                            className={`text-xs px-3 py-1.5 rounded border transition-colors ${
+                                                selectedRoles.includes(role.id as UserRole)
+                                                    ? 'bg-cyan-400/10 text-cyan-400 border-cyan-400/30'
+                                                    : 'border-white/10 text-gray-500 hover:text-gray-300'
+                                            }`}
+                                        >
+                                            {role.title}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Motivation */}
+                            <div>
+                                <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">
+                                    Why are you interested? (2-3 sentences)
+                                </div>
+                                <textarea
+                                    value={applicationNote}
+                                    onChange={e => setApplicationNote(e.target.value)}
+                                    placeholder="I'm interested because..."
+                                    className="w-full bg-white/5 border border-white/10 rounded p-3 text-sm text-white placeholder-gray-600 resize-none"
+                                    rows={3}
+                                    maxLength={500}
+                                />
+                                <div className="text-[10px] text-gray-600 text-right">{applicationNote.length}/500</div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={submitApplication}
+                                    disabled={submitting || selectedRoles.length === 0 || !applicationNote.trim()}
+                                    className="flex-1 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-sm font-semibold rounded transition-colors"
+                                >
+                                    {submitting ? 'Submitting...' : 'Submit Application'}
+                                </button>
+                                <button
+                                    onClick={() => setApplying(false)}
+                                    className="px-4 py-2.5 border border-white/10 text-gray-400 hover:text-white text-sm rounded transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success message */}
+                {submitted && (
+                    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+                        <div className="bg-[#0d1526] border border-[#1a2035] rounded-lg max-w-md w-full p-6 text-center space-y-4">
+                            <div className="text-4xl">&#10003;</div>
+                            <h3 className="text-lg font-bold text-white">Application Submitted</h3>
+                            <p className="text-sm text-gray-400">
+                                A Lead will review your application and get back to you. You'll gain access as soon as you're approved.
+                            </p>
                             <button
-                                onClick={() => navigate('/dashboard')}
-                                className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold tracking-wider uppercase rounded transition-colors"
+                                onClick={() => setSubmitted(false)}
+                                className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded transition-colors"
                             >
-                                Explore the Observatory
+                                Got it
                             </button>
                         </div>
                     </div>
-                </div>
+                )}
             </main>
 
             <footer className="py-6 border-t border-[#1a2035] text-center">
