@@ -53,37 +53,31 @@ function calcTickOpacity(tickPx: number, centerPx: number): number {
 
 export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap, activeItemId }: FrequencyStripProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [containerWidth, setContainerWidth] = useState(800);
-    const [initialized, setInitialized] = useState(false);
+    const [containerWidth, setContainerWidth] = useState(0);
     const [centerPx, setCenterPx] = useState(yearToPx(CURRENT_YEAR));
+    const initializedRef = useRef(false);
     const dragX = useMotionValue(0);
 
     const totalWidth = YEAR_COUNT * YEAR_WIDTH_PX;
 
     const tickPositions = useMemo(() => computeTickPositions(items), [items]);
 
-    const measureContainer = useCallback(() => {
-        if (containerRef.current) {
-            setContainerWidth(containerRef.current.clientWidth);
-        }
-    }, []);
-
+    // Combined measure + init: reads DOM directly, avoids state race
     useEffect(() => {
-        measureContainer();
-        window.addEventListener('resize', measureContainer);
-        return () => window.removeEventListener('resize', measureContainer);
-    }, [measureContainer]);
-
-    const initialX = useMemo(() => {
-        return -(yearToPx(CURRENT_YEAR) - containerWidth / 2);
-    }, [containerWidth]);
-
-    useEffect(() => {
-        if (!initialized && containerWidth > 0) {
-            dragX.set(initialX);
-            setInitialized(true);
-        }
-    }, [initialized, containerWidth, initialX, dragX]);
+        const measure = () => {
+            if (!containerRef.current) return;
+            const width = containerRef.current.clientWidth;
+            setContainerWidth(width);
+            if (!initializedRef.current) {
+                const initX = -(yearToPx(CURRENT_YEAR) - width / 2);
+                dragX.set(initX);
+                initializedRef.current = true;
+            }
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [dragX]);
 
     // Fix #3: Track centerPx as state so opacity updates during drag
     useEffect(() => {
