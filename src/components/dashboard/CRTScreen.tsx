@@ -116,6 +116,7 @@ export default function CRTScreen({
                                 <div className="flex items-center justify-center gap-3 pb-4">
                                     <button
                                         onClick={onPrev}
+                                        aria-label="Previous signal"
                                         className="text-[#00ff41]/50 hover:text-[#00ff41] font-mono text-sm transition-colors"
                                     >
                                         ◄
@@ -130,6 +131,7 @@ export default function CRTScreen({
                                     </div>
                                     <button
                                         onClick={onNext}
+                                        aria-label="Next signal"
                                         className="text-[#00ff41]/50 hover:text-[#00ff41] font-mono text-sm transition-colors"
                                     >
                                         ►

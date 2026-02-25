@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
-import { motion, useMotionValue, type PanInfo } from 'framer-motion';
+import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion';
 import type { TimelineItem } from '../../lib/derivePeakYear';
 
 interface FrequencyStripProps {
@@ -13,12 +13,12 @@ interface FrequencyStripProps {
 const MIN_YEAR = 2026;
 const MAX_YEAR = 2038;
 const YEAR_COUNT = MAX_YEAR - MIN_YEAR + 1;
-const YEAR_WIDTH_PX = 120;
+export const YEAR_WIDTH_PX = 120;
 const CURRENT_YEAR = 2026;
 const SNAP_THRESHOLD_PX = 30;
 const FADE_RANGE = 5;
 
-function yearToPx(year: number): number {
+export function yearToPx(year: number): number {
     return (year - MIN_YEAR) * YEAR_WIDTH_PX + YEAR_WIDTH_PX / 2;
 }
 
@@ -55,6 +55,7 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(800);
     const [initialized, setInitialized] = useState(false);
+    const [centerPx, setCenterPx] = useState(yearToPx(CURRENT_YEAR));
     const dragX = useMotionValue(0);
 
     const totalWidth = YEAR_COUNT * YEAR_WIDTH_PX;
@@ -84,22 +85,25 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
         }
     }, [initialized, containerWidth, initialX, dragX]);
 
+    // Fix #3: Track centerPx as state so opacity updates during drag
     useEffect(() => {
         const unsubscribe = dragX.on('change', (latest) => {
-            const centerPx = -latest + containerWidth / 2;
-            onCenterChange(centerPx);
+            const center = -latest + containerWidth / 2;
+            setCenterPx(center);
+            onCenterChange(center);
         });
         return unsubscribe;
     }, [dragX, containerWidth, onCenterChange]);
 
+    // Fix #4: Use spring animation for snap
     const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        const centerPx = -dragX.get() + containerWidth / 2;
+        const center = -dragX.get() + containerWidth / 2;
         let nearest: { item: TimelineItem; dist: number; px: number } | null = null;
 
         for (const item of items) {
             const px = tickPositions.get(item.id);
             if (px == null) continue;
-            const dist = Math.abs(px - centerPx);
+            const dist = Math.abs(px - center);
             if (dist < SNAP_THRESHOLD_PX && (!nearest || dist < nearest.dist)) {
                 nearest = { item, dist, px };
             }
@@ -108,7 +112,7 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
         const velocityMag = Math.abs(info.velocity.x);
         if (nearest && velocityMag < 500) {
             const snapX = -(nearest.px - containerWidth / 2);
-            dragX.set(snapX);
+            animate(dragX, snapX, { type: 'spring', stiffness: 300, damping: 30 });
             onSnap(nearest.item);
         } else {
             onUnsnap();
@@ -144,17 +148,17 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
                         {items.filter(it => it.type === 'risk').map((item) => {
                             const px = tickPositions.get(item.id) ?? 0;
                             const isActive = item.id === activeItemId;
-                            const centerPx = -dragX.get() + containerWidth / 2;
                             return (
                                 <button
                                     key={item.id}
+                                    aria-label={`Risk ${item.label}: ${item.name}`}
                                     className="absolute bottom-0 flex flex-col items-center -translate-x-1/2"
                                     style={{
                                         left: px,
                                         opacity: calcTickOpacity(px, centerPx),
                                     }}
                                     onClick={() => {
-                                        dragX.set(-(px - containerWidth / 2));
+                                        animate(dragX, -(px - containerWidth / 2), { type: 'spring', stiffness: 300, damping: 30 });
                                         onSnap(item);
                                     }}
                                 >
@@ -173,7 +177,7 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
                         {years.map((year) => (
                             <div
                                 key={year}
-                                className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center"
+                                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center"
                                 style={{ left: yearToPx(year) }}
                             >
                                 <div className="w-px h-2 bg-white/15" />
@@ -189,17 +193,17 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
                         {items.filter(it => it.type === 'solution').map((item) => {
                             const px = tickPositions.get(item.id) ?? 0;
                             const isActive = item.id === activeItemId;
-                            const centerPx = -dragX.get() + containerWidth / 2;
                             return (
                                 <button
                                     key={item.id}
+                                    aria-label={`Solution ${item.label}: ${item.name}`}
                                     className="absolute top-0 flex flex-col items-center -translate-x-1/2"
                                     style={{
                                         left: px,
                                         opacity: calcTickOpacity(px, centerPx),
                                     }}
                                     onClick={() => {
-                                        dragX.set(-(px - containerWidth / 2));
+                                        animate(dragX, -(px - containerWidth / 2), { type: 'spring', stiffness: 300, damping: 30 });
                                         onSnap(item);
                                     }}
                                 >
