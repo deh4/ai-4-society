@@ -80,6 +80,7 @@ export default function Admin() {
     const [bulkRejectDay, setBulkRejectDay] = useState<string | null>(null);
     const [bulkRejectNote, setBulkRejectNote] = useState('');
     const [bulkRejecting, setBulkRejecting] = useState(false);
+    const [pendingCounts, setPendingCounts] = useState<{ risk: number; solution: number }>({ risk: 0, solution: 0 });
 
     useEffect(() => {
         if (visibleTabs.length > 0 && !visibleTabs.includes(adminTab)) {
@@ -105,6 +106,25 @@ export default function Admin() {
         }
         return groups;
     }, [signals]);
+
+    // Always track pending counts for both signal tabs
+    useEffect(() => {
+        const q = query(collection(db, 'signals'), where('status', '==', 'pending'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            let risk = 0;
+            let solution = 0;
+            for (const d of snapshot.docs) {
+                const type = d.data().signal_type as string | undefined;
+                if (type === 'solution') solution++;
+                else if (type === 'both') { risk++; solution++; }
+                else risk++; // 'risk' or undefined
+            }
+            setPendingCounts({ risk, solution });
+        }, (error) => {
+            console.error('Pending count query error:', error);
+        });
+        return unsubscribe;
+    }, []);
 
     useEffect(() => {
         if (adminTab !== 'risk-signals' && adminTab !== 'solution-signals') return;
@@ -232,22 +252,33 @@ export default function Admin() {
 
             {/* Tabs — horizontally scrollable on mobile */}
             <div className="flex gap-4 px-4 border-b border-white/10 overflow-x-auto md:gap-6 md:px-6">
-                {visibleTabs.map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setAdminTab(tab)}
-                        className={`py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${
-                            adminTab === tab
-                                ? `${TAB_CONFIG[tab].accent} text-white`
-                                : 'border-transparent text-gray-500 hover:text-gray-300'
-                        }`}
-                    >
-                        {TAB_CONFIG[tab].label}
-                        {(tab === 'risk-signals' || tab === 'solution-signals') && adminTab === tab && (
-                            <span className="ml-2 text-[10px] text-gray-500">{signals.length}</span>
-                        )}
-                    </button>
-                ))}
+                {visibleTabs.map(tab => {
+                    const pending = tab === 'risk-signals' ? pendingCounts.risk
+                        : tab === 'solution-signals' ? pendingCounts.solution
+                        : 0;
+                    return (
+                        <button
+                            key={tab}
+                            onClick={() => setAdminTab(tab)}
+                            className={`relative py-3 text-sm transition-colors border-b-2 whitespace-nowrap ${
+                                adminTab === tab
+                                    ? `${TAB_CONFIG[tab].accent} text-white`
+                                    : 'border-transparent text-gray-500 hover:text-gray-300'
+                            }`}
+                        >
+                            {TAB_CONFIG[tab].label}
+                            {(tab === 'risk-signals' || tab === 'solution-signals') && pending > 0 && (
+                                <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                    adminTab === tab
+                                        ? 'bg-yellow-400/15 text-yellow-400'
+                                        : 'bg-red-500/15 text-red-400'
+                                }`}>
+                                    {pending}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
                 <button
                     onClick={() => navigate('/observatory')}
                     className="py-3 text-sm transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-300 whitespace-nowrap"
