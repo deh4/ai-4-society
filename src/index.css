@@ -9,3 +9,34 @@ body {
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
 }
+
+@keyframes crt-static {
+    0% { background-position: 0 0; }
+    25% { background-position: 50px 30px; }
+    50% { background-position: -30px 70px; }
+    75% { background-position: 80px -20px; }
+    100% { background-position: 0 0; }
+}
+
+@keyframes crt-glitch-bar1 {
+    0%, 100% { transform: translateY(0); opacity: 0; }
+    10% { opacity: 0.8; }
+    15% { transform: translateY(100px); opacity: 0; }
+    50% { opacity: 0; }
+    60% { transform: translateY(-50px); opacity: 0.5; }
+    65% { transform: translateY(200px); opacity: 0; }
+}
+
+@keyframes crt-glitch-bar2 {
+    0%, 100% { transform: translateY(0); opacity: 0; }
+    30% { opacity: 0; }
+    35% { transform: translateY(-80px); opacity: 0.6; }
+    40% { opacity: 0; }
+    80% { transform: translateY(150px); opacity: 0.3; }
+    85% { opacity: 0; }
+}
+
+@keyframes crt-flicker {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}

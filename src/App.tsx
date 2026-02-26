@@ -2,33 +2,38 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HeroPage from './pages/HeroPage';
 import Dashboard from './pages/Dashboard';
 import Contribute from './pages/Contribute';
-import { useEffect, useState } from 'react';
+import Admin from './pages/Admin';
+import Observatory from './pages/Observatory';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { RiskProvider } from './store/RiskContext';
+import { AuthProvider } from './store/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
-  // Global Theme State could live here or in a context
-  const [themeMode, setThemeMode] = useState<'monitor' | 'solution'>('monitor');
-
-  useEffect(() => {
-    if (themeMode === 'solution') {
-      document.body.setAttribute('data-theme', 'solution');
-    } else {
-      document.body.removeAttribute('data-theme');
-    }
-  }, [themeMode]);
-
   return (
-    <RiskProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<HeroPage />} />
-          <Route
-            path="/dashboard"
-            element={<Dashboard themeMode={themeMode} setThemeMode={setThemeMode} />}
-          />
-          <Route path="/contribute" element={<Contribute />} />
-        </Routes>
-      </Router>
-    </RiskProvider>
+    <ErrorBoundary>
+      <RiskProvider>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<HeroPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/:riskId" element={<Dashboard />} />
+              <Route path="/contribute" element={<Contribute />} />
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <Admin />
+                </ProtectedRoute>
+              } />
+              <Route path="/observatory" element={
+                <ProtectedRoute requiredRoles={['lead']}>
+                  <Observatory />
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </RiskProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,4 +1,8 @@
 {
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
   "firestore": {
     "rules": "firestore.rules"
   },
@@ -20,6 +24,9 @@
     "auth": {
       "port": 9099
     },
+    "functions": {
+      "port": 5001
+    },
     "firestore": {
       "rules": "firestore.rules",
       "port": 8080
@@ -29,6 +36,14 @@
     },
     "ui": {
       "enabled": true
+    }
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "AI 4 Society Observatory",
+        "supportEmail": "dehakuran@gmail.com"
+      }
     }
   }
 }

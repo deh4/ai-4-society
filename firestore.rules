@@ -1,8 +1,185 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // ─── Helper Functions ─────────────────────────────────────────────────────
+
+    // Legacy admin check (kept during migration, remove after confirmed)
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isActiveUser() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && getUserDoc().data.status == 'active';
+    }
+
+    function hasRole(role) {
+      return isActiveUser()
+        && role in getUserDoc().data.roles;
+    }
+
+    function hasAnyRole(roles) {
+      return isActiveUser()
+        && getUserDoc().data.roles.hasAny(roles);
+    }
+
+    // During migration: accept either legacy admin OR new RBAC
+    function canWrite(roles) {
+      return isAdmin() || hasAnyRole(roles);
+    }
+
+    function canRead(roles) {
+      return isAdmin() || hasAnyRole(roles);
+    }
+
+    // ─── Users Collection (RBAC) ──────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Users can read their own doc
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Lead can read all users
+      allow read: if isAdmin() || hasRole('lead');
+
+      // Application: user creates own doc with pending status, no self-assigned roles
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.roles.size() == 0
+                    && request.resource.data.appliedRoles.size() > 0
+                    && request.resource.data.keys().hasAll(
+                         ['email', 'displayName', 'status', 'roles',
+                          'appliedRoles', 'applicationNote', 'appliedAt']);
+
+      // Active users can update their own lastActiveAt (activity tracking)
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && isActiveUser()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt']);
+
+      // Lead manages users: can update status and roles, but not email or appliedAt
+      allow update: if (isAdmin() || hasRole('lead'))
+                    && request.resource.data.email == resource.data.email
+                    && request.resource.data.appliedAt == resource.data.appliedAt;
+
+      // No deletes (audit trail preserved)
+      allow delete: if false;
+    }
+
+    // ─── Admins Collection (Legacy — kept during migration) ───────────────────
+
+    match /admins/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.auth.token.email in ['dehakuran@gmail.com'];
+      allow update, delete: if false;
+    }
+
+    // ─── Public Collections ───────────────────────────────────────────────────
+
+    match /risks/{riskId} {
+      allow read: if true;
+      allow write: if canWrite(['editor', 'lead']);
+    }
+
+    match /solutions/{solutionId} {
+      allow read: if true;
+      allow write: if canWrite(['editor', 'lead']);
+    }
+
+    match /milestones/{milestoneId} {
+      allow read: if true;
+      allow write: if canWrite(['editor', 'lead']);
+    }
+
+    match /signals/{signalId} {
+      allow read: if resource.data.status in ['approved', 'edited']
+                  || canRead(['signal-reviewer', 'lead']);
+      allow write: if canWrite(['signal-reviewer', 'lead']);
+    }
+
+    // ─── Pipeline & Archive (server-only write) ──────────────────────────────
+
+    match /_pipeline_health/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /_archive/{document=**} {
+      allow read: if canRead(['lead']);
+      allow write: if false;
+    }
+
+    match /_usage/{document=**} {
+      allow read: if canRead(['lead']);
+      allow write: if false;
+    }
+
+    // ─── Agent-Related Collections ────────────────────────────────────────────
+
+    match /topics/{topicId} {
+      allow read: if canRead(['discovery-reviewer', 'lead']);
+      allow write: if false;
+    }
+
+    match /risk_updates/{updateId} {
+      allow read: if canRead(['scoring-reviewer', 'lead']);
+      allow write: if canWrite(['scoring-reviewer', 'lead']);
+    }
+
+    match /solution_updates/{updateId} {
+      allow read: if canRead(['scoring-reviewer', 'lead']);
+      allow write: if canWrite(['scoring-reviewer', 'lead']);
+    }
+
+    match /validation_reports/{reportId} {
+      allow read: if canRead(['scoring-reviewer', 'lead']);
+      allow write: if false;
+    }
+
+    match /changelogs/{changelogId} {
+      allow read: if canRead(['lead']);
+      allow write: if false;
+    }
+
+    match /agents/{agentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /agents/{agentId}/config/{doc} {
+      allow read: if canRead(['lead']);
+      allow write: if canWrite(['lead']);
+    }
+
+    match /agents/{agentId}/health/{doc} {
+      allow read: if canRead(['lead']);
+      allow write: if false;
+    }
+
+    match /agents/{agentId}/runs/{runId} {
+      allow read: if canRead(['lead']);
+      allow write: if false;
+    }
+
+    // ─── Discovery & Validation Proposals ─────────────────────────────────────
+
+    match /discovery_proposals/{docId} {
+      allow read: if canRead(['discovery-reviewer', 'lead']);
+      allow write: if canWrite(['discovery-reviewer', 'lead']);
+    }
+
+    match /validation_proposals/{docId} {
+      allow read: if canRead(['scoring-reviewer', 'lead']);
+      allow write: if canWrite(['scoring-reviewer', 'lead']);
     }
   }
 }

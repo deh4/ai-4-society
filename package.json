@@ -9,12 +9,15 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "seed": "ts-node src/scripts/seed.ts",
-    "seed:prod": "ts-node src/scripts/seed-prod.ts"
+    "seed:prod": "ts-node src/scripts/seed-prod.ts",
+    "seed:admin": "ts-node src/scripts/seed-admin.ts",
+    "seed:agents": "ts-node src/scripts/seed-agents.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "firebase": "^12.7.0",
+    "framer-motion": "^12.34.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.11.0",

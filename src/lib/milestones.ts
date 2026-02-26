@@ -1,0 +1,97 @@
+export interface Milestone {
+    id: string;
+    year: number;
+    title: string;
+    description: string;
+}
+
+/**
+ * Seed data for AI milestones — also used as fallback when Firestore is empty.
+ * The canonical source of truth is the /milestones Firestore collection.
+ */
+export const AI_MILESTONES: Milestone[] = [
+    {
+        id: 'M01',
+        year: 1950,
+        title: 'Turing Test Proposed',
+        description: 'Alan Turing publishes "Computing Machinery and Intelligence," flipping the script on philosophy with a single question: can machines think? Rather than defining intelligence, he proposes an imitation game — if a machine can fool a human into thinking it\'s human, does the distinction even matter? This paper doesn\'t just launch AI as an idea; it plants the seed for every chatbot, every language model, every debate about machine consciousness that follows.',
+    },
+    {
+        id: 'M02',
+        year: 1956,
+        title: 'Dartmouth Conference',
+        description: 'A small group of mathematicians and engineers gather at Dartmouth College for a summer workshop, armed with an audacious premise: "every aspect of learning or any other feature of intelligence can in principle be so precisely described that a machine can be made to simulate it." They coin the term "Artificial Intelligence" and launch a field. The optimism is breathtaking — they expect human-level AI within a generation. They\'re wrong about the timeline, but right about the destination.',
+    },
+    {
+        id: 'M03',
+        year: 1966,
+        title: 'ELIZA Chatbot',
+        description: 'Joseph Weizenbaum creates ELIZA at MIT — a simple pattern-matching program that simulates a Rogerian therapist. It has no understanding whatsoever. Yet people pour their hearts out to it, forming emotional bonds with a few hundred lines of code. Weizenbaum is horrified. He intended to demonstrate how superficial human-computer interaction is; instead he accidentally proves something profound about human psychology: we\'re wired to see intelligence and empathy, even where none exists.',
+    },
+    {
+        id: 'M04',
+        year: 1997,
+        title: 'Deep Blue Defeats Kasparov',
+        description: 'IBM\'s Deep Blue defeats world chess champion Garry Kasparov in a six-game match, and the world holds its breath. It\'s not just a chess victory — it\'s the first time a machine publicly humbles human expertise in a domain that was considered the pinnacle of strategic thinking. Kasparov accuses IBM of cheating. IBM dismantles the machine. But the message is clear: raw computational power, applied with enough sophistication, can overcome centuries of human mastery.',
+    },
+    {
+        id: 'M05',
+        year: 2012,
+        title: 'AlexNet Wins ImageNet',
+        description: 'A deep convolutional neural network called AlexNet crushes the ImageNet image recognition competition, cutting the error rate nearly in half. The secret ingredients: massive GPU computing, millions of labeled images, and dropout regularization. Overnight, the AI research community pivots from hand-crafted features to deep learning. This single result triggers the revolution — within three years, every major tech company restructures around neural networks. The deep learning era begins not with a paper, but with a benchmark score.',
+    },
+    {
+        id: 'M06',
+        year: 2014,
+        title: 'GANs Introduced',
+        description: 'Ian Goodfellow, reportedly inspired by a conversation at a bar, invents Generative Adversarial Networks — two neural networks locked in a creative duel. One generates fake images; the other tries to spot the fakes. Through this adversarial dance, machines learn to create startlingly realistic content from nothing. GANs don\'t just advance AI — they force society to confront a new reality: seeing is no longer believing. Deepfakes, synthetic media, and AI art all trace their lineage to this single architecture.',
+    },
+    {
+        id: 'M07',
+        year: 2016,
+        title: 'AlphaGo Defeats Lee Sedol',
+        description: 'DeepMind\'s AlphaGo defeats world Go champion Lee Sedol 4-1, conquering a game with more possible positions than atoms in the universe. Move 37 of Game 2 becomes legendary — a play so unconventional that human experts initially call it a mistake, then realize it\'s brilliant. Lee Sedol says he\'s "speechless." The victory shatters the assumption that Go\'s reliance on intuition and pattern recognition makes it uniquely human. AlphaGo didn\'t just learn the game — it discovered strategies humans never imagined in 2,500 years of play.',
+    },
+    {
+        id: 'M08',
+        year: 2017,
+        title: 'Transformer Architecture',
+        description: 'A team at Google publishes "Attention Is All You Need" — eight pages that quietly reshape the entire field. The Transformer architecture replaces sequential processing with self-attention, allowing models to process entire sequences in parallel. It\'s faster, more scalable, and dramatically more capable. GPT, BERT, PaLM, Claude — every foundation model that follows stands on this paper. The irony: it was designed for machine translation. Its authors had no idea they were building the engine for a revolution.',
+    },
+    {
+        id: 'M09',
+        year: 2020,
+        title: 'AlphaFold Solves Protein Folding',
+        description: 'DeepMind\'s AlphaFold solves protein structure prediction — a 50-year grand challenge in biology — with accuracy rivaling experimental methods. It predicts the 3D shapes of nearly every known protein, work that would have taken experimental scientists centuries. Overnight, structural biology leaps forward by decades. This is the moment AI stops being merely impressive and becomes indispensable to science. Drug discovery, disease understanding, enzyme design — all accelerated by a neural network doing in hours what labs couldn\'t do in years.',
+    },
+    {
+        id: 'M10',
+        year: 2021,
+        title: 'DALL-E — Text to Image',
+        description: 'OpenAI unveils DALL-E, a model that generates images from text descriptions: "an armchair in the shape of an avocado." The results are surreal, playful, and deeply unsettling to artists and illustrators who suddenly see a machine doing in seconds what takes them hours. It\'s the opening salvo in AI\'s creative revolution. Within a year, Midjourney and Stable Diffusion follow. The question shifts from "can AI be creative?" to "what does creativity even mean when a machine can do it?"',
+    },
+    {
+        id: 'M11',
+        year: 2022,
+        title: 'ChatGPT Launched',
+        description: 'On November 30, OpenAI releases ChatGPT. Within five days, a million people are using it. Within two months, 100 million — the fastest technology adoption in human history. It isn\'t the most powerful model, but it\'s the first one anyone can talk to. Teachers panic. Writers worry. Coders marvel. Executives scramble. For the first time, AI isn\'t an abstract concept debated in labs — it\'s sitting on everyone\'s laptop, writing their emails, explaining quantum physics, and occasionally making things up with complete confidence.',
+    },
+    {
+        id: 'M12',
+        year: 2023,
+        title: 'EU AI Act',
+        description: 'The European Union agrees on the AI Act — the world\'s first comprehensive legal framework for regulating artificial intelligence. It bans social scoring, restricts real-time facial recognition, and requires transparency for high-risk AI systems. Critics call it either too aggressive (stifling innovation) or too timid (full of loopholes). But it establishes a precedent: AI is not beyond the reach of democratic governance. Like GDPR before it, the AI Act becomes a global reference point — setting standards that ripple far beyond European borders.',
+    },
+    {
+        id: 'M13',
+        year: 2024,
+        title: 'AI Agents Emerge',
+        description: 'Autonomous AI agents — systems that can plan multi-step tasks, use tools, browse the web, and execute code — move from research demos to production. Software engineers start delegating entire features to AI assistants. Customer service bots handle complex cases end-to-end. The shift is subtle but seismic: AI goes from "tool you use" to "colleague that acts." Questions of accountability, oversight, and control become urgent when the AI isn\'t just suggesting — it\'s doing.',
+    },
+    {
+        id: 'M14',
+        year: 2025,
+        title: 'DeepSeek R1',
+        description: 'DeepSeek, a Chinese AI lab, releases R1 — an open-source reasoning model that matches or exceeds proprietary Western models at a fraction of the cost. Trained with novel reinforcement learning techniques, it demonstrates that frontier AI capability is no longer the exclusive domain of well-funded Silicon Valley labs. The geopolitical implications are immediate: the assumption that export controls and compute restrictions can contain AI capability is shattered. Open-source AI becomes not just viable but competitive at the highest level.',
+    },
+];
