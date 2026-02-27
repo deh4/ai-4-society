@@ -28,8 +28,9 @@ interface Signal {
     admin_notes?: string;
     fetched_at: { seconds: number } | null;
     validationIssues?: Array<{ rule: string; severity: string; message: string; field: string }>;
-    signal_type?: "risk" | "solution" | "both";
+    signal_type?: "risk" | "solution" | "both" | "unmatched";
     solution_ids?: string[];
+    proposed_topic?: string;
 }
 
 const RISK_LABELS: Record<string, string> = {
@@ -60,18 +61,19 @@ export default function Admin() {
     const [selected, setSelected] = useState<Signal | null>(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [updating, setUpdating] = useState(false);
-    type AdminTab = 'risk-signals' | 'solution-signals' | 'discovery' | 'validation' | 'milestones' | 'users';
+    type AdminTab = 'risk-signals' | 'solution-signals' | 'emerging-signals' | 'discovery' | 'validation' | 'milestones' | 'users';
 
     const TAB_CONFIG: Record<AdminTab, { label: string; accent: string }> = {
         'risk-signals': { label: 'Risk Signals', accent: 'border-cyan-400' },
         'solution-signals': { label: 'Solution Signals', accent: 'border-cyan-400' },
+        'emerging-signals': { label: 'Emerging', accent: 'border-amber-400' },
         'discovery': { label: 'Discovery', accent: 'border-cyan-400' },
         'validation': { label: 'Validation', accent: 'border-cyan-400' },
         'milestones': { label: 'Milestones', accent: 'border-yellow-400' },
         'users': { label: 'Users', accent: 'border-emerald-400' },
     };
 
-    const ALL_TABS: AdminTab[] = ['risk-signals', 'solution-signals', 'discovery', 'validation', 'milestones', 'users'];
+    const ALL_TABS: AdminTab[] = ['risk-signals', 'solution-signals', 'emerging-signals', 'discovery', 'validation', 'milestones', 'users'];
     const userRoles: UserRole[] = userDoc?.roles ?? [];
     const visibleTabs = ALL_TABS.filter(tab => canAccessTab(userRoles, tab));
 
@@ -80,7 +82,7 @@ export default function Admin() {
     const [bulkRejectDay, setBulkRejectDay] = useState<string | null>(null);
     const [bulkRejectNote, setBulkRejectNote] = useState('');
     const [bulkRejecting, setBulkRejecting] = useState(false);
-    const [pendingCounts, setPendingCounts] = useState<{ risk: number; solution: number }>({ risk: 0, solution: 0 });
+    const [pendingCounts, setPendingCounts] = useState<{ risk: number; solution: number; emerging: number }>({ risk: 0, solution: 0, emerging: 0 });
 
     useEffect(() => {
         if (visibleTabs.length > 0 && !visibleTabs.includes(adminTab)) {
@@ -89,7 +91,9 @@ export default function Admin() {
     }, [visibleTabs, adminTab]);
 
     // Client-side filter by signal_type — avoids composite index dependency
-    const signalTypeValues = adminTab === 'risk-signals' ? ['risk', 'both'] : ['solution', 'both'];
+    const signalTypeValues = adminTab === 'risk-signals' ? ['risk', 'both']
+        : adminTab === 'solution-signals' ? ['solution', 'both']
+        : ['unmatched'];
     const signals = allSignals.filter(s => signalTypeValues.includes(s.signal_type ?? 'risk'));
 
     // Group signals by published_date
@@ -113,13 +117,15 @@ export default function Admin() {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             let risk = 0;
             let solution = 0;
+            let emerging = 0;
             for (const d of snapshot.docs) {
                 const type = d.data().signal_type as string | undefined;
                 if (type === 'solution') solution++;
                 else if (type === 'both') { risk++; solution++; }
+                else if (type === 'unmatched') emerging++;
                 else risk++; // 'risk' or undefined
             }
-            setPendingCounts({ risk, solution });
+            setPendingCounts({ risk, solution, emerging });
         }, (error) => {
             console.error('Pending count query error:', error);
         });
@@ -127,7 +133,7 @@ export default function Admin() {
     }, []);
 
     useEffect(() => {
-        if (adminTab !== 'risk-signals' && adminTab !== 'solution-signals') return;
+        if (adminTab !== 'risk-signals' && adminTab !== 'solution-signals' && adminTab !== 'emerging-signals') return;
 
         const constraints: QueryConstraint[] = [orderBy('fetched_at', 'desc')];
         if (filter !== 'all') {
@@ -255,6 +261,7 @@ export default function Admin() {
                 {visibleTabs.map(tab => {
                     const pending = tab === 'risk-signals' ? pendingCounts.risk
                         : tab === 'solution-signals' ? pendingCounts.solution
+                        : tab === 'emerging-signals' ? pendingCounts.emerging
                         : 0;
                     return (
                         <button
@@ -267,7 +274,7 @@ export default function Admin() {
                             }`}
                         >
                             {TAB_CONFIG[tab].label}
-                            {(tab === 'risk-signals' || tab === 'solution-signals') && pending > 0 && (
+                            {(tab === 'risk-signals' || tab === 'solution-signals' || tab === 'emerging-signals') && pending > 0 && (
                                 <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                                     adminTab === tab
                                         ? 'bg-yellow-400/15 text-yellow-400'
@@ -303,7 +310,7 @@ export default function Admin() {
                 <UsersTab />
             )}
 
-            {(adminTab === 'risk-signals' || adminTab === 'solution-signals') && (
+            {(adminTab === 'risk-signals' || adminTab === 'solution-signals' || adminTab === 'emerging-signals') && (
                 <div className="flex flex-col md:flex-row h-[calc(100vh-105px)]">
                     {/* Left: Filter + List (full width on mobile, hidden when detail selected on mobile) */}
                     <div className={`${selected ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-white/10 flex-col`}>
@@ -421,6 +428,11 @@ export default function Admin() {
                                                                         : (signal.risk_categories ?? []).join(', ')}
                                                                 </span>
                                                             )}
+                                                            {signal.signal_type === 'unmatched' && signal.proposed_topic && (
+                                                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400">
+                                                                    {signal.proposed_topic}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -527,6 +539,17 @@ export default function Admin() {
                                                     </div>
                                                 )}
                                             </>
+                                        )}
+
+                                        {adminTab === 'emerging-signals' && (
+                                            <div>
+                                                <span className="text-[10px] text-gray-500">Proposed Topic</span>
+                                                <div className="flex gap-1 mt-1 flex-wrap">
+                                                    <span className="text-xs px-2 py-0.5 rounded bg-amber-400/10 text-amber-400">
+                                                        {selected.proposed_topic ?? 'No topic'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         )}
 
                                         <div className="flex gap-6">

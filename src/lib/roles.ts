@@ -29,6 +29,7 @@ export interface UserDoc {
 export const ROLE_TAB_ACCESS: Record<string, UserRole[]> = {
     'risk-signals': ['signal-reviewer', 'lead'],
     'solution-signals': ['signal-reviewer', 'lead'],
+    'emerging-signals': ['signal-reviewer', 'lead'],
     'discovery': ['discovery-reviewer', 'lead'],
     'validation': ['scoring-reviewer', 'lead'],
     'milestones': ['editor', 'lead'],
