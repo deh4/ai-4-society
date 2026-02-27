@@ -43,6 +43,7 @@ export async function storeSignals(signals: ClassifiedSignal[]): Promise<number>
         confidence_score: signal.confidence_score,
         status: "pending",
         fetched_at: FieldValue.serverTimestamp(),
+        ...(signal.proposed_topic ? { proposed_topic: signal.proposed_topic } : {}),
       });
     }
 
