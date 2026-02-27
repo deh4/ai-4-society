@@ -19,6 +19,16 @@ export interface ApprovedSignal {
   published_date: string;
 }
 
+export interface UnmatchedSignal {
+  id: string;
+  title: string;
+  summary: string;
+  proposed_topic: string;
+  severity_hint: string;
+  source_name: string;
+  published_date: string;
+}
+
 export interface DiscoveryProposal {
   type: "new_risk" | "new_solution";
   proposed_name: string;
@@ -38,6 +48,7 @@ const MIN_SUPPORTING_SIGNALS = 3;
 
 export async function analyzeSignals(
   signals: ApprovedSignal[],
+  unmatchedSignals: UnmatchedSignal[],
   risks: RegistryItem[],
   solutions: RegistryItem[],
   geminiApiKey: string
@@ -62,6 +73,17 @@ export async function analyzeSignals(
     )
     .join("\n\n");
 
+  const unmatchedText = unmatchedSignals.length > 0
+    ? unmatchedSignals
+        .map(
+          (s) =>
+            `[${s.id}] "${s.title}" (${s.source_name}, ${s.published_date})\n` +
+            `Proposed topic: ${s.proposed_topic}\n` +
+            `Summary: ${s.summary}`
+        )
+        .join("\n\n")
+    : "None";
+
   const systemPrompt = `You are a discovery analyst for the AI 4 Society Observatory.
 
 Your task: given a body of approved signals and the existing risk/solution registry, identify patterns that suggest a genuinely NEW topic not covered by any existing entry.
@@ -71,6 +93,8 @@ Rules for a valid proposal:
 - It must be supported by at least ${MIN_SUPPORTING_SIGNALS} signals from the list
 - It must represent a distinct societal risk or countermeasure
 - Do NOT propose if the topic clearly maps to an existing R or S code
+
+Pay special attention to UNMATCHED SIGNALS — these are articles that our classifier flagged as relevant but could not map to existing taxonomy codes. They are the strongest candidates for novel risks/solutions. Unmatched signals can be referenced by their IDs in supporting_signal_ids just like classified signals.
 
 For new_solution proposals, suggest the most relevant existing risk as suggested_parent_risk_id (or omit if unclear).
 
@@ -87,7 +111,7 @@ Respond with a JSON array of proposals (can be empty []):
 
 Only output valid JSON array. No markdown. No explanation outside the JSON.`;
 
-  const prompt = `${registryText}\n\nAPPROVED SIGNALS (last 30 days):\n\n${signalText}`;
+  const prompt = `${registryText}\n\nCLASSIFIED SIGNALS (last 30 days):\n\n${signalText}\n\nUNMATCHED SIGNALS (potential novel topics — these did not fit existing taxonomy):\n\n${unmatchedText}`;
 
   try {
     const result = await model.generateContent({
@@ -108,7 +132,10 @@ Only output valid JSON array. No markdown. No explanation outside the JSON.`;
     const parsed: DiscoveryProposal[] = JSON.parse(result.response.text());
 
     // Filter: minimum supporting signals
-    const validSignalIds = new Set(signals.map((s) => s.id));
+    const validSignalIds = new Set([
+      ...signals.map((s) => s.id),
+      ...unmatchedSignals.map((s) => s.id),
+    ]);
     const filtered = parsed.filter((p) => {
       const validRefs = p.supporting_signal_ids.filter((id) => validSignalIds.has(id));
       if (validRefs.length < MIN_SUPPORTING_SIGNALS) {
