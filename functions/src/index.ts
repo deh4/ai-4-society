@@ -10,7 +10,7 @@ import { storeSignals } from "./signal-scout/store.js";
 import { trackUsage, updatePipelineHealth, writeAgentRunSummary } from "./usage-monitor.js";
 import { DATA_SOURCES } from "./config/sources.js";
 import { runDataLifecycle } from "./data-lifecycle.js";
-import { analyzeSignals } from "./discovery-agent/analyzer.js";
+import { analyzeSignals, UnmatchedSignal } from "./discovery-agent/analyzer.js";
 import { storeDiscoveryProposals } from "./discovery-agent/store.js";
 import { assessRisk, assessSolution } from "./validator-agent/assessor.js";
 import { storeValidationProposal } from "./validator-agent/store.js";
@@ -359,14 +359,34 @@ export const discoveryAgent = onSchedule(
 
       logger.info(`Discovery: ${signals.length} approved signals in last 30 days`);
 
-      if (signals.length < 5) {
-        logger.info("Discovery: insufficient signals (<5), skipping Gemini call");
+      // Also fetch unmatched signals (any status) from last 30 days
+      const unmatchedSnap = await db
+        .collection("signals")
+        .where("signal_type", "==", "unmatched")
+        .where("fetched_at", ">", cutoff)
+        .orderBy("fetched_at", "desc")
+        .get();
+
+      const unmatchedSignals: UnmatchedSignal[] = unmatchedSnap.docs.map((d) => ({
+        id: d.id,
+        title: (d.data().title as string) ?? "",
+        summary: (d.data().summary as string) ?? "",
+        proposed_topic: (d.data().proposed_topic as string) ?? "",
+        severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+        source_name: (d.data().source_name as string) ?? "",
+        published_date: (d.data().published_date as string) ?? "",
+      }));
+
+      logger.info(`Discovery: ${unmatchedSignals.length} unmatched signals in last 30 days`);
+
+      if (signals.length < 5 && unmatchedSignals.length < 3) {
+        logger.info(`Discovery: insufficient signals (${signals.length} approved, ${unmatchedSignals.length} unmatched), skipping Gemini call`);
         await writeAgentRunSummary({
           agentId: "discovery-agent",
           startedAt: runStartedAt,
           outcome: "empty",
           error: null,
-          metrics: { articlesFetched: signals.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 0 },
+          metrics: { articlesFetched: signals.length + unmatchedSignals.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 2, firestoreWrites: 0 },
           sourcesUsed: [],
         });
         return;
@@ -392,7 +412,7 @@ export const discoveryAgent = onSchedule(
 
       // Step 3: Analyze with Gemini 2.5 Pro
       const { proposals, tokenUsage } = await analyzeSignals(
-        signals, risks, solutions, geminiApiKey.value()
+        signals, unmatchedSignals, risks, solutions, geminiApiKey.value()
       );
 
       // Step 4: Store proposals
@@ -737,16 +757,24 @@ export const triggerAgentRun = onCall(
           source_name: (d.data().source_name as string) ?? "", published_date: (d.data().published_date as string) ?? "",
         }));
 
-        if (signals.length < 5) {
-          await writeAgentRunSummary({ agentId: "discovery-agent", startedAt: runStartedAt, outcome: "empty", error: null, metrics: { articlesFetched: signals.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 0 }, sourcesUsed: [] });
-          return { success: true, message: `Discovery Agent: insufficient signals (${signals.length} < 5)` };
+        // Also fetch unmatched signals (any status) from last 30 days
+        const unmatchedSnap = await db.collection("signals").where("signal_type", "==", "unmatched").where("fetched_at", ">", cutoff).orderBy("fetched_at", "desc").get();
+        const unmatchedSignals: UnmatchedSignal[] = unmatchedSnap.docs.map((d) => ({
+          id: d.id, title: (d.data().title as string) ?? "", summary: (d.data().summary as string) ?? "",
+          proposed_topic: (d.data().proposed_topic as string) ?? "", severity_hint: (d.data().severity_hint as string) ?? "Emerging",
+          source_name: (d.data().source_name as string) ?? "", published_date: (d.data().published_date as string) ?? "",
+        }));
+
+        if (signals.length < 5 && unmatchedSignals.length < 3) {
+          await writeAgentRunSummary({ agentId: "discovery-agent", startedAt: runStartedAt, outcome: "empty", error: null, metrics: { articlesFetched: signals.length + unmatchedSignals.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 2, firestoreWrites: 0 }, sourcesUsed: [] });
+          return { success: true, message: `Discovery Agent: insufficient signals (${signals.length} approved, ${unmatchedSignals.length} unmatched)` };
         }
 
         const [risksSnap, solutionsSnap] = await Promise.all([db.collection("risks").get(), db.collection("solutions").get()]);
         const risks = risksSnap.docs.map((d) => ({ id: d.id, name: (d.data().risk_name as string) ?? d.id, description: (d.data().summary as string) ?? "" }));
         const solutions = solutionsSnap.docs.map((d) => ({ id: d.id, name: (d.data().solution_title as string) ?? d.id, description: (d.data().summary as string) ?? "" }));
 
-        const { proposals, tokenUsage } = await analyzeSignals(signals, risks, solutions, geminiApiKey.value());
+        const { proposals, tokenUsage } = await analyzeSignals(signals, unmatchedSignals, risks, solutions, geminiApiKey.value());
         const stored = await storeDiscoveryProposals(proposals);
 
         await writeAgentRunSummary({ agentId: "discovery-agent", startedAt: runStartedAt, outcome: stored > 0 ? "success" : "empty", error: null, metrics: { articlesFetched: signals.length, signalsStored: stored, geminiCalls: 1, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 3, firestoreWrites: stored }, sourcesUsed: [] });
