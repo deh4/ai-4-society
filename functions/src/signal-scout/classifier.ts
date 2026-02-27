@@ -181,7 +181,7 @@ export async function classifyArticles(
         if (signalType === "unmatched") {
           const topic = item.proposed_topic ?? "";
           if (!topic) {
-            logger.info(`Dropping unmatched signal with no proposed_topic: ${batch[item.index]?.title}`);
+            logger.info(`Dropping unmatched signal with no proposed_topic: ${article.title}`);
             continue;
           }
           results.push({
