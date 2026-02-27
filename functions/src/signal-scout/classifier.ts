@@ -8,12 +8,13 @@ export interface ClassifiedSignal {
   source_url: string;
   source_name: string;
   published_date: string;
-  signal_type: "risk" | "solution" | "both";
+  signal_type: "risk" | "solution" | "both" | "unmatched";
   risk_categories: string[];
   solution_ids: string[];
   severity_hint: "Critical" | "Emerging" | "Horizon";
   affected_groups: string[];
   confidence_score: number;
+  proposed_topic?: string;
 }
 
 const RISK_TAXONOMY = `
@@ -76,10 +77,25 @@ For relevant articles, provide:
   "confidence_score": <0.0-1.0>
 }
 
+For unmatched articles (relevant but outside taxonomy):
+{
+  "index": <number>,
+  "relevant": true,
+  "signal_type": "unmatched",
+  "summary": "<2-3 sentence summary focused on the societal impact>",
+  "proposed_topic": "<3-8 word label describing the novel topic>",
+  "risk_categories": [],
+  "solution_ids": [],
+  "severity_hint": "Critical" | "Emerging" | "Horizon",
+  "affected_groups": ["<group 1>", ...],
+  "confidence_score": <0.0-1.0>
+}
+
 Rules:
 - risk_categories must be empty [] if signal_type is "solution"
 - solution_ids must be empty [] if signal_type is "risk"
 - Both arrays must be non-empty if signal_type is "both"
+- If the article describes a genuine AI-related societal risk or solution that does NOT fit any existing R/S code, use signal_type: "unmatched" with a short proposed_topic label (3-8 words). risk_categories and solution_ids must both be empty [] for unmatched signals.
 - Only include R/S codes you are confident about
 
 For irrelevant articles:
@@ -139,13 +155,14 @@ export async function classifyArticles(
       const parsed: Array<{
         index: number;
         relevant: boolean;
-        signal_type?: "risk" | "solution" | "both";
+        signal_type?: "risk" | "solution" | "both" | "unmatched";
         summary?: string;
         risk_categories?: string[];
         solution_ids?: string[];
         severity_hint?: "Critical" | "Emerging" | "Horizon";
         affected_groups?: string[];
         confidence_score?: number;
+        proposed_topic?: string;
       }> = JSON.parse(text);
 
       for (const item of parsed) {
@@ -159,6 +176,31 @@ export async function classifyArticles(
         if (!article) continue;
 
         const signalType = item.signal_type ?? "risk";
+
+        // Unmatched signals: skip taxonomy checks, require proposed_topic
+        if (signalType === "unmatched") {
+          const topic = item.proposed_topic ?? "";
+          if (!topic) {
+            logger.info(`Dropping unmatched signal with no proposed_topic: ${batch[item.index]?.title}`);
+            continue;
+          }
+          results.push({
+            title: article.title,
+            summary: item.summary ?? "",
+            source_url: article.url,
+            source_name: article.source_name,
+            published_date: article.published_date,
+            signal_type: "unmatched",
+            risk_categories: [],
+            solution_ids: [],
+            severity_hint: item.severity_hint ?? "Emerging",
+            affected_groups: item.affected_groups ?? [],
+            confidence_score: confidence,
+            proposed_topic: topic,
+          });
+          continue;
+        }
+
         const riskCats = item.risk_categories ?? [];
         const solutionIds = item.solution_ids ?? [];
 
