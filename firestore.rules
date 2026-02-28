@@ -58,11 +58,12 @@ service cloud.firestore {
                          ['email', 'displayName', 'status', 'roles',
                           'appliedRoles', 'applicationNote', 'appliedAt']);
 
-      // Active users can update their own lastActiveAt (activity tracking)
+      // Active users can update their own activity and onboarding tracking
       allow update: if request.auth != null
                     && request.auth.uid == userId
                     && isActiveUser()
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt']);
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                         ['lastActiveAt', 'acknowledgedAt', 'onboardingCompleted']);
 
       // Lead manages users: can update status and roles, but not email or appliedAt
       allow update: if (isAdmin() || hasRole('lead'))

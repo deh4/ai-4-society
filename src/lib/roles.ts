@@ -23,6 +23,8 @@ export interface UserDoc {
     approvedBy: string | null;
     lastActiveAt: { seconds: number } | null;
     totalReviews: number;
+    acknowledgedAt: { seconds: number } | null;
+    onboardingCompleted: Record<string, boolean>;
 }
 
 /** Which admin tabs each role can see */

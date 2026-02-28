@@ -55,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                 approvedBy: 'system-migration',
                                 lastActiveAt: null,
                                 totalReviews: 0,
+                                acknowledgedAt: null,
+                                onboardingCompleted: {},
                             };
                             await setDoc(userRef, {
                                 ...migratedDoc,
