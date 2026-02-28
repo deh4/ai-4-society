@@ -122,7 +122,7 @@ export default function ValidationTab() {
                         </button>
                     ))}
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div data-tutorial="proposal-list" className="flex-1 overflow-y-auto p-2 space-y-1">
                     {proposals.map((p) => (
                         <div key={p.id} onClick={() => selectProposal(p)}
                             className={`p-3 rounded cursor-pointer transition-all ${selected?.id === p.id ? 'bg-cyan-950/50 border-l-2 border-cyan-400' : 'hover:bg-white/5'}`}>
@@ -173,7 +173,7 @@ export default function ValidationTab() {
                                 <p className="text-[10px] text-gray-500 mt-2">{selected.supporting_signal_ids.length} supporting signals</p>
                             </div>
 
-                            <div className="space-y-4">
+                            <div data-tutorial="proposed-changes" className="space-y-4">
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400">{changeCount} Proposed Change{changeCount !== 1 ? 's' : ''}</h3>
                                 {Object.entries(selected.proposed_changes).map(([field, change]) => (
                                     <div key={field} className="bg-white/5 rounded p-4 space-y-2">
@@ -218,7 +218,7 @@ export default function ValidationTab() {
                             </div>
 
                             {selected.status === 'pending' && (
-                                <div className="flex gap-3 flex-wrap">
+                                <div data-tutorial="actions" className="flex gap-3 flex-wrap">
                                     <button onClick={handleApprove} disabled={saving}
                                         className="px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
                                         {saving ? 'Applying...' : 'Approve & Apply'}

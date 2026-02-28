@@ -126,7 +126,7 @@ export default function DiscoveryTab() {
                         </button>
                     ))}
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div data-tutorial="proposal-list" className="flex-1 overflow-y-auto p-2 space-y-1">
                     {proposals.map((p) => (
                         <div key={p.id} onClick={() => selectProposal(p)}
                             className={`p-3 rounded cursor-pointer transition-all ${selected?.id === p.id ? 'bg-cyan-950/50 border-l-2 border-cyan-400' : 'hover:bg-white/5'}`}>
@@ -166,7 +166,7 @@ export default function DiscoveryTab() {
                                 <h2 className="text-xl font-bold mt-2">{selected.proposed_name}</h2>
                             </div>
 
-                            <div className="bg-white/5 rounded p-4 space-y-3">
+                            <div data-tutorial="proposal-detail" className="bg-white/5 rounded p-4 space-y-3">
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400">Gemini Skeleton</h3>
                                 <div><span className="text-[10px] text-gray-500">Description</span><p className="text-sm text-gray-300 mt-1">{selected.description}</p></div>
                                 <div><span className="text-[10px] text-gray-500">Why Novel</span><p className="text-sm text-gray-300 mt-1">{selected.why_novel}</p></div>
@@ -180,7 +180,7 @@ export default function DiscoveryTab() {
                             </div>
 
                             {selected.status === 'pending' && (
-                                <div className="bg-white/5 rounded p-4 space-y-4">
+                                <div data-tutorial="narrative-form" className="bg-white/5 rounded p-4 space-y-4">
                                     <h3 className="text-xs uppercase tracking-widest text-gray-400">Complete Narrative</h3>
                                     <div>
                                         <label className="text-xs text-gray-400 block mb-1">Document ID *</label>
@@ -219,7 +219,7 @@ export default function DiscoveryTab() {
                             </div>
 
                             {selected.status === 'pending' && (
-                                <div className="flex gap-3 flex-wrap">
+                                <div data-tutorial="actions" className="flex gap-3 flex-wrap">
                                     <button onClick={handleApprove} disabled={saving || !canApprove}
                                         className="px-4 py-2 rounded bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
                                         Approve &amp; Create

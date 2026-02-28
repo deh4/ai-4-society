@@ -10,32 +10,30 @@ interface Props {
     onComplete: () => void;
 }
 
+function getTargetRect(selector: string | undefined): DOMRect | null {
+    if (!selector) return null;
+    const el = document.querySelector(selector);
+    return el ? el.getBoundingClientRect() : null;
+}
+
 export default function TutorialOverlay({ steps, tabName, onComplete }: Props) {
     const { user } = useAuth();
     const [currentStep, setCurrentStep] = useState(0);
-    const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+    const [, setTick] = useState(0);
 
     const step = steps[currentStep];
+    const targetRect = getTargetRect(step?.target);
 
-    const updateTargetRect = useCallback(() => {
-        if (!step) return;
-        const el = document.querySelector(step.target);
-        if (el) {
-            setTargetRect(el.getBoundingClientRect());
-        } else {
-            setTargetRect(null);
-        }
-    }, [step]);
+    const forceUpdate = useCallback(() => setTick((t) => t + 1), []);
 
     useEffect(() => {
-        updateTargetRect();
-        window.addEventListener('resize', updateTargetRect);
-        window.addEventListener('scroll', updateTargetRect, true);
+        window.addEventListener('resize', forceUpdate);
+        window.addEventListener('scroll', forceUpdate, true);
         return () => {
-            window.removeEventListener('resize', updateTargetRect);
-            window.removeEventListener('scroll', updateTargetRect, true);
+            window.removeEventListener('resize', forceUpdate);
+            window.removeEventListener('scroll', forceUpdate, true);
         };
-    }, [updateTargetRect]);
+    }, [forceUpdate]);
 
     const markComplete = async () => {
         if (!user) return;

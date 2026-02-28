@@ -10,6 +10,10 @@ import DiscoveryTab from '../components/admin/DiscoveryTab';
 import ValidationTab from '../components/admin/ValidationTab';
 import MilestonesTab from '../components/admin/MilestonesTab';
 import UsersTab from '../components/admin/UsersTab';
+import AcknowledgmentModal from '../components/admin/AcknowledgmentModal';
+import TutorialOverlay from '../components/admin/TutorialOverlay';
+import HelpPanel from '../components/admin/HelpPanel';
+import { TUTORIAL_STEPS } from '../lib/tutorial-steps';
 
 type SignalStatus = 'pending' | 'approved' | 'rejected' | 'edited';
 
@@ -82,12 +86,26 @@ export default function Admin() {
     const [bulkRejectNote, setBulkRejectNote] = useState('');
     const [bulkRejecting, setBulkRejecting] = useState(false);
     const [pendingCounts, setPendingCounts] = useState<{ risk: number; solution: number }>({ risk: 0, solution: 0 });
+    const [acknowledged, setAcknowledged] = useState(() => !!(userDoc as Record<string, unknown> | null)?.acknowledgedAt);
+    const [showTutorial, setShowTutorial] = useState(false);
+    const [showHelpPanel, setShowHelpPanel] = useState(false);
+
+    const onboardingCompleted = (userDoc as Record<string, unknown> | null)?.onboardingCompleted as Record<string, boolean> | undefined;
+    const shouldShowTutorial = acknowledged && !onboardingCompleted?.[adminTab] && !!TUTORIAL_STEPS[adminTab];
 
     useEffect(() => {
         if (visibleTabs.length > 0 && !visibleTabs.includes(adminTab)) {
             setAdminTab(visibleTabs[0]!);
         }
     }, [visibleTabs, adminTab]);
+
+    useEffect(() => {
+        if (shouldShowTutorial && !showTutorial) {
+            const timer = setTimeout(() => setShowTutorial(true), 500);
+            return () => clearTimeout(timer);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [adminTab, shouldShowTutorial]);
 
     // Client-side filter by signal_type — avoids composite index dependency
     const signalTypeValues = adminTab === 'risk-signals' ? ['risk', 'both'] : ['solution', 'both'];
@@ -234,6 +252,10 @@ export default function Admin() {
 
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+            {!acknowledged && (
+                <AcknowledgmentModal onComplete={() => setAcknowledged(true)} />
+            )}
+
             {/* Header */}
             <div className="flex flex-col gap-2 px-4 py-3 border-b border-white/10 md:flex-row md:items-center md:justify-between md:px-6 md:py-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -244,6 +266,12 @@ export default function Admin() {
                     <PipelineHealth />
                 </div>
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigate('/help')}
+                        className="text-xs text-gray-400 hover:text-white transition-colors shrink-0"
+                    >
+                        Help
+                    </button>
                     <span className="text-xs text-gray-500 truncate">{user?.email}</span>
                     <button onClick={logOut} className="text-xs text-gray-400 hover:text-white transition-colors shrink-0">
                         Sign Out
@@ -252,7 +280,7 @@ export default function Admin() {
             </div>
 
             {/* Tabs — horizontally scrollable on mobile */}
-            <div className="flex gap-4 px-4 border-b border-white/10 overflow-x-auto md:gap-6 md:px-6">
+            <div data-tutorial="tab-bar" className="flex gap-4 px-4 border-b border-white/10 overflow-x-auto md:gap-6 md:px-6">
                 {visibleTabs.map(tab => {
                     const pending = tab === 'risk-signals' ? pendingCounts.risk
                         : tab === 'solution-signals' ? pendingCounts.solution
@@ -285,6 +313,12 @@ export default function Admin() {
                     className="py-3 text-sm transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-300 whitespace-nowrap"
                 >
                     Observatory
+                </button>
+                <button
+                    onClick={() => setShowHelpPanel(!showHelpPanel)}
+                    className="py-3 text-sm transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-300 whitespace-nowrap ml-auto"
+                >
+                    ?
                 </button>
             </div>
 
@@ -325,7 +359,7 @@ export default function Admin() {
                         </div>
 
                         {/* Signal List — grouped by day */}
-                        <div className="flex-1 overflow-y-auto p-2">
+                        <div data-tutorial="signal-list" className="flex-1 overflow-y-auto p-2">
                             {[...groupedSignals.entries()].map(([day, daySignals]) => {
                                 const isCollapsed = collapsedDays.has(day);
                                 const pendingCount = daySignals.filter(s => s.status === 'pending').length;
@@ -334,7 +368,7 @@ export default function Admin() {
                                 return (
                                     <div key={day} className="mb-1">
                                         {/* Day header */}
-                                        <div className="sticky top-0 z-10 flex items-center gap-2 px-2 py-1.5 bg-[var(--bg-primary)]">
+                                        <div data-tutorial="bulk-reject" className="sticky top-0 z-10 flex items-center gap-2 px-2 py-1.5 bg-[var(--bg-primary)]">
                                             <button
                                                 onClick={() => toggleDay(day)}
                                                 className="flex items-center gap-2 flex-1 min-w-0 text-left"
@@ -388,9 +422,10 @@ export default function Admin() {
                                         {/* Signals in this day */}
                                         {!isCollapsed && (
                                             <div className="space-y-1">
-                                                {daySignals.map((signal) => (
+                                                {daySignals.map((signal, i) => (
                                                     <div
                                                         key={signal.id}
+                                                        {...(i === 0 ? { 'data-tutorial': 'signal-item' } : {})}
                                                         onClick={() => selectSignal(signal)}
                                                         className={`p-3 rounded cursor-pointer transition-all ${selected?.id === signal.id
                                                             ? 'bg-cyan-950/50 border-l-2 border-cyan-400'
@@ -471,7 +506,7 @@ export default function Admin() {
                                     <p className="text-sm text-gray-300 leading-relaxed mb-6">{selected.summary}</p>
 
                                     {/* Classification */}
-                                    <div className="bg-white/5 rounded p-4 mb-6 space-y-3">
+                                    <div data-tutorial="classification" className="bg-white/5 rounded p-4 mb-6 space-y-3">
                                         <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">Gemini Classification</h3>
 
                                         {adminTab === 'risk-signals' && (
@@ -590,7 +625,7 @@ export default function Admin() {
 
                                     {/* Actions */}
                                     {selected.status === 'pending' && (
-                                        <div className="flex gap-3 flex-wrap">
+                                        <div data-tutorial="actions" className="flex gap-3 flex-wrap">
                                             <button
                                                 onClick={() => updateSignal(selected.id, 'approved')}
                                                 disabled={updating}
@@ -638,6 +673,22 @@ export default function Admin() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {showTutorial && TUTORIAL_STEPS[adminTab] && (
+                <TutorialOverlay
+                    steps={TUTORIAL_STEPS[adminTab]}
+                    tabName={adminTab}
+                    onComplete={() => setShowTutorial(false)}
+                />
+            )}
+
+            {showHelpPanel && (
+                <HelpPanel
+                    tabName={adminTab}
+                    onClose={() => setShowHelpPanel(false)}
+                    onReplayTutorial={() => { setShowHelpPanel(false); setShowTutorial(true); }}
+                />
             )}
         </div>
     );
