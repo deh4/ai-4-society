@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Contribute from './pages/Contribute';
 import Admin from './pages/Admin';
 import Observatory from './pages/Observatory';
+import Help from './pages/Help';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RiskProvider } from './store/RiskContext';
 import { AuthProvider } from './store/AuthContext';
@@ -28,6 +29,11 @@ export default function App() {
               <Route path="/observatory" element={
                 <ProtectedRoute requiredRoles={['lead']}>
                   <Observatory />
+                </ProtectedRoute>
+              } />
+              <Route path="/help" element={
+                <ProtectedRoute>
+                  <Help />
                 </ProtectedRoute>
               } />
             </Routes>
