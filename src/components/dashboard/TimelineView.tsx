@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import type { Risk, Solution, Milestone } from '../../store/RiskContext';
 import { buildTimelineItems } from '../../lib/derivePeakYear';
 import type { TimelineItem } from '../../lib/derivePeakYear';
@@ -29,6 +29,32 @@ export default function TimelineView({ risks, solutions, milestones, loading, er
         () => buildTimelineItems(risks, solutions, milestones),
         [risks, solutions, milestones]
     );
+
+    // Auto-snap to nearest risk on initial load
+    const autoSnappedRef = useRef(false);
+    const initialSnapItem = useMemo(() => {
+        if (autoSnappedRef.current) return null;
+        const currentYear = new Date().getFullYear();
+        let nearest: TimelineItem | null = null;
+        let nearestDist = Infinity;
+        for (const item of items) {
+            if (item.type !== 'risk') continue;
+            const dist = Math.abs(item.peakYear - currentYear);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = item;
+            }
+        }
+        return nearest;
+    }, [items]);
+
+    useEffect(() => {
+        if (initialSnapItem && !autoSnappedRef.current) {
+            autoSnappedRef.current = true;
+            setSnapTarget(initialSnapItem);
+            setScreenState('locked');
+        }
+    }, [initialSnapItem]);
 
     const itemsByYear = useMemo(() => {
         const map = new Map<number, TimelineItem[]>();
@@ -156,6 +182,7 @@ export default function TimelineView({ risks, solutions, milestones, loading, er
                 onSnap={handleSnap}
                 onUnsnap={handleUnsnap}
                 activeItemId={activeItem?.id ?? null}
+                initialSnapItem={initialSnapItem}
             />
 
             <CRTScreen

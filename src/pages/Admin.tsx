@@ -89,9 +89,10 @@ export default function Admin() {
     const [acknowledged, setAcknowledged] = useState(() => !!(userDoc as Record<string, unknown> | null)?.acknowledgedAt);
     const [showTutorial, setShowTutorial] = useState(false);
     const [showHelpPanel, setShowHelpPanel] = useState(false);
+    const [localCompleted, setLocalCompleted] = useState<Record<string, boolean>>({});
 
     const onboardingCompleted = (userDoc as Record<string, unknown> | null)?.onboardingCompleted as Record<string, boolean> | undefined;
-    const shouldShowTutorial = acknowledged && !onboardingCompleted?.[adminTab] && !!TUTORIAL_STEPS[adminTab];
+    const shouldShowTutorial = acknowledged && !onboardingCompleted?.[adminTab] && !localCompleted[adminTab] && !!TUTORIAL_STEPS[adminTab];
 
     useEffect(() => {
         if (visibleTabs.length > 0 && !visibleTabs.includes(adminTab)) {
@@ -679,7 +680,10 @@ export default function Admin() {
                 <TutorialOverlay
                     steps={TUTORIAL_STEPS[adminTab]}
                     tabName={adminTab}
-                    onComplete={() => setShowTutorial(false)}
+                    onComplete={() => {
+                        setShowTutorial(false);
+                        setLocalCompleted(prev => ({ ...prev, [adminTab]: true }));
+                    }}
                 />
             )}
 

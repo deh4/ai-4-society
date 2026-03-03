@@ -8,6 +8,7 @@ interface FrequencyStripProps {
     onSnap: (item: TimelineItem) => void;
     onUnsnap: () => void;
     activeItemId: string | null;
+    initialSnapItem?: TimelineItem | null;
 }
 
 const MIN_YEAR = 1950;
@@ -60,7 +61,7 @@ function calcTickOpacity(tickPx: number, centerPx: number): number {
     return 1 - ((distYears - 1) / (FADE_RANGE - 1)) * 0.92;
 }
 
-export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap, activeItemId }: FrequencyStripProps) {
+export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap, activeItemId, initialSnapItem }: FrequencyStripProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(0);
     const [centerPx, setCenterPx] = useState(yearToPx(CURRENT_YEAR));
@@ -87,6 +88,19 @@ export default function FrequencyStrip({ items, onCenterChange, onSnap, onUnsnap
         window.addEventListener('resize', measure);
         return () => window.removeEventListener('resize', measure);
     }, [dragX]);
+
+    // Animate to initial snap item after mount
+    const didInitialSnap = useRef(false);
+    useEffect(() => {
+        if (!initialSnapItem || didInitialSnap.current || !containerWidth) return;
+        const px = tickPositions.get(initialSnapItem.id);
+        if (px == null) return;
+        didInitialSnap.current = true;
+        // Small delay so the strip renders first
+        requestAnimationFrame(() => {
+            animate(dragX, -(px - containerWidth / 2), { type: 'spring', stiffness: 200, damping: 30 });
+        });
+    }, [initialSnapItem, containerWidth, tickPositions, dragX]);
 
     // Fix #3: Track centerPx as state so opacity updates during drag
     useEffect(() => {
