@@ -29,7 +29,8 @@ interface AgentHealth {
     lastRunSignalsStored: number;
     lastRunTokens: { input: number; output: number } | null;
     totalTokensMonth: { input: number; output: number };
-    estimatedCostMonth: number;
+    estimatedCostMonth: { geminiTokens: number; firestoreReads: number; firestoreWrites: number; functionsCompute: number; total: number } | number;
+    lastRunCost: { geminiTokens: number; firestoreReads: number; firestoreWrites: number; functionsCompute: number; total: number } | null;
     lastError: string | null;
     lastErrorAt: { seconds: number } | null;
 }
@@ -155,7 +156,12 @@ export default function Observatory() {
         0
     );
     const totalMonthlyCost = Object.values(healthMap).reduce(
-        (sum, h) => sum + (h.estimatedCostMonth || 0),
+        (sum, h) => {
+            const cost = h.estimatedCostMonth;
+            if (typeof cost === 'number') return sum + cost;
+            if (cost && typeof cost === 'object' && 'total' in cost) return sum + (cost as { total: number }).total;
+            return sum;
+        },
         0
     );
     const totalLifetimeSignals = Object.values(healthMap).reduce(

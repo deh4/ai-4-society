@@ -19,10 +19,16 @@ export interface RunStats {
   firestoreWrites: number; // approximate
 }
 
+export interface CumulativeUsage {
+  dailyReads: number;
+  dailyWrites: number;
+  monthlyGbSeconds: number;
+}
+
 /**
  * Log a pipeline run's usage to Firestore and warn if approaching free tier limits.
  */
-export async function trackUsage(stats: RunStats): Promise<void> {
+export async function trackUsage(stats: RunStats): Promise<CumulativeUsage> {
   const db = getFirestore();
   const now = new Date();
   const dateKey = now.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -97,6 +103,13 @@ export async function trackUsage(stats: RunStats): Promise<void> {
       `Monthly usage (${monthKey}): ${monthly.totalRuns} runs, ${monthly.totalGeminiCalls} Gemini calls, ${monthly.totalSignalsStored} signals stored, ~${monthly.totalFirestoreReads} reads, ~${monthly.totalFirestoreWrites} writes`
     );
   }
+
+  // Return cumulative totals for cost calculation
+  return {
+    dailyReads: (daily?.firestoreReads as number) ?? stats.firestoreReads,
+    dailyWrites: (daily?.firestoreWrites as number) ?? stats.firestoreWrites,
+    monthlyGbSeconds: 0,
+  };
 }
 
 // ─── Pipeline Health Tracking ───────────────────────────────────────────────
@@ -154,14 +167,48 @@ export async function updatePipelineHealth(
 
 // ─── Agent Run Summaries ────────────────────────────────────────────────────
 
-// Gemini 2.0 Flash pricing (per 1M tokens)
-const GEMINI_FLASH_PRICING = {
-  inputPerMillion: 0.10,
-  outputPerMillion: 0.40,
+// Gemini model pricing (per 1M tokens) — update when models change
+// Source: https://ai.google.dev/gemini-api/docs/pricing
+const MODEL_PRICING: Record<string, { inputPerMillion: number; outputPerMillion: number }> = {
+  "gemini-2.5-flash": { inputPerMillion: 0.30, outputPerMillion: 2.50 },
+  "gemini-2.5-pro":   { inputPerMillion: 1.25, outputPerMillion: 10.00 },
 };
+
+const DEFAULT_MODEL_PRICING = { inputPerMillion: 0.30, outputPerMillion: 2.50 }; // fallback to flash
+
+// Firebase pricing (Blaze plan, pay-as-you-go above free tier)
+// Source: https://firebase.google.com/pricing
+const FIRESTORE_PRICING = {
+  readPer100K: 0.036,
+  writePer100K: 0.108,
+};
+
+const FUNCTIONS_PRICING = {
+  gbSecondRate: 0.0000025,
+};
+
+// Free tier daily/monthly allowances
+const FREE_TIER_DAILY = {
+  firestoreReads: 50_000,
+  firestoreWrites: 20_000,
+};
+
+const FREE_TIER_MONTHLY = {
+  functionGbSeconds: 400_000,
+};
+
+export interface CostBreakdown {
+  geminiTokens: number;
+  firestoreReads: number;
+  firestoreWrites: number;
+  functionsCompute: number;
+  total: number;
+}
 
 export interface AgentRunData {
   agentId: string;
+  modelId: string;
+  memoryMiB: number;
   startedAt: Date;
   outcome: PipelineOutcome;
   error: string | null;
@@ -177,10 +224,58 @@ export interface AgentRunData {
   sourcesUsed: string[];
 }
 
-export async function writeAgentRunSummary(data: AgentRunData): Promise<void> {
+function calculateCostBreakdown(
+  data: AgentRunData,
+  durationMs: number,
+  cumulativeUsage: CumulativeUsage | null,
+): CostBreakdown {
+  // Gemini token cost
+  const pricing = MODEL_PRICING[data.modelId] ?? DEFAULT_MODEL_PRICING;
+  const geminiTokens =
+    (data.metrics.tokensInput / 1_000_000) * pricing.inputPerMillion +
+    (data.metrics.tokensOutput / 1_000_000) * pricing.outputPerMillion;
+
+  // Firestore cost (above daily free tier)
+  let firestoreReadCost = 0;
+  let firestoreWriteCost = 0;
+  if (cumulativeUsage) {
+    const billableReads = Math.max(0, cumulativeUsage.dailyReads - FREE_TIER_DAILY.firestoreReads);
+    const billableWrites = Math.max(0, cumulativeUsage.dailyWrites - FREE_TIER_DAILY.firestoreWrites);
+    const runReadShare = cumulativeUsage.dailyReads > 0
+      ? data.metrics.firestoreReads / cumulativeUsage.dailyReads
+      : 0;
+    const runWriteShare = cumulativeUsage.dailyWrites > 0
+      ? data.metrics.firestoreWrites / cumulativeUsage.dailyWrites
+      : 0;
+    firestoreReadCost = (billableReads * runReadShare / 100_000) * FIRESTORE_PRICING.readPer100K;
+    firestoreWriteCost = (billableWrites * runWriteShare / 100_000) * FIRESTORE_PRICING.writePer100K;
+  }
+
+  // Cloud Functions compute cost
+  const gbSeconds = (data.memoryMiB / 1024) * (durationMs / 1000);
+  const functionsCompute = gbSeconds * FUNCTIONS_PRICING.gbSecondRate;
+
+  const total = geminiTokens + firestoreReadCost + firestoreWriteCost + functionsCompute;
+
+  return {
+    geminiTokens: Math.round(geminiTokens * 10000) / 10000,
+    firestoreReads: Math.round(firestoreReadCost * 10000) / 10000,
+    firestoreWrites: Math.round(firestoreWriteCost * 10000) / 10000,
+    functionsCompute: Math.round(functionsCompute * 10000) / 10000,
+    total: Math.round(total * 10000) / 10000,
+  };
+}
+
+export async function writeAgentRunSummary(
+  data: AgentRunData,
+  cumulativeUsage: CumulativeUsage | null = null,
+): Promise<void> {
   const db = getFirestore();
   const now = new Date();
   const duration = now.getTime() - data.startedAt.getTime();
+
+  // Calculate cost breakdown for this run
+  const runCost = calculateCostBreakdown(data, duration, cumulativeUsage);
 
   // Write run summary doc
   await db.collection("agents").doc(data.agentId).collection("runs").add({
@@ -190,6 +285,8 @@ export async function writeAgentRunSummary(data: AgentRunData): Promise<void> {
     outcome: data.outcome,
     error: data.error,
     metrics: data.metrics,
+    modelId: data.modelId,
+    cost: runCost,
     sourcesUsed: data.sourcesUsed,
   });
 
@@ -217,9 +314,38 @@ export async function writeAgentRunSummary(data: AgentRunData): Promise<void> {
     ? { input: prevMonth.input + data.metrics.tokensInput, output: prevMonth.output + data.metrics.tokensOutput }
     : { input: data.metrics.tokensInput, output: data.metrics.tokensOutput };
 
-  const estimatedCostMonth =
-    (totalTokensMonth.input / 1_000_000) * GEMINI_FLASH_PRICING.inputPerMillion +
-    (totalTokensMonth.output / 1_000_000) * GEMINI_FLASH_PRICING.outputPerMillion;
+  // Accumulate monthly cost breakdown
+  const prevCostMonth = (prev.estimatedCostMonth as CostBreakdown | number | undefined);
+  const prevCostBreakdown: CostBreakdown = (typeof prevCostMonth === 'object' && prevCostMonth !== null)
+    ? prevCostMonth as CostBreakdown
+    : { geminiTokens: 0, firestoreReads: 0, firestoreWrites: 0, functionsCompute: 0, total: 0 };
+
+  const estimatedCostMonth: CostBreakdown = sameMonth
+    ? {
+        geminiTokens: Math.round((prevCostBreakdown.geminiTokens + runCost.geminiTokens) * 10000) / 10000,
+        firestoreReads: Math.round((prevCostBreakdown.firestoreReads + runCost.firestoreReads) * 10000) / 10000,
+        firestoreWrites: Math.round((prevCostBreakdown.firestoreWrites + runCost.firestoreWrites) * 10000) / 10000,
+        functionsCompute: Math.round((prevCostBreakdown.functionsCompute + runCost.functionsCompute) * 10000) / 10000,
+        total: Math.round((prevCostBreakdown.total + runCost.total) * 10000) / 10000,
+      }
+    : runCost;
+
+  // Apply monthly free tier offset for functions compute
+  const monthlyGbSeconds = (data.memoryMiB / 1024) * (duration / 1000);
+  const prevMonthlyGbSeconds = sameMonth ? ((prev.totalGbSecondsMonth as number) ?? 0) : 0;
+  const totalGbSecondsMonth = prevMonthlyGbSeconds + monthlyGbSeconds;
+  const freeGbSecondsRemaining = Math.max(0, FREE_TIER_MONTHLY.functionGbSeconds - prevMonthlyGbSeconds);
+  const billableGbSeconds = Math.max(0, monthlyGbSeconds - freeGbSecondsRemaining);
+  const adjustedFunctionsCompute = Math.round(billableGbSeconds * FUNCTIONS_PRICING.gbSecondRate * 10000) / 10000;
+
+  // Recalculate with free tier offset for functions
+  estimatedCostMonth.functionsCompute = sameMonth
+    ? Math.round((prevCostBreakdown.functionsCompute + adjustedFunctionsCompute) * 10000) / 10000
+    : adjustedFunctionsCompute;
+  estimatedCostMonth.total = Math.round(
+    (estimatedCostMonth.geminiTokens + estimatedCostMonth.firestoreReads +
+     estimatedCostMonth.firestoreWrites + estimatedCostMonth.functionsCompute) * 10000
+  ) / 10000;
 
   const totalSignalsLifetime = ((prev.totalSignalsLifetime as number) ?? 0) + data.metrics.signalsStored;
 
@@ -231,13 +357,15 @@ export async function writeAgentRunSummary(data: AgentRunData): Promise<void> {
     consecutiveErrors,
     consecutiveEmptyRuns,
     lastRunTokens: { input: data.metrics.tokensInput, output: data.metrics.tokensOutput },
+    lastRunCost: runCost,
     totalTokensToday,
     totalTokensMonth,
-    estimatedCostMonth: Math.round(estimatedCostMonth * 10000) / 10000,
+    totalGbSecondsMonth,
+    estimatedCostMonth,
     lastRunArticlesFetched: data.metrics.articlesFetched,
     lastRunSignalsStored: data.metrics.signalsStored,
     totalSignalsLifetime,
   });
 
-  logger.info(`Agent run summary written for ${data.agentId}: ${data.outcome}, ${duration}ms`);
+  logger.info(`Agent run summary written for ${data.agentId}: ${data.outcome}, ${duration}ms, cost $${runCost.total}`);
 }

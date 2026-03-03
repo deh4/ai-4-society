@@ -10,6 +10,14 @@ import ChangelogsTab from './ChangelogsTab';
 
 // --- Types ---
 
+interface CostBreakdown {
+    geminiTokens: number;
+    firestoreReads: number;
+    firestoreWrites: number;
+    functionsCompute: number;
+    total: number;
+}
+
 interface AgentRegistry {
     id: string;
     name: string;
@@ -31,7 +39,8 @@ interface AgentHealth {
     lastRunSignalsStored: number;
     lastRunTokens: { input: number; output: number } | null;
     totalTokensMonth: { input: number; output: number };
-    estimatedCostMonth: number;
+    estimatedCostMonth: CostBreakdown | number;
+    lastRunCost: CostBreakdown | null;
     lastError: string | null;
     lastErrorAt: { seconds: number } | null;
 }
@@ -56,6 +65,8 @@ interface RunRecord {
     };
     sourcesUsed: string[];
     error: string | null;
+    modelId?: string;
+    cost?: CostBreakdown;
 }
 
 interface Props {
@@ -65,6 +76,18 @@ interface Props {
 }
 
 // --- Helpers ---
+
+function getCostTotal(cost: CostBreakdown | number | null | undefined): number {
+    if (cost === null || cost === undefined) return 0;
+    if (typeof cost === 'number') return cost;
+    return cost.total ?? 0;
+}
+
+function getCostBreakdown(cost: CostBreakdown | number | null | undefined): CostBreakdown | null {
+    if (cost === null || cost === undefined) return null;
+    if (typeof cost === 'number') return null;
+    return cost;
+}
 
 function timeAgo(seconds: number): string {
     const diff = Math.floor((Date.now() - seconds * 1000) / 1000);
@@ -265,7 +288,7 @@ function HealthTab({ health }: { health: AgentHealth | null }) {
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Est. Cost</div>
-                        <div className="text-sm font-bold">${(health.estimatedCostMonth ?? 0).toFixed(4)}</div>
+                        <div className="text-sm font-bold">${getCostTotal(health.estimatedCostMonth).toFixed(4)}</div>
                     </div>
                     <div>
                         <div className="text-[10px] text-gray-500">Consecutive Empty</div>
@@ -274,6 +297,29 @@ function HealthTab({ health }: { health: AgentHealth | null }) {
                         </div>
                     </div>
                 </div>
+                {getCostBreakdown(health.estimatedCostMonth) && (
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                        <div className="text-[10px] text-gray-500 mb-2">Cost Breakdown</div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                                <div className="text-[10px] text-gray-600">Gemini Tokens</div>
+                                <div className="text-xs font-bold">${getCostBreakdown(health.estimatedCostMonth)!.geminiTokens.toFixed(4)}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-gray-600">Firestore Reads</div>
+                                <div className="text-xs font-bold">${getCostBreakdown(health.estimatedCostMonth)!.firestoreReads.toFixed(4)}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-gray-600">Firestore Writes</div>
+                                <div className="text-xs font-bold">${getCostBreakdown(health.estimatedCostMonth)!.firestoreWrites.toFixed(4)}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-gray-600">Functions Compute</div>
+                                <div className="text-xs font-bold">${getCostBreakdown(health.estimatedCostMonth)!.functionsCompute.toFixed(4)}</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Last Error */}
@@ -420,12 +466,13 @@ function RunsTab({ agentId }: { agentId: string }) {
     return (
         <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-5 gap-4 px-4 py-2 border-b border-white/10 text-[10px] text-gray-500 uppercase tracking-wider">
+            <div className="grid grid-cols-6 gap-4 px-4 py-2 border-b border-white/10 text-[10px] text-gray-500 uppercase tracking-wider">
                 <div>Time</div>
                 <div>Outcome</div>
                 <div>Duration</div>
                 <div>Signals</div>
                 <div>Tokens</div>
+                <div>Cost</div>
             </div>
 
             {/* Rows */}
@@ -437,7 +484,7 @@ function RunsTab({ agentId }: { agentId: string }) {
                     <div key={run.id}>
                         <div
                             onClick={() => setExpandedId(isExpanded ? null : run.id)}
-                            className="grid grid-cols-5 gap-4 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/10 text-sm"
+                            className="grid grid-cols-6 gap-4 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/10 text-sm"
                         >
                             <div className="text-gray-300">
                                 {run.startedAt ? timeAgo(run.startedAt.seconds) : 'N/A'}
@@ -448,6 +495,7 @@ function RunsTab({ agentId }: { agentId: string }) {
                             <div className="text-gray-300">{durationSec !== null ? `${durationSec}s` : 'N/A'}</div>
                             <div className="text-gray-300">{run.metrics?.signalsStored ?? 0}</div>
                             <div className="text-gray-300">{((run.metrics?.tokensInput ?? 0) + (run.metrics?.tokensOutput ?? 0)).toLocaleString()}</div>
+                            <div className="text-gray-300">${(run.cost?.total ?? 0).toFixed(4)}</div>
                         </div>
 
                         {/* Expanded detail */}
@@ -471,6 +519,24 @@ function RunsTab({ agentId }: { agentId: string }) {
                                         <span className="text-gray-300">{(run.metrics?.tokensOutput ?? 0).toLocaleString()}</span>
                                     </div>
                                 </div>
+                                {run.modelId && (
+                                    <div>
+                                        <span className="text-gray-500">Model:</span>{' '}
+                                        <span className="text-gray-300">{run.modelId}</span>
+                                    </div>
+                                )}
+                                {run.cost && (
+                                    <div className="mt-2 pt-2 border-t border-white/5">
+                                        <div className="text-[10px] text-gray-500 mb-1">Cost Breakdown</div>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                                            <div><span className="text-gray-500">Gemini:</span> <span className="text-gray-300">${run.cost.geminiTokens.toFixed(4)}</span></div>
+                                            <div><span className="text-gray-500">Reads:</span> <span className="text-gray-300">${run.cost.firestoreReads.toFixed(4)}</span></div>
+                                            <div><span className="text-gray-500">Writes:</span> <span className="text-gray-300">${run.cost.firestoreWrites.toFixed(4)}</span></div>
+                                            <div><span className="text-gray-500">Compute:</span> <span className="text-gray-300">${run.cost.functionsCompute.toFixed(4)}</span></div>
+                                            <div><span className="text-gray-500">Total:</span> <span className="text-white font-bold">${run.cost.total.toFixed(4)}</span></div>
+                                        </div>
+                                    </div>
+                                )}
                                 {run.sourcesUsed && run.sourcesUsed.length > 0 && (
                                     <div className="text-xs">
                                         <span className="text-gray-500">Sources:</span>{' '}
