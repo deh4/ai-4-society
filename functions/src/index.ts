@@ -342,13 +342,13 @@ export const discoveryAgent = onSchedule(
     const db = getFirestore();
 
     try {
-      // Step 1: Read approved signals from last 30 days
+      // Step 1: Read classified signals from last 30 days (including pending)
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 30);
 
       const signalsSnap = await db
         .collection("signals")
-        .where("status", "in", ["approved", "edited"])
+        .where("status", "in", ["pending", "approved", "edited"])
         .where("fetched_at", ">", cutoff)
         .orderBy("fetched_at", "desc")
         .get();
@@ -365,7 +365,7 @@ export const discoveryAgent = onSchedule(
         published_date: (d.data().published_date as string) ?? "",
       }));
 
-      logger.info(`Discovery: ${signals.length} approved signals in last 30 days`);
+      logger.info(`Discovery: ${signals.length} classified signals in last 30 days`);
 
       // Also fetch unmatched signals (any status) from last 30 days
       const unmatchedSnap = await db
@@ -489,12 +489,12 @@ export const validatorAgent = onSchedule(
         db.collection("solutions").get(),
       ]);
 
-      // Step 2: Read approved signals from last 30 days
+      // Step 2: Read classified signals from last 30 days (including pending)
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 30);
       const signalsSnap = await db
         .collection("signals")
-        .where("status", "in", ["approved", "edited"])
+        .where("status", "in", ["pending", "approved", "edited"])
         .where("fetched_at", ">", cutoff)
         .get();
 
@@ -767,7 +767,7 @@ export const triggerAgentRun = onCall(
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 30);
 
-        const signalsSnap = await db.collection("signals").where("status", "in", ["approved", "edited"]).where("fetched_at", ">", cutoff).orderBy("fetched_at", "desc").get();
+        const signalsSnap = await db.collection("signals").where("status", "in", ["pending", "approved", "edited"]).where("fetched_at", ">", cutoff).orderBy("fetched_at", "desc").get();
         const signals = signalsSnap.docs.map((d) => ({
           id: d.id, title: (d.data().title as string) ?? "", summary: (d.data().summary as string) ?? "",
           signal_type: (d.data().signal_type as string) ?? "risk", risk_categories: (d.data().risk_categories as string[]) ?? [],
@@ -806,7 +806,7 @@ export const triggerAgentRun = onCall(
         const [risksSnap, solutionsSnap] = await Promise.all([db.collection("risks").get(), db.collection("solutions").get()]);
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 30);
-        const signalsSnap = await db.collection("signals").where("status", "in", ["approved", "edited"]).where("fetched_at", ">", cutoff).get();
+        const signalsSnap = await db.collection("signals").where("status", "in", ["pending", "approved", "edited"]).where("fetched_at", ">", cutoff).get();
         const allSignals = signalsSnap.docs.map((d) => ({
           id: d.id, title: (d.data().title as string) ?? "", summary: (d.data().summary as string) ?? "",
           severity_hint: (d.data().severity_hint as string) ?? "Emerging", source_name: (d.data().source_name as string) ?? "",
