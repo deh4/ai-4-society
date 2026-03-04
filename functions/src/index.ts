@@ -10,10 +10,10 @@ import { storeSignals } from "./signal-scout/store.js";
 import { trackUsage, updatePipelineHealth, writeAgentRunSummary } from "./usage-monitor.js";
 import { DATA_SOURCES } from "./config/sources.js";
 import { runDataLifecycle } from "./data-lifecycle.js";
-import { analyzeSignals, UnmatchedSignal } from "./discovery-agent/analyzer.js";
+import { analyzeSignals, UnmatchedSignal, PendingProposal } from "./discovery-agent/analyzer.js";
 import { storeDiscoveryProposals } from "./discovery-agent/store.js";
 import { assessRisk, assessSolution } from "./validator-agent/assessor.js";
-import { storeValidationProposal } from "./validator-agent/store.js";
+import { storeValidationProposal, resetPendingCache } from "./validator-agent/store.js";
 
 initializeApp();
 
@@ -402,10 +402,11 @@ export const discoveryAgent = onSchedule(
         return;
       }
 
-      // Step 2: Read current registry (name + description only)
-      const [risksSnap, solutionsSnap] = await Promise.all([
+      // Step 2: Read current registry (name + description only) + pending proposals
+      const [risksSnap, solutionsSnap, pendingProposalsSnap] = await Promise.all([
         db.collection("risks").get(),
         db.collection("solutions").get(),
+        db.collection("discovery_proposals").where("status", "==", "pending").get(),
       ]);
 
       const risks = risksSnap.docs.map((d) => ({
@@ -420,9 +421,15 @@ export const discoveryAgent = onSchedule(
         description: (d.data().summary as string) ?? "",
       }));
 
+      const pendingProposals: PendingProposal[] = pendingProposalsSnap.docs.map((d) => ({
+        proposed_name: (d.data().proposed_name as string) ?? "",
+        type: (d.data().type as "new_risk" | "new_solution") ?? "new_risk",
+        description: (d.data().description as string) ?? "",
+      }));
+
       // Step 3: Analyze with Gemini 2.5 Pro
       const { proposals, tokenUsage } = await analyzeSignals(
-        signals, unmatchedSignals, risks, solutions, geminiApiKey.value()
+        signals, unmatchedSignals, risks, solutions, geminiApiKey.value(), pendingProposals
       );
 
       // Step 4: Store proposals
@@ -481,6 +488,8 @@ export const validatorAgent = onSchedule(
     let totalTokensOutput = 0;
     let geminiCalls = 0;
     let proposalsStored = 0;
+
+    resetPendingCache();
 
     try {
       // Step 1: Read all risks and solutions
@@ -788,11 +797,12 @@ export const triggerAgentRun = onCall(
           return { success: true, message: `Discovery Agent: insufficient signals (${signals.length} approved, ${unmatchedSignals.length} unmatched)` };
         }
 
-        const [risksSnap, solutionsSnap] = await Promise.all([db.collection("risks").get(), db.collection("solutions").get()]);
+        const [risksSnap, solutionsSnap, pendingProposalsSnap] = await Promise.all([db.collection("risks").get(), db.collection("solutions").get(), db.collection("discovery_proposals").where("status", "==", "pending").get()]);
         const risks = risksSnap.docs.map((d) => ({ id: d.id, name: (d.data().risk_name as string) ?? d.id, description: (d.data().summary as string) ?? "" }));
         const solutions = solutionsSnap.docs.map((d) => ({ id: d.id, name: (d.data().solution_title as string) ?? d.id, description: (d.data().summary as string) ?? "" }));
+        const pendingProposals: PendingProposal[] = pendingProposalsSnap.docs.map((d) => ({ proposed_name: (d.data().proposed_name as string) ?? "", type: (d.data().type as "new_risk" | "new_solution") ?? "new_risk", description: (d.data().description as string) ?? "" }));
 
-        const { proposals, tokenUsage } = await analyzeSignals(signals, unmatchedSignals, risks, solutions, geminiApiKey.value());
+        const { proposals, tokenUsage } = await analyzeSignals(signals, unmatchedSignals, risks, solutions, geminiApiKey.value(), pendingProposals);
         const stored = await storeDiscoveryProposals(proposals);
 
         await writeAgentRunSummary({ agentId: "discovery-agent", startedAt: runStartedAt, outcome: stored > 0 ? "success" : "empty", error: null, modelId: "gemini-2.5-pro", memoryMiB: 512, metrics: { articlesFetched: signals.length, signalsStored: stored, geminiCalls: 1, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 3, firestoreWrites: stored }, sourcesUsed: [] });
@@ -802,6 +812,7 @@ export const triggerAgentRun = onCall(
         // validator-agent
         const runStartedAt = new Date();
         let totalTokensInput = 0, totalTokensOutput = 0, geminiCalls = 0, proposalsStored = 0;
+        resetPendingCache();
 
         const [risksSnap, solutionsSnap] = await Promise.all([db.collection("risks").get(), db.collection("solutions").get()]);
         const cutoff = new Date();

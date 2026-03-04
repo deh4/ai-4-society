@@ -39,6 +39,12 @@ export interface DiscoveryProposal {
   suggested_parent_risk_id?: string;
 }
 
+export interface PendingProposal {
+  proposed_name: string;
+  type: "new_risk" | "new_solution";
+  description: string;
+}
+
 export interface DiscoveryResult {
   proposals: DiscoveryProposal[];
   tokenUsage: { input: number; output: number };
@@ -51,10 +57,19 @@ export async function analyzeSignals(
   unmatchedSignals: UnmatchedSignal[],
   risks: RegistryItem[],
   solutions: RegistryItem[],
-  geminiApiKey: string
+  geminiApiKey: string,
+  pendingProposals: PendingProposal[] = []
 ): Promise<DiscoveryResult> {
   const genAI = new GoogleGenerativeAI(geminiApiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+
+  const pendingSection = pendingProposals.length > 0
+    ? [
+        "",
+        "ALREADY-PENDING PROPOSALS (do NOT re-propose these or similar topics):",
+        ...pendingProposals.map((p) => `- [${p.type}] ${p.proposed_name} — ${p.description}`),
+      ]
+    : [];
 
   const registryText = [
     "EXISTING RISKS:",
@@ -62,6 +77,7 @@ export async function analyzeSignals(
     "",
     "EXISTING SOLUTIONS:",
     ...solutions.map((s) => `- ${s.id}: ${s.name} — ${s.description}`),
+    ...pendingSection,
   ].join("\n");
 
   const signalText = signals
@@ -90,6 +106,7 @@ Your task: given a body of approved signals and the existing risk/solution regis
 
 Rules for a valid proposal:
 - The topic must NOT be a sub-variant or reframing of an existing entry
+- The topic must NOT overlap with or duplicate any ALREADY-PENDING PROPOSALS listed below
 - It must be supported by at least ${MIN_SUPPORTING_SIGNALS} signals from the list
 - It must represent a distinct societal risk or countermeasure
 - Do NOT propose if the topic clearly maps to an existing R or S code
