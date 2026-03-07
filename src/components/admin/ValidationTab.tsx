@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp, where, type QueryConstraint } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
@@ -34,7 +34,6 @@ function formatValue(value: unknown): string {
 
 export default function ValidationTab() {
     const { user } = useAuth();
-    const [proposals, setProposals] = useState<ValidationProposal[]>([]);
     const [filter, setFilter] = useState<ProposalStatus | 'all'>('pending');
     const [selected, setSelected] = useState<ValidationProposal | null>(null);
     const [editedChanges, setEditedChanges] = useState<Record<string, unknown>>({});
@@ -42,14 +41,18 @@ export default function ValidationTab() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [allProposals, setAllProposals] = useState<ValidationProposal[]>([]);
+
     useEffect(() => {
-        const constraints: QueryConstraint[] = [orderBy('created_at', 'desc')];
-        if (filter !== 'all') constraints.unshift(where('status', '==', filter));
-        const q = query(collection(db, 'validation_proposals'), ...constraints);
+        const q = query(collection(db, 'validation_proposals'), orderBy('created_at', 'desc'));
         return onSnapshot(q, (snap) => {
-            setProposals(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ValidationProposal[]);
+            setAllProposals(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ValidationProposal[]);
+        }, (error) => {
+            console.error('Validation proposals query error:', error);
         });
-    }, [filter]);
+    }, []);
+
+    const proposals = filter === 'all' ? allProposals : allProposals.filter(p => p.status === filter);
 
     const selectProposal = (p: ValidationProposal) => {
         setSelected(p);

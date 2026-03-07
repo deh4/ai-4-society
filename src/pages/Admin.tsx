@@ -85,7 +85,7 @@ export default function Admin() {
     const [bulkRejectDay, setBulkRejectDay] = useState<string | null>(null);
     const [bulkRejectNote, setBulkRejectNote] = useState('');
     const [bulkRejecting, setBulkRejecting] = useState(false);
-    const [pendingCounts, setPendingCounts] = useState<{ risk: number; solution: number }>({ risk: 0, solution: 0 });
+    const [pendingCounts, setPendingCounts] = useState<{ risk: number; solution: number; discovery: number; validation: number }>({ risk: 0, solution: 0, discovery: 0, validation: 0 });
     const [acknowledged, setAcknowledged] = useState(() => !!(userDoc as Record<string, unknown> | null)?.acknowledgedAt);
     const [showTutorial, setShowTutorial] = useState(false);
     const [showHelpPanel, setShowHelpPanel] = useState(false);
@@ -127,23 +127,37 @@ export default function Admin() {
         return groups;
     }, [signals]);
 
-    // Always track pending counts for both signal tabs
+    // Always track pending counts for all tabs
     useEffect(() => {
-        const q = query(collection(db, 'signals'), where('status', '==', 'pending'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            let risk = 0;
-            let solution = 0;
-            for (const d of snapshot.docs) {
-                const type = d.data().signal_type as string | undefined;
-                if (type === 'solution') solution++;
-                else if (type === 'both') { risk++; solution++; }
-                else if (type !== 'unmatched') risk++; // 'risk' or undefined (skip unmatched)
-            }
-            setPendingCounts({ risk, solution });
-        }, (error) => {
-            console.error('Pending count query error:', error);
-        });
-        return unsubscribe;
+        const unsubSignals = onSnapshot(
+            query(collection(db, 'signals'), where('status', '==', 'pending')),
+            (snapshot) => {
+                let risk = 0;
+                let solution = 0;
+                for (const d of snapshot.docs) {
+                    const type = d.data().signal_type as string | undefined;
+                    if (type === 'solution') solution++;
+                    else if (type === 'both') { risk++; solution++; }
+                    else if (type !== 'unmatched') risk++; // 'risk' or undefined (skip unmatched)
+                }
+                setPendingCounts(prev => ({ ...prev, risk, solution }));
+            },
+            (error) => console.error('Pending signal count error:', error)
+        );
+
+        const unsubDiscovery = onSnapshot(
+            query(collection(db, 'discovery_proposals'), where('status', '==', 'pending')),
+            (snapshot) => setPendingCounts(prev => ({ ...prev, discovery: snapshot.size })),
+            (error) => console.error('Pending discovery count error:', error)
+        );
+
+        const unsubValidation = onSnapshot(
+            query(collection(db, 'validation_proposals'), where('status', '==', 'pending')),
+            (snapshot) => setPendingCounts(prev => ({ ...prev, validation: snapshot.size })),
+            (error) => console.error('Pending validation count error:', error)
+        );
+
+        return () => { unsubSignals(); unsubDiscovery(); unsubValidation(); };
     }, []);
 
     useEffect(() => {
@@ -285,6 +299,8 @@ export default function Admin() {
                 {visibleTabs.map(tab => {
                     const pending = tab === 'risk-signals' ? pendingCounts.risk
                         : tab === 'solution-signals' ? pendingCounts.solution
+                        : tab === 'discovery' ? pendingCounts.discovery
+                        : tab === 'validation' ? pendingCounts.validation
                         : 0;
                     return (
                         <button
@@ -297,7 +313,7 @@ export default function Admin() {
                             }`}
                         >
                             {TAB_CONFIG[tab].label}
-                            {(tab === 'risk-signals' || tab === 'solution-signals') && pending > 0 && (
+                            {pending > 0 && (
                                 <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                                     adminTab === tab
                                         ? 'bg-yellow-400/15 text-yellow-400'

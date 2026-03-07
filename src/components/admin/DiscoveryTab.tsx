@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, where, increment, type QueryConstraint } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
 
@@ -24,7 +24,6 @@ const RISK_IDS = ['R01','R02','R03','R04','R05','R06','R07','R08','R09','R10'];
 
 export default function DiscoveryTab() {
     const { user } = useAuth();
-    const [proposals, setProposals] = useState<DiscoveryProposal[]>([]);
     const [filter, setFilter] = useState<ProposalStatus | 'all'>('pending');
     const [selected, setSelected] = useState<DiscoveryProposal | null>(null);
     const [saving, setSaving] = useState(false);
@@ -34,14 +33,18 @@ export default function DiscoveryTab() {
     const [narrativeName, setNarrativeName] = useState('');
     const [narrativeSummary, setNarrativeSummary] = useState('');
 
+    const [allProposals, setAllProposals] = useState<DiscoveryProposal[]>([]);
+
     useEffect(() => {
-        const constraints: QueryConstraint[] = [orderBy('created_at', 'desc')];
-        if (filter !== 'all') constraints.unshift(where('status', '==', filter));
-        const q = query(collection(db, 'discovery_proposals'), ...constraints);
+        const q = query(collection(db, 'discovery_proposals'), orderBy('created_at', 'desc'));
         return onSnapshot(q, (snap) => {
-            setProposals(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as DiscoveryProposal[]);
+            setAllProposals(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as DiscoveryProposal[]);
+        }, (error) => {
+            console.error('Discovery proposals query error:', error);
         });
-    }, [filter]);
+    }, []);
+
+    const proposals = filter === 'all' ? allProposals : allProposals.filter(p => p.status === filter);
 
     const selectProposal = (p: DiscoveryProposal) => {
         setSelected(p);
