@@ -108,7 +108,7 @@ export interface ClassificationResult {
   tokenUsage: { input: number; output: number };
 }
 
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 25;
 const RELEVANCE_THRESHOLD = 0.8;
 
 export async function classifyArticles(

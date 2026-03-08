@@ -44,11 +44,11 @@ async function requireRole(uid: string, requiredRoles: string[]): Promise<void> 
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
-const BATCH_SIZE = 10; // matches classifier batch size
+const BATCH_SIZE = 25; // matches classifier batch size
 
 export const signalScout = onSchedule(
   {
-    schedule: "every 6 hours",
+    schedule: "every 12 hours",
     timeoutSeconds: 300,
     memory: "512MiB",
     secrets: [geminiApiKey],
@@ -82,13 +82,19 @@ export const signalScout = onSchedule(
       const enabledSourcesList = enabledSourceIds ? [...enabledSourceIds] : DATA_SOURCES.map((s) => s.id);
       logger.info(`Fetched ${articles.length} unique articles`);
 
-      if (articles.length === 0) {
-        logger.info("No articles found. Ending run.");
+      // Pre-classify dedup: skip articles already stored in signals collection
+      const existingSnap = await db.collection("signals").select("source_url").get();
+      const existingUrls = new Set(existingSnap.docs.map((d) => d.data().source_url as string));
+      const newArticles = articles.filter((a) => !existingUrls.has(a.url));
+      logger.info(`Pre-classify dedup: ${articles.length} fetched, ${newArticles.length} new`);
+
+      if (newArticles.length === 0) {
+        logger.info("No new articles after dedup. Ending run.");
         const usage = await trackUsage({
-          articlesFetched: 0,
+          articlesFetched: articles.length,
           geminiCalls: 0,
           signalsStored: 0,
-          firestoreReads: 1,
+          firestoreReads: 1 + existingSnap.size,
           firestoreWrites: 3,
         });
         await updatePipelineHealth("empty", { articlesFetched: 0, signalsStored: 0 });
@@ -105,7 +111,7 @@ export const signalScout = onSchedule(
             geminiCalls: 0,
             tokensInput: 0,
             tokensOutput: 0,
-            firestoreReads: 1,
+            firestoreReads: 1 + existingSnap.size,
             firestoreWrites: 3,
           },
           sourcesUsed: enabledSourcesList,
@@ -113,9 +119,9 @@ export const signalScout = onSchedule(
         return;
       }
 
-      // Step 2: Classify with Gemini
-      const { signals, tokenUsage } = await classifyArticles(articles, geminiApiKey.value());
-      const geminiCalls = Math.ceil(articles.length / BATCH_SIZE);
+      // Step 2: Classify with Gemini (only new articles)
+      const { signals, tokenUsage } = await classifyArticles(newArticles, geminiApiKey.value());
+      const geminiCalls = Math.ceil(newArticles.length / BATCH_SIZE);
       logger.info(`Classified ${signals.length} relevant signals`);
 
       if (signals.length === 0) {
@@ -124,10 +130,10 @@ export const signalScout = onSchedule(
           articlesFetched: articles.length,
           geminiCalls,
           signalsStored: 0,
-          firestoreReads: 1,
+          firestoreReads: 1 + existingSnap.size,
           firestoreWrites: 3,
         });
-        await updatePipelineHealth("empty", { articlesFetched: articles.length, signalsStored: 0 });
+        await updatePipelineHealth("empty", { articlesFetched: newArticles.length, signalsStored: 0 });
         await writeAgentRunSummary({
           agentId: "signal-scout",
           startedAt: runStartedAt,
@@ -141,7 +147,7 @@ export const signalScout = onSchedule(
             geminiCalls,
             tokensInput: tokenUsage.input,
             tokensOutput: tokenUsage.output,
-            firestoreReads: 1,
+            firestoreReads: 1 + existingSnap.size,
             firestoreWrites: 3,
           },
           sourcesUsed: enabledSourcesList,
@@ -158,12 +164,12 @@ export const signalScout = onSchedule(
         articlesFetched: articles.length,
         geminiCalls,
         signalsStored: stored,
-        firestoreReads: 1 + signals.length,
+        firestoreReads: 1 + existingSnap.size + signals.length,
         firestoreWrites: stored + 3,
       });
 
       const outcome = stored > 0 ? "success" : "partial";
-      await updatePipelineHealth(outcome, { articlesFetched: articles.length, signalsStored: stored });
+      await updatePipelineHealth(outcome, { articlesFetched: newArticles.length, signalsStored: stored });
       await writeAgentRunSummary({
         agentId: "signal-scout",
         startedAt: runStartedAt,
@@ -177,7 +183,7 @@ export const signalScout = onSchedule(
           geminiCalls,
           tokensInput: tokenUsage.input,
           tokensOutput: tokenUsage.output,
-          firestoreReads: 1 + signals.length,
+          firestoreReads: 1 + existingSnap.size + signals.length,
           firestoreWrites: stored + 3,
         },
         sourcesUsed: enabledSourcesList,
@@ -285,13 +291,13 @@ export const pipelineHealth = onRequest(
     let health: "green" | "yellow" | "red";
     const warnings: string[] = [];
 
-    if (hoursAgo > 12 || (data.consecutiveErrors ?? 0) >= 2) {
+    if (hoursAgo > 24 || (data.consecutiveErrors ?? 0) >= 2) {
       health = "red";
-      if (hoursAgo > 12) warnings.push(`Last run was ${Math.round(hoursAgo)}h ago`);
+      if (hoursAgo > 24) warnings.push(`Last run was ${Math.round(hoursAgo)}h ago`);
       if ((data.consecutiveErrors ?? 0) >= 2) warnings.push(`${data.consecutiveErrors} consecutive errors`);
-    } else if (hoursAgo > 7 || (data.consecutiveEmptyRuns ?? 0) >= 3) {
+    } else if (hoursAgo > 14 || (data.consecutiveEmptyRuns ?? 0) >= 3) {
       health = "yellow";
-      if (hoursAgo > 7) warnings.push(`Last run was ${Math.round(hoursAgo)}h ago`);
+      if (hoursAgo > 14) warnings.push(`Last run was ${Math.round(hoursAgo)}h ago`);
       if ((data.consecutiveEmptyRuns ?? 0) >= 3) warnings.push(`${data.consecutiveEmptyRuns} consecutive empty runs`);
     } else {
       health = "green";
@@ -756,20 +762,32 @@ export const triggerAgentRun = onCall(
           return { success: true, message: "Signal Scout completed (no articles found)" };
         }
 
-        const { signals, tokenUsage } = await classifyArticles(articles, geminiApiKey.value());
-        const geminiCalls = Math.ceil(articles.length / BATCH_SIZE);
+        // Pre-classify dedup: skip articles already stored in signals collection
+        const existingSnap = await db.collection("signals").select("source_url").get();
+        const existingUrls = new Set(existingSnap.docs.map((d) => d.data().source_url as string));
+        const newArticles = articles.filter((a) => !existingUrls.has(a.url));
+        logger.info(`Manual trigger dedup: ${articles.length} fetched, ${newArticles.length} new`);
+
+        if (newArticles.length === 0) {
+          await updatePipelineHealth("empty", { articlesFetched: 0, signalsStored: 0 });
+          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1 + existingSnap.size, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
+          return { success: true, message: `Signal Scout completed: ${articles.length} articles fetched, 0 new after dedup` };
+        }
+
+        const { signals, tokenUsage } = await classifyArticles(newArticles, geminiApiKey.value());
+        const geminiCalls = Math.ceil(newArticles.length / BATCH_SIZE);
 
         if (signals.length === 0) {
-          await updatePipelineHealth("empty", { articlesFetched: articles.length, signalsStored: 0 });
-          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
-          return { success: true, message: `Signal Scout completed: ${articles.length} articles, 0 relevant signals` };
+          await updatePipelineHealth("empty", { articlesFetched: newArticles.length, signalsStored: 0 });
+          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + existingSnap.size, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
+          return { success: true, message: `Signal Scout completed: ${newArticles.length} new articles, 0 relevant signals` };
         }
 
         const stored = await storeSignals(signals);
         const outcome = stored > 0 ? "success" : "partial";
-        await updatePipelineHealth(outcome, { articlesFetched: articles.length, signalsStored: stored });
-        await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome, error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: stored, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + signals.length, firestoreWrites: stored + 3 }, sourcesUsed: enabledSourcesList });
-        return { success: true, message: `Signal Scout completed: ${articles.length} articles, ${stored} signals stored` };
+        await updatePipelineHealth(outcome, { articlesFetched: newArticles.length, signalsStored: stored });
+        await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome, error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: stored, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + existingSnap.size + signals.length, firestoreWrites: stored + 3 }, sourcesUsed: enabledSourcesList });
+        return { success: true, message: `Signal Scout completed: ${newArticles.length} new articles, ${stored} signals stored` };
 
       } else if (agentId === "discovery-agent") {
         const runStartedAt = new Date();
