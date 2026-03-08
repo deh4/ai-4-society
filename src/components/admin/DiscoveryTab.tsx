@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, increment } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, setDoc, serverTimestamp, increment, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
 
@@ -20,7 +20,17 @@ interface DiscoveryProposal {
     admin_notes?: string;
 }
 
-const RISK_IDS = ['R01','R02','R03','R04','R05','R06','R07','R08','R09','R10'];
+/** Parse an ID like "R05" or "S12" into its numeric part, or 0 if unparseable. */
+function parseIdNum(id: string): number {
+    const m = id.match(/^[RS](\d+)$/);
+    return m ? parseInt(m[1], 10) : 0;
+}
+
+/** Compute next sequential ID (e.g. existing R01-R10 → R11). */
+function nextId(prefix: 'R' | 'S', existingIds: string[]): string {
+    const max = existingIds.reduce((acc, id) => Math.max(acc, parseIdNum(id)), 0);
+    return `${prefix}${String(max + 1).padStart(2, '0')}`;
+}
 
 export default function DiscoveryTab() {
     const { user } = useAuth();
@@ -34,6 +44,21 @@ export default function DiscoveryTab() {
     const [narrativeSummary, setNarrativeSummary] = useState('');
 
     const [allProposals, setAllProposals] = useState<DiscoveryProposal[]>([]);
+    const [existingRiskIds, setExistingRiskIds] = useState<string[]>([]);
+    const [existingSolutionIds, setExistingSolutionIds] = useState<string[]>([]);
+
+    // Fetch existing risk & solution IDs for auto-assignment and parent dropdown
+    useEffect(() => {
+        async function fetchIds() {
+            const [risksSnap, solsSnap] = await Promise.all([
+                getDocs(collection(db, 'risks')),
+                getDocs(collection(db, 'solutions')),
+            ]);
+            setExistingRiskIds(risksSnap.docs.map(d => d.id).sort());
+            setExistingSolutionIds(solsSnap.docs.map(d => d.id).sort());
+        }
+        fetchIds();
+    }, []);
 
     useEffect(() => {
         const q = query(collection(db, 'discovery_proposals'), orderBy('created_at', 'desc'));
@@ -51,7 +76,12 @@ export default function DiscoveryTab() {
         setAdminNotes(p.admin_notes ?? '');
         setNarrativeName(p.proposed_name);
         setNarrativeSummary(p.description);
-        setNewDocId('');
+        // Auto-assign next sequential ID
+        setNewDocId(
+            p.type === 'new_risk'
+                ? nextId('R', existingRiskIds)
+                : nextId('S', existingSolutionIds)
+        );
         setParentRiskId(p.suggested_parent_risk_id ?? '');
     };
 
@@ -64,6 +94,7 @@ export default function DiscoveryTab() {
         if (!selected || !user) return;
         setSaving(true);
         try {
+            const docId = newDocId.trim();
             const colName = selected.type === 'new_risk' ? 'risks' : 'solutions';
             const baseDoc: Record<string, unknown> = {
                 [selected.type === 'new_risk' ? 'risk_name' : 'solution_title']: narrativeName,
@@ -75,7 +106,15 @@ export default function DiscoveryTab() {
             };
             if (selected.type === 'new_solution') baseDoc.parent_risk_id = parentRiskId;
 
-            await addDoc(collection(db, colName), baseDoc);
+            // Use the assigned ID as the Firestore document ID
+            await setDoc(doc(db, colName, docId), baseDoc);
+
+            // Update local ID lists so subsequent approvals get correct next ID
+            if (selected.type === 'new_risk') {
+                setExistingRiskIds(prev => [...prev, docId].sort());
+            } else {
+                setExistingSolutionIds(prev => [...prev, docId].sort());
+            }
 
             await updateDoc(doc(db, 'discovery_proposals', selected.id), {
                 status: 'approved',
@@ -186,9 +225,8 @@ export default function DiscoveryTab() {
                                 <div data-tutorial="narrative-form" className="bg-white/5 rounded p-4 space-y-4">
                                     <h3 className="text-xs uppercase tracking-widest text-gray-400">Complete Narrative</h3>
                                     <div>
-                                        <label className="text-xs text-gray-400 block mb-1">Document ID *</label>
+                                        <label className="text-xs text-gray-400 block mb-1">Document ID * <span className="text-gray-600">(auto-assigned)</span></label>
                                         <input value={newDocId} onChange={(e) => setNewDocId(e.target.value)}
-                                            placeholder={selected.type === 'new_risk' ? 'e.g. R11' : 'e.g. S11'}
                                             className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/50" />
                                     </div>
                                     {selected.type === 'new_solution' && (
@@ -197,7 +235,7 @@ export default function DiscoveryTab() {
                                             <select value={parentRiskId} onChange={(e) => setParentRiskId(e.target.value)}
                                                 className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white focus:outline-none focus:border-cyan-400/50">
                                                 <option value="">Select parent risk…</option>
-                                                {RISK_IDS.map((r) => <option key={r} value={r}>{r}</option>)}
+                                                {existingRiskIds.map((r) => <option key={r} value={r}>{r}</option>)}
                                             </select>
                                         </div>
                                     )}

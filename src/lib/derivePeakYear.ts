@@ -9,11 +9,12 @@ const VELOCITY_OFFSET: Record<string, number> = {
 };
 
 const STAGE_OFFSET: Record<string, number> = {
-    'Deployed': 1,
-    'Scaling': 2,
-    'Piloting': 4,
-    'Proposed': 6,
-    'Concept': 8,
+    'Early Adoption': 1,
+    'Pilot Programs': 3,
+    'Advocacy': 5,
+    'Policy Debate': 6,
+    'Negotiation': 7,
+    'Research': 8,
 };
 
 function clamp(value: number, min: number, max: number): number {
