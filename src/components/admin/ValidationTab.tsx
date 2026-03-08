@@ -226,17 +226,14 @@ function LongFieldCard({
                     className="w-full bg-white/5 border border-white/10 rounded p-3 text-sm font-mono text-white resize-y focus:outline-none focus:border-cyan-400/50"
                 />
             ) : (
-                <div className="relative">
-                    <div className={isCollapsed ? 'max-h-32 overflow-hidden' : ''}>
+                <div>
+                    <div className={isCollapsed ? 'max-h-32 overflow-y-auto' : ''}>
                         <InlineDiff oldStr={oldStr} newStr={newStr} />
                     </div>
-                    {isCollapsed && (
-                        <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#0f1117] to-transparent" />
-                    )}
                     {needsCollapse && (
                         <button
                             onClick={() => setExpanded(!expanded)}
-                            className="text-[10px] text-cyan-400 hover:text-cyan-300 mt-1 transition-colors"
+                            className="text-[10px] text-cyan-400 hover:text-cyan-300 mt-2 transition-colors"
                         >
                             {expanded ? 'Show less' : `Show more (${lines.length} lines)`}
                         </button>
