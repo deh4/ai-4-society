@@ -233,8 +233,8 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == voteId;
       allow create: if request.auth != null
                     && request.auth.uid == voteId
-                    && request.resource.data.keys().hasAll(['user_id', 'value', 'createdAt'])
-                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'value', 'createdAt'])
+                    && request.resource.data.userId == request.auth.uid
                     && request.resource.data.value in [1, -1];
       allow update: if request.auth != null
                     && request.auth.uid == voteId
