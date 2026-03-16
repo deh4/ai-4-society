@@ -1,7 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import {
-  db,
+  getDb,
   FieldValue,
   writeFeedItems,
   deleteCollection,
@@ -15,7 +15,7 @@ async function buildFeed() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   // Get approved signals from last 30 days
-  const signalsSnap = await db
+  const signalsSnap = await getDb()
     .collection("signals")
     .where("status", "in", ["approved", "edited"])
     .where("fetched_at", ">=", thirtyDaysAgo)
@@ -48,7 +48,7 @@ async function buildFeed() {
   });
 
   // Get milestone nodes (no date filter — include all milestones)
-  const milestonesSnap = await db
+  const milestonesSnap = await getDb()
     .collection("nodes")
     .where("type", "==", "milestone")
     .get();

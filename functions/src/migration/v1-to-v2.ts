@@ -1,8 +1,6 @@
 import { onCall } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-const db = getFirestore();
-
 interface MigrationResult {
   nodes: number;
   edges: number;
@@ -14,6 +12,7 @@ interface MigrationResult {
 export const migrateV1toV2 = onCall(
   { memory: "1GiB", timeoutSeconds: 540 },
   async (): Promise<MigrationResult> => {
+    const db = getFirestore();
     const result: MigrationResult = {
       nodes: 0,
       edges: 0,

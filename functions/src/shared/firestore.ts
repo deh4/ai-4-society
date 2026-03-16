@@ -1,21 +1,23 @@
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-const db = getFirestore();
+function getDb() {
+  return getFirestore();
+}
 
 type DocWithId = Record<string, unknown> & { id: string };
 
 export async function getAllNodes(): Promise<DocWithId[]> {
-  const snap = await db.collection("nodes").get();
+  const snap = await getDb().collection("nodes").get();
   return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 }
 
 export async function getAllEdges(): Promise<DocWithId[]> {
-  const snap = await db.collection("edges").get();
+  const snap = await getDb().collection("edges").get();
   return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 }
 
 export async function getNodesByType(type: string): Promise<DocWithId[]> {
-  const snap = await db.collection("nodes").where("type", "==", type).get();
+  const snap = await getDb().collection("nodes").where("type", "==", type).get();
   return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 }
 
@@ -25,7 +27,7 @@ export async function getSignalsByStatus(
 ): Promise<DocWithId[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const snap = await db
+  const snap = await getDb()
     .collection("signals")
     .where("status", "in", statuses)
     .where("fetched_at", ">=", cutoff)
@@ -34,7 +36,7 @@ export async function getSignalsByStatus(
 }
 
 export async function getSignalsForNode(nodeId: string, status?: string): Promise<DocWithId[]> {
-  let q = db
+  let q = getDb()
     .collection("signals")
     .where("related_node_ids", "array-contains", nodeId);
   if (status) {
@@ -45,31 +47,31 @@ export async function getSignalsForNode(nodeId: string, status?: string): Promis
 }
 
 export async function writeGraphSnapshot(snapshot: object) {
-  await db.doc("graph_snapshot/current").set({
+  await getDb().doc("graph_snapshot/current").set({
     ...snapshot,
     updatedAt: FieldValue.serverTimestamp(),
   });
 }
 
 export async function writeNodeSummary(nodeId: string, summary: object) {
-  await db.doc(`node_summaries/${nodeId}`).set({
+  await getDb().doc(`node_summaries/${nodeId}`).set({
     ...summary,
     updatedAt: FieldValue.serverTimestamp(),
   });
 }
 
 export async function writeFeedItems(items: Array<{ id: string } & Record<string, unknown>>) {
-  const batch = db.batch();
+  const batch = getDb().batch();
   for (const item of items) {
-    batch.set(db.doc(`feed_items/${item.id}`), item);
+    batch.set(getDb().doc(`feed_items/${item.id}`), item);
   }
   await batch.commit();
 }
 
 export async function deleteCollection(collectionPath: string, batchSize = 500) {
-  const snap = await db.collection(collectionPath).limit(batchSize).get();
+  const snap = await getDb().collection(collectionPath).limit(batchSize).get();
   if (snap.empty) return;
-  const batch = db.batch();
+  const batch = getDb().batch();
   snap.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
   if (snap.size === batchSize) {
@@ -77,4 +79,4 @@ export async function deleteCollection(collectionPath: string, batchSize = 500) 
   }
 }
 
-export { db, FieldValue };
+export { getDb, FieldValue };

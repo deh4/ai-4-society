@@ -5,7 +5,7 @@ import {
   writeGraphSnapshot,
   writeNodeSummary,
   getSignalsForNode,
-  db,
+  getDb,
   FieldValue,
 } from "../../shared/firestore.js";
 
@@ -25,7 +25,7 @@ export const buildGraph = onCall(
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
 
     // Debounce: check if a build ran in the last 30 seconds
-    const lockRef = db.doc("_internal/graph_builder_lock");
+    const lockRef = getDb().doc("_internal/graph_builder_lock");
     const lockSnap = await lockRef.get();
     if (lockSnap.exists) {
       const lastRun = lockSnap.data()?.lastRunAt?.toDate?.();
@@ -92,7 +92,7 @@ export const buildGraph = onCall(
       else if (count7d < avgPrevious * 0.5) trending = "declining";
 
       // Recompute vote totals from scratch (consistency check)
-      const votesSnap = await db
+      const votesSnap = await getDb()
         .collection("nodes")
         .doc(nodeId)
         .collection("votes")

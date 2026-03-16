@@ -1,11 +1,10 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-const db = getFirestore();
-
 export const onVoteWritten = onDocumentWritten(
   "nodes/{nodeId}/votes/{userId}",
   async (event) => {
+    const db = getFirestore();
     const nodeId = event.params.nodeId;
     const summaryRef = db.doc(`node_summaries/${nodeId}`);
 
