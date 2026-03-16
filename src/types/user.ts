@@ -22,5 +22,5 @@ export interface User {
 }
 
 export interface UserPreferences {
-  interests: string[];
+  interests: string[]; // node IDs, e.g., ["R01", "R03", "S07"]
 }

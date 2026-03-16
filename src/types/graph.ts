@@ -13,7 +13,7 @@ export interface RiskNode {
   score_2035: number;
   velocity: "Critical" | "High" | "Medium" | "Low";
   expert_severity: number;
-  public_perception: number;
+  public_perception: number; // carried from v1, replaced by vote aggregates over time
   timeline_narrative: {
     near_term: string;
     mid_term: string;
