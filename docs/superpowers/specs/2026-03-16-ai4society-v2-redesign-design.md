@@ -126,7 +126,7 @@ interface MilestoneNode {
   type: "milestone";
   name: string;
   description: string;
-  date: Timestamp;               // precise date (not just year)
+  date: string;                   // ISO 8601 partial: "2023", "2023-06", or "2023-06-14"
   significance: "breakthrough" | "regulatory" | "incident" | "deployment";
   source_url?: string;
   createdAt: Timestamp;
@@ -181,22 +181,29 @@ interface Signal {
     relevance: number;           // 0-1
   }>;
 
-  // Deprecated (kept for migration reference, not used in v2)
-  // risk_categories: string[];
-  // solution_ids: string[];
-  // severity_hint: string;
-  // affected_groups: string[];
+  // Flat array of node IDs for Firestore array-contains queries
+  // (Firestore cannot query into array-of-objects, so this parallel field enables
+  // queries like "find all signals related to node R01")
+  related_node_ids: string[];    // e.g., ["R01", "S03"] — kept in sync with related_nodes
 }
 ```
 
 ### 2.4 Pre-Computed Views (Denormalized)
 
 **`graph_snapshot` (single document)**
-Contains all nodes and edges, rebuilt by Graph Builder whenever the graph changes. Powers the observatory visualization without N+1 reads.
+Contains minimal node/edge data for rendering the force graph visualization. Narrative content (deep_dive, timeline_narrative, etc.) is NOT included — those are fetched from `nodes/{id}` on click via the Detail Panel. This keeps the snapshot well under Firestore's 1 MiB document limit. Size estimate: ~200 nodes × ~200 bytes + ~1000 edges × ~100 bytes ≈ ~140 KB.
 
 ```typescript
 interface GraphSnapshot {
-  nodes: Array<{ id: string; type: NodeType; name: string; /* summary fields */ }>;
+  nodes: Array<{
+    id: string;
+    type: NodeType;
+    name: string;
+    velocity?: string;           // for risk nodes (visual indicator)
+    implementation_stage?: string; // for solution nodes
+    significance?: string;       // for milestone nodes
+    score_2026?: number;         // for sizing nodes
+  }>;
   edges: Array<{ from: string; to: string; relationship: string; properties?: object }>;
   updatedAt: Timestamp;
   nodeCount: number;
@@ -286,7 +293,213 @@ updateAgentConfig(agentId: string, config: AgentConfig): Promise<void>
 manageUser(userId: string, action: "grant_reviewer" | "revoke_reviewer" | "block" | "unblock" | "remove"): Promise<void>
 ```
 
-This abstraction is the escape hatch — if Firestore is outgrown, swap the implementation to Postgres/Supabase without rewriting the UI.
+This abstraction is the escape hatch — if Firestore is outgrown, swap the implementation to Postgres/Supabase without rewriting the UI. `client.ts` defines abstract TypeScript interfaces for all data operations. The other files (`graph.ts`, `signals.ts`, `votes.ts`, `admin.ts`) are the Firestore-specific implementations of those interfaces.
+
+### 2.7 Proposal Schemas
+
+**Graph Proposal (`graph_proposals/{docId}`)**
+
+Used by both Discovery Agent and Validator Agent. Replaces the separate `discovery_proposals` and `validation_proposals` collections from v1.
+
+```typescript
+interface GraphProposal {
+  id: string;
+  proposal_type: "new_node" | "new_edge" | "update_node";
+
+  // For new_node proposals
+  node_data?: {
+    type: NodeType;
+    name: string;
+    description: string;
+    why_novel?: string;          // why not covered by existing taxonomy
+    key_themes?: string[];
+    suggested_parent_risk_id?: string;  // for new solutions
+  };
+
+  // For new_edge proposals
+  edge_data?: {
+    from_node: string;
+    to_node: string;
+    relationship: string;
+    properties?: object;
+    reasoning: string;           // why this relationship exists
+  };
+
+  // For update_node proposals
+  update_data?: {
+    node_id: string;
+    node_name: string;           // human-readable
+    proposed_changes: Record<string, {
+      current_value: unknown;
+      proposed_value: unknown;
+      reasoning: string;
+    }>;
+    overall_reasoning: string;
+  };
+
+  supporting_signal_ids: string[];
+  confidence: number;            // 0-1
+  created_by: "discovery-agent" | "validator-agent";
+  status: "pending" | "approved" | "rejected";
+  admin_notes?: string;
+  created_at: Timestamp;
+}
+```
+
+**Admin review UX per proposal type:**
+- **new_node:** Shows proposed name, type, description, why_novel, supporting signals. Approve creates the node.
+- **new_edge:** Shows from-node → to-node with relationship label, reasoning, supporting signals. Approve creates the edge.
+- **update_node:** Shows inline word-level diffs for each changed field with reasoning. Approve writes changes to the node.
+
+### 2.8 Personalization Preferences
+
+```typescript
+interface UserPreferences {
+  interests: string[];           // node IDs the user cares about, e.g., ["R01", "R03", "S07"]
+  // Stored in localStorage for visitors, in users/{uid}/preferences for members
+}
+```
+
+- Visitors: stored in `localStorage` under key `ai4s_preferences`
+- Members: migrated to `users/{uid}` document field `preferences: UserPreferences` on sign-in
+- Feed ranking: signals related to preference node IDs get a boost multiplier (e.g., 1.5x impact_score)
+- Graph highlighting: preference nodes get a visual emphasis (brighter color, larger size)
+- Risk badges: preference-matching risks prioritized in badge selection
+
+### 2.9 Firestore Security Rules
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() { return request.auth != null; }
+    function getUserDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function isReviewer() { return isAuthenticated() && getUserDoc().data.isReviewer == true; }
+    function isAdmin() { return isAuthenticated() && getUserDoc().data.isAdmin == true; }
+    function isReviewerOrAdmin() { return isReviewer() || isAdmin(); }
+
+    // Public read collections
+    match /nodes/{nodeId} {
+      allow read: if true;
+      allow write: if isReviewerOrAdmin();
+
+      // Votes subcollection
+      match /votes/{userId} {
+        allow read: if false;                              // individual votes are private
+        allow create, update: if isAuthenticated()
+          && request.auth.uid == userId;                   // can only vote as yourself
+        allow delete: if isAuthenticated()
+          && request.auth.uid == userId;
+      }
+    }
+
+    match /edges/{edgeId} {
+      allow read: if true;
+      allow write: if isReviewerOrAdmin();
+    }
+
+    match /graph_snapshot/{doc} {
+      allow read: if true;
+      allow write: if false;                               // server-only
+    }
+
+    match /feed_items/{itemId} {
+      allow read: if true;
+      allow write: if false;                               // server-only
+    }
+
+    match /node_summaries/{nodeId} {
+      allow read: if true;
+      allow write: if false;                               // server-only
+    }
+
+    // Signals: approved/edited visible to all, pending only to reviewers
+    match /signals/{signalId} {
+      allow read: if resource.data.status in ["approved", "edited"]
+        || isReviewerOrAdmin();
+      allow write: if isReviewerOrAdmin();
+    }
+
+    // Proposals: only reviewers/admins
+    match /graph_proposals/{proposalId} {
+      allow read: if isReviewerOrAdmin();
+      allow write: if isAdmin();                           // only admin can approve/reject
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated()
+        && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Agent config and health: admin read/write, server write
+    match /agents/{agentId} {
+      allow read: if isAdmin();
+      allow write: if false;                               // server-only
+
+      match /{subcollection}/{docId} {
+        allow read: if isAdmin();
+        allow write: if false;                             // server-only
+      }
+    }
+
+    // Changelogs: public read
+    match /changelogs/{changelogId} {
+      allow read: if true;
+      allow write: if false;                               // server-only
+    }
+
+    // Pipeline health: public read
+    match /_pipeline_health/{doc} {
+      allow read: if true;
+      allow write: if false;                               // server-only
+    }
+
+    // Usage metrics: admin only
+    match /_usage/{doc} {
+      allow read: if isAdmin();
+      allow write: if false;                               // server-only
+    }
+
+    // Archive: server-only
+    match /_archive/{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+### 2.10 Firestore Indexes (Required)
+
+New composite indexes needed for v2:
+
+| Collection | Fields | Purpose |
+|-----------|--------|---------|
+| `nodes` | `type` + `createdAt` | List nodes by type |
+| `edges` | `from_node` + `relationship` | Get edges from a node |
+| `edges` | `to_node` + `relationship` | Get edges to a node |
+| `signals` | `status` + `fetched_at` | List pending/approved signals |
+| `signals` | `related_node_ids` (array-contains) + `status` + `impact_score` | Signals for a node, sorted by impact |
+| `feed_items` | `impact_score` desc | Ranked feed |
+| `feed_items` | `published_date` desc | Chronological feed |
+| `graph_proposals` | `status` + `created_at` | List pending proposals |
+| `graph_proposals` | `proposal_type` + `status` + `created_at` | Filter proposals by type |
+| `changelogs` | `document_id` + `createdAt` | Changelog for a node |
+| `node_summaries` | `node_type` + `signal_count_7d` desc | Trending nodes by type |
+
+### 2.11 Vote Aggregation
+
+Vote counts in `node_summaries` are maintained via a Firestore `onDocumentWritten` trigger on `nodes/{nodeId}/votes/{userId}`:
+
+- On vote create: atomically increment `node_summaries/{nodeId}.vote_up` or `vote_down` using a transaction
+- On vote update (changed direction): atomically decrement old direction, increment new direction
+- On vote delete: atomically decrement the relevant counter
+
+This ensures near-real-time vote counts without race conditions. The Graph Builder also recomputes vote totals from scratch as a consistency check during its runs.
 
 ---
 
@@ -298,7 +511,7 @@ This abstraction is the escape hatch — if Firestore is outgrown, swap the impl
 
 Runs before any Gemini API call. Filters on:
 - **Source credibility** — score from source config (0-1)
-- **Keyword/topic relevance** — simple text matching against known risk/solution terms
+- **Keyword/topic relevance** — text matching against terms dynamically derived from the graph (node names, categories, and a manually curated synonym list stored in `agents/signal-scout/config/current.filterTerms`). Updated automatically when Graph Builder runs.
 - **Deduplication** — URL match (existing) + title similarity (new, catches same story from different outlets)
 - **Recency** — skip articles older than 7 days
 
@@ -343,21 +556,22 @@ Source credibility scores are configurable by admin and feed directly into the s
 - Proposes `stakeholder` nodes when patterns emerge in affected groups
 
 **Validator Agent changes from v1:**
-- Assesses nodes against recent signals via `related_nodes` references
-- Can propose new edges between existing nodes (not just field updates)
+- Assesses nodes against recent signals via `related_node_ids` queries
+- Scoped to node-field updates only (scores, narratives, arrays). Does NOT propose new edges — that's Discovery Agent's job. The Validator's per-node loop cannot discover cross-node relationships.
 - Confidence threshold: 0.6 (configurable)
 
 **Graph Builder (new):**
-- Triggered after: signal approval, proposal approval, migration, manual trigger
+- **Trigger mechanism:** Explicitly called by approval Cloud Functions (signal approval, proposal approval) and manual trigger endpoint. NOT triggered by Firestore document listeners (avoids rapid re-firing during bulk operations or migration). Uses a debounce: if called multiple times within 30 seconds, only the last invocation executes.
 - Reads all nodes and edges, builds `graph_snapshot` document
 - Computes `node_summaries` (signal counts, trending direction, vote aggregates)
 
 **Feed Curator (new):**
-- Runs every 6h + triggered on signal approval
+- Runs every 6h + triggered asynchronously (fire-and-forget) on signal approval
 - Reads approved signals + milestones
 - Ranks by `impact_score` (credibility x confidence x recency)
 - Writes top items to `feed_items` collection
 - Limits feed to last 30 days of content
+- Landing page uses a Firestore real-time listener on `feed_items` so new items appear without page refresh
 
 ### 3.4 Agent Configuration (Admin-Managed)
 
@@ -436,6 +650,7 @@ Three pages:
 |-------|------|--------|
 | `/` | Landing | Public |
 | `/observatory` | Observatory | Public (voting requires Member) |
+| `/observatory/:nodeId` | Observatory (deep link) | Public — opens with specific node selected |
 | `/admin` | Admin | Reviewer + Admin |
 
 ### 5.2 Landing Page (`/`)
@@ -632,13 +847,15 @@ Three sections:
 
 ### 7.2 Migration Execution
 
+**ID preservation constraint:** Migrated risk nodes MUST keep their original IDs (R01-R10). Migrated solution nodes MUST keep S01-S10. Migrated milestones keep their existing document IDs. Only newly created nodes (from Discovery Agent or manual creation) get auto-generated IDs. This ensures all existing signal references remain valid.
+
 **Phase 1: Schema migration script** (Cloud Function, run once)
-1. Read all risks → write as `nodes/{id}` with `type: "risk"`
-2. Read all solutions → write as `nodes/{id}` with `type: "solution"`
-3. Read all milestones → write as `nodes/{id}` with `type: "milestone"`
+1. Read all risks → write as `nodes/{id}` with `type: "risk"` (preserving original R01-R10 IDs)
+2. Read all solutions → write as `nodes/{id}` with `type: "solution"` (preserving S01-S10 IDs)
+3. Read all milestones → write as `nodes/{id}` with `type: "milestone"` (preserving IDs)
 4. Extract unique `who_affected` values → create stakeholder nodes
 5. Generate edges from: `parent_risk_id`, `connected_to[]`, `who_affected[]`
-6. Transform all signals' `risk_categories[]` + `solution_ids[]` → `related_nodes[]`
+6. Transform all signals' `risk_categories[]` + `solution_ids[]` → `related_nodes[]` + `related_node_ids[]`
 7. Backfill `source_credibility` and compute `impact_score` for all signals
 8. Simplify user roles to `isReviewer` + `isAdmin` flags
 
