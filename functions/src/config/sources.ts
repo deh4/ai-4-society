@@ -5,6 +5,8 @@ export interface DataSource {
   url: string;
   category?: string;
   maxItems?: number; // Per-source cap for feed balancing
+  credibility: number; // 0-1, default used when no admin override
+  tier: 1 | 2 | 3 | 4 | 5;
 }
 
 export const DATA_SOURCES: DataSource[] = [
@@ -16,6 +18,8 @@ export const DATA_SOURCES: DataSource[] = [
     url: "https://rss.arxiv.org/rss/cs.AI",
     category: "Research",
     maxItems: 15,
+    credibility: 0.85,
+    tier: 1,
   },
   // ── Journalism ──────────────────────────────────────────────
   {
@@ -24,6 +28,8 @@ export const DATA_SOURCES: DataSource[] = [
     type: "rss",
     url: "https://www.technologyreview.com/feed/",
     category: "Journalism",
+    credibility: 0.80,
+    tier: 2,
   },
   {
     id: "ars-ai",
@@ -31,6 +37,8 @@ export const DATA_SOURCES: DataSource[] = [
     type: "rss",
     url: "https://feeds.arstechnica.com/arstechnica/technology-lab",
     category: "Journalism",
+    credibility: 0.75,
+    tier: 2,
   },
   {
     id: "verge-ai",
@@ -38,6 +46,8 @@ export const DATA_SOURCES: DataSource[] = [
     type: "rss",
     url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
     category: "Journalism",
+    credibility: 0.65,
+    tier: 3,
   },
   {
     id: "techcrunch-ai",
@@ -45,6 +55,8 @@ export const DATA_SOURCES: DataSource[] = [
     type: "rss",
     url: "https://techcrunch.com/category/artificial-intelligence/feed/",
     category: "Journalism",
+    credibility: 0.60,
+    tier: 3,
   },
   {
     id: "wired-ai",
@@ -52,6 +64,8 @@ export const DATA_SOURCES: DataSource[] = [
     type: "rss",
     url: "https://www.wired.com/feed/tag/ai/latest/rss",
     category: "Journalism",
+    credibility: 0.75,
+    tier: 2,
   },
   // ── Newsletters ─────────────────────────────────────────────
   {
@@ -61,6 +75,8 @@ export const DATA_SOURCES: DataSource[] = [
     url: "https://bullrich.dev/tldr-rss/ai.rss",
     category: "Newsletter",
     maxItems: 20,
+    credibility: 0.65,
+    tier: 5,
   },
   {
     id: "import-ai",
@@ -68,6 +84,8 @@ export const DATA_SOURCES: DataSource[] = [
     type: "rss",
     url: "https://importai.substack.com/feed",
     category: "Newsletter",
+    credibility: 0.70,
+    tier: 5,
   },
   {
     id: "last-week-in-ai",
@@ -75,6 +93,8 @@ export const DATA_SOURCES: DataSource[] = [
     type: "rss",
     url: "https://lastweekin.ai/feed",
     category: "Newsletter",
+    credibility: 0.65,
+    tier: 5,
   },
   // ── Global Events ───────────────────────────────────────────
   {
@@ -83,5 +103,7 @@ export const DATA_SOURCES: DataSource[] = [
     type: "api",
     url: "https://api.gdeltproject.org/api/v2/doc/doc?query=artificial+intelligence+risk&mode=ArtList&maxrecords=20&format=json",
     category: "Global Events",
+    credibility: 0.50,
+    tier: 4,
   },
 ];
