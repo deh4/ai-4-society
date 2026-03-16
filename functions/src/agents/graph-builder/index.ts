@@ -65,6 +65,22 @@ export const buildGraph = onCall(
       edgeCount: snapshotEdges.length,
     });
 
+    // Auto-update filter terms for Signal Scout Stage 1 filter
+    const filterTerms: string[] = [];
+    for (const node of nodes) {
+      const name = (node.name as string) ?? "";
+      if (name) filterTerms.push(name.toLowerCase());
+      const category = (node.category as string) ?? "";
+      if (category) filterTerms.push(category.toLowerCase());
+    }
+    const uniqueTerms = [...new Set(filterTerms)].filter((t) => t.length > 2);
+    await getDb()
+      .collection("agents")
+      .doc("signal-scout")
+      .collection("config")
+      .doc("current")
+      .set({ filterTerms: uniqueTerms }, { merge: true });
+
     // Compute node summaries
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
