@@ -1109,7 +1109,51 @@ ai-4-society/
 | Comments / sharing | Needs moderation infrastructure, community too small | When 50+ active members |
 | Non-English sources | Requires translation pipeline | When institutional sources are solid |
 | Social media monitoring (X/Reddit) | API costs, noise, moderation risk | After T1-T3 sources prove pipeline |
+| Weekly AI risk podcast | Requires TTS pipeline, content curation, hosting | After feed content is stable and reviewed (see design below) |
 | Supabase/Postgres migration | Firestore sufficient for 12-18 months | When graph queries become bottleneck |
+
+### 9.1 Weekly Podcast — Design Placeholder
+
+An AI-generated weekly audio briefing summarizing the top signals, risk movements, and notable milestones. Deferred from v1 launch but designed here so the architecture supports it.
+
+**Concept:** "AI 4 Society Weekly" — a 5-10 minute podcast published every Monday, covering:
+- Top 3-5 signals of the week (ranked by impact_score)
+- Risk velocity changes ("Disinformation risk accelerated this week after...")
+- New graph proposals or approved changes
+- A milestone spotlight if relevant
+
+**Pipeline (future agent: Podcast Producer):**
+
+```
+Feed Curator (weekly summary) → Gemini Pro (script generation) → TTS API (audio) → Storage → RSS podcast feed
+```
+
+1. **Script generation** — Gemini Pro takes the week's top `feed_items` and `node_summaries` changes, generates a conversational script (5-10 min reading time). Human review optional but recommended initially.
+2. **Text-to-speech** — Google Cloud TTS, ElevenLabs, or OpenAI TTS API. Generates natural-sounding audio from the script.
+3. **Hosting** — Audio files stored in Firebase Storage (or Cloud Storage), served via CDN.
+4. **Distribution** — Published as a standard RSS podcast feed (`/feeds/podcast.xml`) compatible with Apple Podcasts, Spotify, Google Podcasts, etc. Also embedded as a player widget on the landing page.
+
+**Landing page integration:**
+- Small audio player widget below the risk badges row or in the news feed
+- "Listen to this week's briefing" — plays the latest episode inline
+- Link to full podcast feed for subscription
+
+**Why it makes sense:**
+- Content already exists (curated feed items, summaries) — just needs reformatting
+- Low marginal cost (TTS APIs are cheap, ~$0.01-0.05 per minute of audio)
+- Huge engagement potential — podcasts reach people who won't visit a website
+- RSS podcast feeds are indexed by Google, Apple, Spotify — additional discoverability
+- Aligns with the GEO strategy — podcast transcripts are highly citable by LLMs
+
+**Prerequisites before building:**
+- Feed Curator producing stable, high-quality weekly summaries
+- At least 4-6 weeks of reviewed signal data to ensure content quality
+- Decision on TTS provider and voice identity
+
+**Architectural hooks to include in v2 launch:**
+- Feed Curator already computes weekly top items — add a `weekly_summary` document in Firestore
+- RSS feed infrastructure (from section 5.7) already supports adding a podcast feed type
+- Firebase Storage already available for audio file hosting
 
 ---
 
