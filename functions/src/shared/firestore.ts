@@ -46,6 +46,21 @@ export async function getSignalsForNode(nodeId: string, status?: string): Promis
   return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 }
 
+export async function getNodeById(nodeId: string): Promise<DocWithId | null> {
+  const snap = await getDb().doc(`nodes/${nodeId}`).get();
+  if (!snap.exists) return null;
+  return { ...snap.data()!, id: snap.id } as DocWithId;
+}
+
+export async function getGraphProposals(status: string): Promise<DocWithId[]> {
+  const snap = await getDb()
+    .collection("graph_proposals")
+    .where("status", "==", status)
+    .orderBy("created_at", "desc")
+    .get();
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+}
+
 export async function writeGraphSnapshot(snapshot: object) {
   await getDb().doc("graph_snapshot/current").set({
     ...snapshot,
