@@ -147,9 +147,11 @@ export const migrateV1toV2 = onCall(
     }
 
     // --- 4. Create stakeholder nodes ---
-    let stakeholderIdx = 0;
-    for (const name of stakeholderSet) {
-      const sId = `SH${String(stakeholderIdx + 1).padStart(2, "0")}`;
+    // Sort for deterministic ordering, derive ID from name for idempotent re-runs
+    const sortedStakeholders = [...stakeholderSet].sort();
+    for (let i = 0; i < sortedStakeholders.length; i++) {
+      const name = sortedStakeholders[i];
+      const sId = `SH${String(i + 1).padStart(2, "0")}`;
       await db.doc(`nodes/${sId}`).set({
         id: sId,
         type: "stakeholder",
@@ -158,7 +160,6 @@ export const migrateV1toV2 = onCall(
         createdAt: FieldValue.serverTimestamp(),
       });
       result.stakeholders++;
-      stakeholderIdx++;
 
       // Create impacts edges from all risks that reference this stakeholder
       for (const riskDoc of risksSnap.docs) {

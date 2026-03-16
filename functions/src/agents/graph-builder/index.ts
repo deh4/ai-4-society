@@ -1,4 +1,4 @@
-import { onCall } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import {
   getAllNodes,
   getAllEdges,
@@ -21,7 +21,9 @@ interface SnapshotNode {
 
 export const buildGraph = onCall(
   { memory: "512MiB", timeoutSeconds: 120 },
-  async () => {
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
+
     // Debounce: check if a build ran in the last 30 seconds
     const lockRef = db.doc("_internal/graph_builder_lock");
     const lockSnap = await lockRef.get();

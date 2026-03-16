@@ -59,8 +59,17 @@ export const signalClient: SignalDataClient = {
 
   async editSignal(id: string, edits: Partial<Signal>, notes?: string): Promise<void> {
     const ref = doc(db, "signals", id);
+    // Only allow safe-to-edit fields to prevent overwriting id, status, fetched_at, etc.
+    const { title, summary, source_name, signal_type, related_nodes, related_node_ids } = edits;
+    const safeEdits: Record<string, unknown> = {};
+    if (title !== undefined) safeEdits.title = title;
+    if (summary !== undefined) safeEdits.summary = summary;
+    if (source_name !== undefined) safeEdits.source_name = source_name;
+    if (signal_type !== undefined) safeEdits.signal_type = signal_type;
+    if (related_nodes !== undefined) safeEdits.related_nodes = related_nodes;
+    if (related_node_ids !== undefined) safeEdits.related_node_ids = related_node_ids;
     await updateDoc(ref, {
-      ...edits,
+      ...safeEdits,
       status: "edited",
       ...(notes && { admin_notes: notes }),
       reviewed_at: serverTimestamp(),

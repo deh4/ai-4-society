@@ -1,5 +1,5 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onCall } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import {
   db,
   FieldValue,
@@ -90,7 +90,8 @@ export const scheduledFeedCurator = onSchedule(
 // Manual trigger / async call from approval functions
 export const triggerFeedCurator = onCall(
   { memory: "256MiB", timeoutSeconds: 60 },
-  async () => {
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
     return await buildFeed();
   }
 );

@@ -57,7 +57,7 @@ export const graphClient: GraphDataClient = {
         orderBy("signal_count_7d", "desc")
       );
     } else {
-      q = query(collection(db, "node_summaries"));
+      q = query(collection(db, "node_summaries"), orderBy("signal_count_7d", "desc"));
     }
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ ...d.data() } as NodeSummary));

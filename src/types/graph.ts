@@ -134,7 +134,7 @@ export interface FeedItem {
   source_credibility?: number;
   impact_score: number;
   related_node_ids: string[];
-  published_date: Timestamp;
+  published_date: string;
   createdAt: Timestamp;
 }
 

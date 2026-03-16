@@ -196,9 +196,9 @@ service cloud.firestore {
     }
 
     function isV2ReviewerOrAdmin() {
-      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       return request.auth != null
-        && (u.isAdmin == true || u.isReviewer == true);
+        && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+            || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isReviewer == true);
     }
 
     // ─── V2 Graph Model Collections ──────────────────────────────────────────
