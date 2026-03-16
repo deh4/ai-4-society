@@ -187,18 +187,18 @@ service cloud.firestore {
 
     function isV2Admin() {
       return request.auth != null
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     function isV2Reviewer() {
       return request.auth != null
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isReviewer == true;
     }
 
     function isV2ReviewerOrAdmin() {
-      return isV2Admin() || isV2Reviewer();
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return request.auth != null
+        && (u.isAdmin == true || u.isReviewer == true);
     }
 
     // ─── V2 Graph Model Collections ──────────────────────────────────────────
@@ -233,7 +233,8 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == voteId;
       allow create: if request.auth != null
                     && request.auth.uid == voteId
-                    && request.resource.data.keys().hasAll(['value', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['user_id', 'value', 'createdAt'])
+                    && request.resource.data.user_id == request.auth.uid
                     && request.resource.data.value in [1, -1];
       allow update: if request.auth != null
                     && request.auth.uid == voteId
@@ -245,6 +246,11 @@ service cloud.firestore {
     match /graph_proposals/{proposalId} {
       allow read: if isV2ReviewerOrAdmin();
       allow write: if isV2Admin();
+    }
+
+    // V2: changelogs become public read (v1 rule above restricts to lead-only)
+    match /changelogs/{changelogId} {
+      allow read: if true;
     }
 
     // Note: v1 signals rules remain above; v2 signals will use same collection
