@@ -241,7 +241,8 @@ interface NodeSummary {
   signal_count_30d: number;
   trending: "rising" | "stable" | "declining";
   velocity?: string;
-  vote_count: number;
+  vote_up: number;
+  vote_down: number;
   updatedAt: Timestamp;
 }
 ```
