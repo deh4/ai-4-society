@@ -182,5 +182,72 @@ service cloud.firestore {
       allow read: if canRead(['scoring-reviewer', 'lead']);
       allow write: if canWrite(['scoring-reviewer', 'lead']);
     }
+
+    // ─── V2 Helper Functions ──────────────────────────────────────────────────
+
+    function isV2Admin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isV2Reviewer() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isReviewer == true;
+    }
+
+    function isV2ReviewerOrAdmin() {
+      return isV2Admin() || isV2Reviewer();
+    }
+
+    // ─── V2 Graph Model Collections ──────────────────────────────────────────
+
+    match /nodes/{nodeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /edges/{edgeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /graph_snapshot/{docId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /node_summaries/{nodeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /feed_items/{itemId} {
+      allow read: if true;
+      allow write: if false; // server-only (Feed Curator)
+    }
+
+    // Votes subcollection on nodes
+    match /nodes/{nodeId}/votes/{voteId} {
+      allow read: if request.auth != null && request.auth.uid == voteId;
+      allow create: if request.auth != null
+                    && request.auth.uid == voteId
+                    && request.resource.data.keys().hasAll(['value', 'createdAt'])
+                    && request.resource.data.value in [1, -1];
+      allow update: if request.auth != null
+                    && request.auth.uid == voteId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['value', 'updatedAt'])
+                    && request.resource.data.value in [1, -1];
+      allow delete: if request.auth != null && request.auth.uid == voteId;
+    }
+
+    match /graph_proposals/{proposalId} {
+      allow read: if isV2ReviewerOrAdmin();
+      allow write: if isV2Admin();
+    }
+
+    // Note: v1 signals rules remain above; v2 signals will use same collection
+    // but once v2 UI ships, signal rules will be updated to use isV2Reviewer
   }
 }
