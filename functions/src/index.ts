@@ -878,3 +878,9 @@ export const triggerAgentRun = onCall(
     }
   }
 );
+
+// --- v2 agents ---
+export { buildGraph } from "./agents/graph-builder/index.js";
+export { scheduledFeedCurator, triggerFeedCurator } from "./agents/feed-curator/index.js";
+export { onVoteWritten } from "./triggers/vote-aggregation.js";
+export { migrateV1toV2 } from "./migration/v1-to-v2.js";
