@@ -549,7 +549,7 @@ Source credibility scores are configurable by admin and feed directly into the s
 | **Validator Agent** | Weekly (Mon 09 UTC) | Propose updates to existing nodes (scores, narratives) |
 | **Graph Builder** | On trigger (after graph change) | Rebuild `graph_snapshot` and `node_summaries` |
 | **Feed Curator** | Every 6h | Build ranked `feed_items` for landing page |
-| **Data Lifecycle** | Daily (03:00 UTC) | Archive, cleanup, stale-marking |
+| **Data Lifecycle** | Daily (03:00 UTC) | Data retention, archiving, cost management |
 
 **Discovery Agent changes from v1:**
 - Now proposes edges (relationships) in addition to new nodes
@@ -573,6 +573,27 @@ Source credibility scores are configurable by admin and feed directly into the s
 - Writes top items to `feed_items` collection
 - Limits feed to last 30 days of content
 - Landing page uses a Firestore real-time listener on `feed_items` so new items appear without page refresh
+
+**Data Lifecycle (responsible data management):**
+
+Ensures data is handled responsibly and economically. Runs daily at 03:00 UTC.
+
+| Data Type | Retention Policy | Action |
+|-----------|-----------------|--------|
+| Approved/edited signals | 90 days active | Archive to `_archive/signals/items/` (preserves audit trail) |
+| Rejected signals | 30 days | Hard delete (no value in keeping) |
+| Signal evidence freshness | 180 days | Mark `isNew: false` (stale evidence de-prioritized in feeds) |
+| Agent run summaries | 90 days | Delete (diagnostics value diminishes) |
+| Changelogs | Keep indefinitely | No action (audit trail, low volume) |
+| Rejected graph proposals | 90 days | Delete |
+| Expired graph proposals (pending) | 30 days without review | Auto-reject with note "expired" |
+| Feed items | 30 days | Delete (rebuilt by Feed Curator) |
+| Archived signals | 1 year | Hard delete from archive |
+
+**Why this matters:**
+- **Cost:** Firestore charges per stored document. Thousands of old signals and run summaries accumulate cost without value.
+- **Responsibility:** Signals contain article summaries and source URLs. Clear retention policies demonstrate responsible data handling.
+- **Quality:** Stale evidence should not carry equal weight in the observatory. The freshness marking ensures old signals are visually de-emphasized.
 
 ### 3.4 Agent Configuration (Admin-Managed)
 
@@ -645,16 +666,39 @@ No trust tiers, no SLAs, no co-sign requirements. Scale governance complexity la
 
 ### 5.1 Page Structure
 
-Three pages:
+Four pages:
 
 | Route | Page | Access |
 |-------|------|--------|
 | `/` | Landing | Public |
+| `/about` | About | Public |
 | `/observatory` | Observatory | Public (voting requires Member) |
 | `/observatory/:nodeId` | Observatory (deep link) | Public — opens with specific node selected |
 | `/admin` | Admin | Reviewer + Admin |
 
-### 5.2 Landing Page (`/`)
+### 5.2 About Page (`/about`)
+
+The "What is AI-4-Society?" page. Linked from the hero CTA. Explains the platform to both audiences — builds trust and credibility.
+
+**Content sections:**
+
+1. **Mission** — Why this exists. The problem (AI is reshaping society faster than we can track), the approach (human-in-the-loop observatory with AI-powered signal detection), the goal (democratize AI risk intelligence).
+
+2. **How It Works** — Visual pipeline explanation. Sources → Signal Scout → Human Review → Observatory. Simple diagram showing how signals become intelligence. Non-technical language.
+
+3. **What We Track** — The evolving taxonomy explained. Risks, solutions, stakeholders, milestones, and how they connect. A mini version of the graph as a visual hook.
+
+4. **Our Sources** — Transparency about where data comes from. Source tiers, credibility scoring, why diverse sources matter. This is critical for researcher credibility.
+
+5. **Human-in-the-Loop** — How human review works. What gets reviewed, who reviews it, why AI alone isn't enough. Builds trust that this isn't just AI-generated noise.
+
+6. **Get Involved** — How to contribute. Sign in to vote, apply to review. Clear, simple onboarding path. Links to the contribute flow.
+
+7. **Data & Privacy** — How data is handled. Retention policies, what's collected, what's not. Important for public trust.
+
+**Design:** Long-scroll page, clean and readable, minimal animation. Should feel like a well-designed manifesto, not a marketing page.
+
+### 5.3 Landing Page (`/`)
 
 **Top-to-bottom flow:**
 
@@ -686,7 +730,7 @@ Three pages:
    - About, links
    - Lightweight "Pick your interests" prompt (if preferences not yet set)
 
-### 5.3 Observatory (`/observatory`)
+### 5.4 Observatory (`/observatory`)
 
 Three switchable views:
 
@@ -715,7 +759,7 @@ Three switchable views:
 - Filter by risk/solution
 - Useful for researchers tracing how a risk evolved over time
 
-### 5.4 Admin (`/admin`)
+### 5.5 Admin (`/admin`)
 
 Three sections:
 
@@ -749,7 +793,7 @@ Three sections:
 - Action buttons: grant reviewer, revoke, block, unblock, remove
 - Pending reviewer requests highlighted
 
-### 5.5 Personalization (Anonymous)
+### 5.6 Personalization (Anonymous)
 
 - First visit: subtle banner to pick 2-3 interest areas (not a modal)
 - Stored in `localStorage`
@@ -881,6 +925,7 @@ ai-4-society/
 ├── src/
 │   ├── pages/
 │   │   ├── Landing.tsx              # Hero + badges + news feed
+│   │   ├── About.tsx                # Mission, how it works, sources, get involved
 │   │   ├── Observatory.tsx          # Graph + detail + timeline views
 │   │   └── Admin.tsx                # Review + agents + users
 │   │
