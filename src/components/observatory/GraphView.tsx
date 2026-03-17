@@ -135,12 +135,41 @@ export default function GraphView({
       ctx.fillStyle = isSelected ? "#ffffff" : (node.color ?? "#ffffff");
       ctx.fill();
 
-      // Label for selected node
+      // Labels for all nodes
+      const name = node.name ?? "";
+      const type = node.type;
+
       if (isSelected) {
+        // Selected: full name, bright white, slightly larger
+        const label = name.length > 24 ? name.slice(0, 22) + "…" : name;
+        ctx.font = `bold 4px Inter, sans-serif`;
+        ctx.textAlign = "center";
+        // Subtle background pill for readability
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(x - tw / 2 - 1.5, y + radius + 2, tw + 3, 5.5);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(label, x, y + radius + 6.5);
+      } else if (type === "risk" || type === "solution" || type === "milestone") {
+        // Key nodes: always labeled, truncated
+        const label = name.length > 18 ? name.slice(0, 16) + "…" : name;
         ctx.font = "3px Inter, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(node.name ?? "", x, y + radius + 5);
+        ctx.fillStyle =
+          type === "risk"
+            ? "rgba(239,68,68,0.85)"
+            : type === "solution"
+              ? "rgba(34,197,94,0.85)"
+              : "rgba(234,179,8,0.75)";
+        ctx.fillText(label, x, y + radius + 4.5);
+      } else {
+        // Stakeholders: first word only, dim
+        const firstWord = name.split(" ")[0] ?? name;
+        const label = firstWord.length > 12 ? firstWord.slice(0, 10) + "…" : firstWord;
+        ctx.font = "2.5px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(148,163,184,0.55)";
+        ctx.fillText(label, x, y + radius + 4);
       }
     },
     [selectedNodeId]
