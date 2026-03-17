@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-key",
@@ -14,13 +15,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const functions = getFunctions(app);
 
 // Only connect to emulators when explicitly enabled (run: VITE_USE_EMULATORS=true npm run dev)
 if (import.meta.env.VITE_USE_EMULATORS === "true") {
     try {
         connectFirestoreEmulator(db, 'localhost', 8080);
         connectAuthEmulator(auth, 'http://localhost:9099');
-        console.log("Connected to emulators (Firestore :8080, Auth :9099)");
+        connectFunctionsEmulator(functions, 'localhost', 5001);
+        console.log("Connected to emulators (Firestore :8080, Auth :9099, Functions :5001)");
     } catch (e) {
         console.error("Error connecting to emulator", e);
     }
