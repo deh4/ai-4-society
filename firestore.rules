@@ -39,6 +39,13 @@ service cloud.firestore {
       return isAdmin() || hasAnyRole(roles);
     }
 
+    // Any active user holding at least one reviewer or lead role
+    function isActiveReviewer() {
+      return isActiveUser()
+        && getUserDoc().data.roles.hasAny(
+             ['signal-reviewer', 'discovery-reviewer', 'scoring-reviewer', 'lead']);
+    }
+
     // ─── Users Collection (RBAC) ──────────────────────────────────────────────
 
     match /users/{userId} {
@@ -72,6 +79,12 @@ service cloud.firestore {
 
       // No deletes (audit trail preserved)
       allow delete: if false;
+
+      // User preferences subcollection — each user can only read/write their own
+      match /preferences/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // ─── Admins Collection (Legacy — kept during migration) ───────────────────
@@ -157,17 +170,17 @@ service cloud.firestore {
     }
 
     match /agents/{agentId}/config/{doc} {
-      allow read: if canRead(['lead']);
-      allow write: if canWrite(['lead']);
+      allow read: if isActiveReviewer();
+      allow write: if hasRole('lead');
     }
 
     match /agents/{agentId}/health/{doc} {
-      allow read: if canRead(['lead']);
+      allow read: if isActiveReviewer();
       allow write: if false;
     }
 
     match /agents/{agentId}/runs/{runId} {
-      allow read: if canRead(['lead']);
+      allow read: if isActiveReviewer();
       allow write: if false;
     }
 
