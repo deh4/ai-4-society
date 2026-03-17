@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useGraph } from "../../store/GraphContext";
 import {
   getLocalPreferences,
-  setLocalPreferences,
+  savePreferences,
   hasPreferences,
 } from "../../lib/preferences";
 
@@ -39,7 +39,7 @@ export default function PreferencePicker() {
   };
 
   const save = () => {
-    setLocalPreferences({ interests: [...selected] });
+    savePreferences({ interests: [...selected] });
     setVisible(false);
   };
 

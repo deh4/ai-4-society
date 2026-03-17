@@ -1,4 +1,6 @@
 import type { UserPreferences } from "../types/user";
+import { auth } from "./firebase";
+import { setFirestorePreferences } from "../data/preferences";
 
 const STORAGE_KEY = "ai4s_preferences";
 
@@ -18,4 +20,15 @@ export function setLocalPreferences(prefs: UserPreferences): void {
 
 export function hasPreferences(): boolean {
   return getLocalPreferences().interests.length > 0;
+}
+
+/**
+ * Save preferences to localStorage always, and to Firestore if authenticated.
+ */
+export async function savePreferences(prefs: UserPreferences): Promise<void> {
+  setLocalPreferences(prefs);
+  const user = auth.currentUser;
+  if (user) {
+    await setFirestorePreferences(user.uid, prefs, "manual");
+  }
 }
