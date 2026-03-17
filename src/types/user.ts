@@ -24,3 +24,8 @@ export interface User {
 export interface UserPreferences {
   interests: string[]; // node IDs, e.g., ["R01", "R03", "S07"]
 }
+
+export interface UserPreferencesDoc extends UserPreferences {
+  syncedAt: Timestamp | null;
+  source: "localStorage" | "manual";
+}
