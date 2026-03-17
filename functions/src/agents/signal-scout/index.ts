@@ -206,6 +206,12 @@ export const scheduledSignalScout = onSchedule(
     secrets: [geminiApiKey],
   },
   async () => {
+    const db = getFirestore();
+    const configSnap = await db.collection("agents").doc("signal-scout").collection("config").doc("current").get();
+    if (configSnap.exists && configSnap.data()?.paused === true) {
+      logger.info("Signal Scout is paused, skipping scheduled run");
+      return;
+    }
     logger.info("Signal Scout v2: starting scheduled run");
     await runSignalScout(geminiApiKey.value());
   }

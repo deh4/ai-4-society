@@ -158,6 +158,12 @@ export const scheduledDiscovery = onSchedule(
     secrets: [geminiApiKey],
   },
   async () => {
+    const db = getFirestore();
+    const configSnap = await db.collection("agents").doc("discovery-agent").collection("config").doc("current").get();
+    if (configSnap.exists && configSnap.data()?.paused === true) {
+      logger.info("Discovery Agent is paused, skipping scheduled run");
+      return;
+    }
     logger.info("Discovery Agent v2: starting weekly run");
     await runDiscoveryAgent(geminiApiKey.value());
   }

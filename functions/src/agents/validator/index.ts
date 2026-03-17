@@ -111,6 +111,12 @@ export const scheduledValidator = onSchedule(
     secrets: [geminiApiKey],
   },
   async () => {
+    const db = getFirestore();
+    const configSnap = await db.collection("agents").doc("validator-agent").collection("config").doc("current").get();
+    if (configSnap.exists && configSnap.data()?.paused === true) {
+      logger.info("Validator Agent is paused, skipping scheduled run");
+      return;
+    }
     logger.info("Validator Agent v2: starting weekly run");
     await runValidatorAgent(geminiApiKey.value());
   }

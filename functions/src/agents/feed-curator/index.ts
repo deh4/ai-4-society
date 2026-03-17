@@ -1,5 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions/v2";
+import { getFirestore } from "firebase-admin/firestore";
 import {
   getDb,
   FieldValue,
@@ -83,6 +85,12 @@ async function buildFeed() {
 export const scheduledFeedCurator = onSchedule(
   { schedule: "every 6 hours", memory: "256MiB", timeoutSeconds: 60 },
   async () => {
+    const db = getFirestore();
+    const configSnap = await db.collection("agents").doc("feed-curator").collection("config").doc("current").get();
+    if (configSnap.exists && configSnap.data()?.paused === true) {
+      logger.info("Feed Curator is paused, skipping scheduled run");
+      return;
+    }
     await buildFeed();
   }
 );
