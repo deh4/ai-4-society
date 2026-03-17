@@ -106,6 +106,19 @@ export default function GraphView({
     return () => observer.disconnect();
   }, []);
 
+  // Center camera on selected node when selection changes
+  useEffect(() => {
+    if (!selectedNodeId || !fgRef.current) return;
+    const found = graphData.nodes.find((n) => n.id === selectedNodeId);
+    if (!found) return;
+    const nx = (found as unknown as { x?: number }).x;
+    const ny = (found as unknown as { y?: number }).y;
+    if (nx !== undefined && ny !== undefined) {
+      fgRef.current.centerAt(nx, ny, 500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNodeId]);
+
   const handleNodeClick = useCallback(
     (node: NodeObject<ForceNode>) => {
       if (node.id) onSelectNode(String(node.id));

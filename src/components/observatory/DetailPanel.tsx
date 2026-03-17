@@ -7,6 +7,17 @@ import PerceptionGap from "./PerceptionGap";
 import VoteButton from "./VoteButton";
 import type { GraphNode, Edge, NodeType } from "../../types/graph";
 
+function useIsMobile() {
+  const [v, setV] = useState(() => window.innerWidth < 640);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const h = (e: MediaQueryListEvent) => setV(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+  return v;
+}
+
 interface DetailPanelProps {
   nodeId: string;
   onClose: () => void;
@@ -25,11 +36,20 @@ export default function DetailPanel({
   onClose,
   onNavigate,
 }: DetailPanelProps) {
+  const isMobile = useIsMobile();
   const { summaries, snapshot } = useGraph();
   const [node, setNode] = useState<GraphNode | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeepDive, setShowDeepDive] = useState(false);
+
+  const panelClass = isMobile
+    ? "fixed bottom-0 left-0 right-0 h-[58vh] bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl"
+    : "fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto";
+
+  const panelAnim = isMobile
+    ? { initial: { y: "100%" }, animate: { y: 0 }, exit: { y: "100%" } }
+    : { initial: { x: "100%" }, animate: { x: 0 }, exit: { x: "100%" } };
 
   const summary = summaries.find((s) => s.node_id === nodeId);
 
@@ -57,12 +77,11 @@ export default function DetailPanel({
   if (loading) {
     return (
       <motion.div
-        initial={{ x: "100%" }}
-        animate={{ x: 0 }}
-        exit={{ x: "100%" }}
+        {...panelAnim}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto p-4"
+        className={`${panelClass} p-4`}
       >
+        {isMobile && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
         <div className="text-gray-500 text-xs animate-pulse">Loading...</div>
       </motion.div>
     );
@@ -71,11 +90,11 @@ export default function DetailPanel({
   if (!node) {
     return (
       <motion.div
-        initial={{ x: "100%" }}
-        animate={{ x: 0 }}
-        exit={{ x: "100%" }}
-        className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto p-4"
+        {...panelAnim}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className={`${panelClass} p-4`}
       >
+        {isMobile && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
         <button onClick={onClose} className="text-xs text-gray-400 mb-4">
           ← Back
         </button>
@@ -107,13 +126,15 @@ export default function DetailPanel({
 
   return (
     <motion.div
-      initial={{ x: "100%" }}
-      animate={{ x: 0 }}
-      exit={{ x: "100%" }}
+      {...panelAnim}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto"
+      className={panelClass}
     >
       <div className="p-4 space-y-5">
+        {/* Drag handle (mobile) */}
+        {isMobile && (
+          <div className="w-10 h-1 bg-white/20 rounded-full mx-auto -mt-1 mb-1" />
+        )}
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
