@@ -20,14 +20,6 @@
       "collectionGroup": "signals",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "isNew", "order": "ASCENDING" },
-        { "fieldPath": "fetched_at", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "signals",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "signal_type", "order": "ASCENDING" },
         { "fieldPath": "fetched_at", "order": "DESCENDING" }
       ]
@@ -42,10 +34,20 @@
       ]
     },
     {
-      "collectionGroup": "changelogs",
+      "collectionGroup": "signals",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "impact_score", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "signals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "related_node_ids", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "impact_score", "order": "DESCENDING" }
       ]
     },
     {
@@ -53,6 +55,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "documentId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "changelogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "document_id", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
@@ -81,28 +91,6 @@
       ]
     },
     {
-      "collectionGroup": "signals",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "impact_score", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "feed_items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "impact_score", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "feed_items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "published_date", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "graph_proposals",
       "queryScope": "COLLECTION",
       "fields": [
@@ -120,28 +108,11 @@
       ]
     },
     {
-      "collectionGroup": "changelogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "document_id", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "node_summaries",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "node_type", "order": "ASCENDING" },
         { "fieldPath": "signal_count_7d", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "signals",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "related_node_ids", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "impact_score", "order": "DESCENDING" }
       ]
     }
   ],
