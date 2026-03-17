@@ -37,13 +37,14 @@ export function AgentDetailPanel({ agentId, onBack }: Props) {
   const [health, setHealth] = useState<AgentHealthDoc | null>(null);
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [runs, setRuns] = useState<AgentRunSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataReady, setDataReady] = useState(false);
   const [triggering, setTriggering] = useState(false);
   const [triggerResult, setTriggerResult] = useState<string | null>(null);
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const timestamp = Date.now();
 
     Promise.all([
       getAgentHealth(agentId),
@@ -54,7 +55,8 @@ export function AgentDetailPanel({ agentId, onBack }: Props) {
       setHealth(h);
       setConfig(c);
       setRuns(r);
-      setLoading(false);
+      setNow(timestamp);
+      setDataReady(true);
     });
 
     return () => {
@@ -89,7 +91,7 @@ export function AgentDetailPanel({ agentId, onBack }: Props) {
     );
   };
 
-  if (loading) {
+  if (!dataReady) {
     return <p className="text-white/40 text-center py-8">Loading agent data...</p>;
   }
 
@@ -102,7 +104,7 @@ export function AgentDetailPanel({ agentId, onBack }: Props) {
 
   const lastRun = health?.lastRunAt?.toDate?.()
     ?? (health?.lastRunAt?.seconds ? new Date(health.lastRunAt.seconds * 1000) : null);
-  const hoursAgo = lastRun ? Math.round((Date.now() - lastRun.getTime()) / 3600_000) : null;
+  const hoursAgo = lastRun && now ? Math.round((now - lastRun.getTime()) / 3600_000) : null;
 
   return (
     <div className="space-y-6">

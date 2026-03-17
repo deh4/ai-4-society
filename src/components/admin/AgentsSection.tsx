@@ -13,8 +13,10 @@ export function AgentsSection() {
   const [selectedAgent, setSelectedAgent] = useState<AgentId | null>(null);
   const [healthMap, setHealthMap] = useState<Record<string, AgentHealthDoc | null>>({});
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
+    const timestamp = Date.now();
     Promise.all(
       AGENT_IDS.map(async (id) => {
         const health = await getAgentHealth(id);
@@ -26,6 +28,7 @@ export function AgentsSection() {
         map[id] = health;
       }
       setHealthMap(map);
+      setNow(timestamp);
       setLoading(false);
     });
   }, []);
@@ -52,7 +55,7 @@ export function AgentsSection() {
           const lastRun = health?.lastRunAt?.toDate?.()
             ?? (health?.lastRunAt?.seconds ? new Date(health.lastRunAt.seconds * 1000) : null);
           const hoursAgo = lastRun
-            ? Math.round((Date.now() - lastRun.getTime()) / 3600_000)
+            ? Math.round((now - lastRun.getTime()) / 3600_000)
             : null;
 
           const statusColor =
