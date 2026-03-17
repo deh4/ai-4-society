@@ -99,18 +99,34 @@ export function UnifiedReviewList({
     const unsub = onSnapshot(q, (snap) => {
       const discoveries: ReviewItem[] = snap.docs.map((d) => {
         const data = d.data();
-        return {
-          id: d.id,
-          type: "discovery" as const,
-          title: (data.proposed_changes?.name as string) ?? "New proposal",
-          summary: (data.proposed_changes?.summary as string) ?? "",
-          status: (data.status as string) ?? "pending",
-          createdAt: data.created_at ?? null,
-          proposedName: data.proposed_changes?.name as string,
-          proposalType: data.proposal_type as string,
-          skeleton: data.proposed_changes as Record<string, unknown>,
-          supportingSignalIds: (data.supporting_signal_ids as string[]) ?? [],
-        };
+        if (data.proposal_type === "new_node") {
+          return {
+            id: d.id,
+            type: "discovery" as const,
+            title: (data.node_data?.name as string) ?? "New node proposal",
+            summary: (data.node_data?.description as string) ?? "",
+            status: (data.status as string) ?? "pending",
+            createdAt: data.created_at ?? null,
+            proposedName: data.node_data?.name as string,
+            proposalType: data.proposal_type as string,
+            skeleton: data.node_data as Record<string, unknown>,
+            supportingSignalIds: (data.supporting_signal_ids as string[]) ?? [],
+          };
+        } else {
+          // new_edge
+          return {
+            id: d.id,
+            type: "discovery" as const,
+            title: `${(data.edge_data?.from_node as string) ?? "?"} → ${(data.edge_data?.to_node as string) ?? "?"}`,
+            summary: (data.edge_data?.reasoning as string) ?? "",
+            status: (data.status as string) ?? "pending",
+            createdAt: data.created_at ?? null,
+            proposedName: "New Edge",
+            proposalType: data.proposal_type as string,
+            skeleton: data.edge_data as Record<string, unknown>,
+            supportingSignalIds: (data.supporting_signal_ids as string[]) ?? [],
+          };
+        }
       });
       setItems((prev) => {
         const nonDiscovery = prev.filter((i) => i.type !== "discovery");
@@ -137,18 +153,19 @@ export function UnifiedReviewList({
     const unsub = onSnapshot(q, (snap) => {
       const validations: ReviewItem[] = snap.docs.map((d) => {
         const data = d.data();
+        const ud = data.update_data as Record<string, unknown> | undefined;
         return {
           id: d.id,
           type: "validation" as const,
-          title: (data.node_name as string) ?? (data.node_id as string) ?? "Update proposal",
-          summary: (data.overall_reasoning as string) ?? "",
+          title: (ud?.node_name as string) ?? (ud?.node_id as string) ?? "Update proposal",
+          summary: (ud?.overall_reasoning as string) ?? "",
           status: (data.status as string) ?? "pending",
           createdAt: data.created_at ?? null,
-          documentType: data.node_type as string,
-          documentId: data.node_id as string,
-          documentName: data.node_name as string,
-          proposedChanges: data.proposed_changes as Record<string, { current_value: unknown; proposed_value: unknown }>,
-          overallReasoning: data.overall_reasoning as string,
+          documentType: ud?.node_type as string,
+          documentId: ud?.node_id as string,
+          documentName: ud?.node_name as string,
+          proposedChanges: ud?.proposed_changes as Record<string, { current_value: unknown; proposed_value: unknown }>,
+          overallReasoning: ud?.overall_reasoning as string,
           confidence: data.confidence as number,
         };
       });
