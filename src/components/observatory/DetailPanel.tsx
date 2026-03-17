@@ -33,6 +33,15 @@ export default function DetailPanel({
 
   const summary = summaries.find((s) => s.node_id === nodeId);
 
+  // Must be before any early returns (Rules of Hooks)
+  const nodeNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (snapshot) {
+      for (const n of snapshot.nodes) map.set(n.id, n.name);
+    }
+    return map;
+  }, [snapshot]);
+
   useEffect(() => {
     setLoading(true);
     setShowDeepDive(false);
@@ -85,14 +94,6 @@ export default function DetailPanel({
     | undefined;
 
   // Connected nodes from edges, with names resolved from snapshot
-  const nodeNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    if (snapshot) {
-      for (const n of snapshot.nodes) map.set(n.id, n.name);
-    }
-    return map;
-  }, [snapshot]);
-
   const connectedNodes = edges.map((e) => {
     const isOutgoing = e.from_node === nodeId;
     const otherId = isOutgoing ? e.to_node : e.from_node;
