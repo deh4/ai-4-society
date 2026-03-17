@@ -18,6 +18,9 @@ export interface Signal {
   fetched_at: Timestamp;
   proposed_topic?: string;
 
+  severity_hint?: "Critical" | "Emerging" | "Horizon";
+  affected_groups?: string[];
+
   source_credibility: number;
   impact_score: number;
 

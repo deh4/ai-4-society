@@ -28,6 +28,7 @@ export interface GraphProposal {
   update_data?: {
     node_id: string;
     node_name: string;
+    node_type?: string;
     proposed_changes: Record<
       string,
       {
