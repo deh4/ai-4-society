@@ -2,18 +2,18 @@ import { useState } from "react";
 import type { AgentConfig } from "../../data/agentConfig";
 import { toggleAgentSource } from "../../data/agentConfig";
 
-// Source metadata from functions/src/config/sources.ts
+// Source metadata — IDs must match functions/src/config/sources.ts exactly
 const SOURCE_META: Record<string, { name: string; tier: number; defaultCredibility: number }> = {
-  arxiv: { name: "arXiv CS.AI", tier: 1, defaultCredibility: 0.85 },
+  "arxiv-ai":        { name: "arXiv CS.AI",           tier: 1, defaultCredibility: 0.85 },
   "mit-tech-review": { name: "MIT Technology Review", tier: 2, defaultCredibility: 0.80 },
-  wired: { name: "Wired", tier: 2, defaultCredibility: 0.75 },
-  "ars-technica": { name: "Ars Technica", tier: 2, defaultCredibility: 0.75 },
-  "the-verge": { name: "The Verge", tier: 3, defaultCredibility: 0.65 },
-  techcrunch: { name: "TechCrunch", tier: 3, defaultCredibility: 0.60 },
-  "tldr-ai": { name: "TLDR AI", tier: 5, defaultCredibility: 0.65 },
-  "import-ai": { name: "Import AI", tier: 5, defaultCredibility: 0.70 },
-  "last-week-in-ai": { name: "Last Week in AI", tier: 5, defaultCredibility: 0.65 },
-  gdelt: { name: "GDELT", tier: 4, defaultCredibility: 0.50 },
+  "wired-ai":        { name: "Wired AI",               tier: 2, defaultCredibility: 0.75 },
+  "ars-ai":          { name: "Ars Technica AI",        tier: 2, defaultCredibility: 0.75 },
+  "verge-ai":        { name: "The Verge AI",           tier: 3, defaultCredibility: 0.65 },
+  "techcrunch-ai":   { name: "TechCrunch AI",          tier: 3, defaultCredibility: 0.60 },
+  "tldr-ai":         { name: "TLDR AI",                tier: 5, defaultCredibility: 0.65 },
+  "import-ai":       { name: "Import AI",              tier: 5, defaultCredibility: 0.70 },
+  "last-week-in-ai": { name: "Last Week in AI",        tier: 5, defaultCredibility: 0.65 },
+  "gdelt-ai":        { name: "GDELT DOC API",          tier: 4, defaultCredibility: 0.50 },
 };
 
 interface Props {
