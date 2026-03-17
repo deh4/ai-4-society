@@ -61,7 +61,7 @@ export default function DetailPanel({
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto p-4"
+        className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto p-4"
       >
         <div className="text-gray-500 text-xs animate-pulse">Loading...</div>
       </motion.div>
@@ -74,7 +74,7 @@ export default function DetailPanel({
         initial={{ x: "100%" }}
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
-        className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto p-4"
+        className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto p-4"
       >
         <button onClick={onClose} className="text-xs text-gray-400 mb-4">
           ← Back
@@ -111,7 +111,7 @@ export default function DetailPanel({
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto"
+      className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto"
     >
       <div className="p-4 space-y-5">
         {/* Header */}

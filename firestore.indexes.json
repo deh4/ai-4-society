@@ -134,6 +134,15 @@
         { "fieldPath": "node_type", "order": "ASCENDING" },
         { "fieldPath": "signal_count_7d", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "signals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "related_node_ids", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "impact_score", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
