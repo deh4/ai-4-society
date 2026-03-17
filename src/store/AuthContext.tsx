@@ -3,6 +3,7 @@ import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, type 
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { UserDoc, UserRole } from '../lib/roles';
+import { syncPreferences } from "../data/preferences";
 
 interface AuthContextType {
     user: User | null;
@@ -73,6 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     console.error('Failed to load user document:', err);
                     setUserDoc(null);
                 }
+                // Sync preferences from localStorage → Firestore on sign-in
+                syncPreferences(firebaseUser.uid).catch((err) =>
+                  console.error("Failed to sync preferences:", err)
+                );
             } else {
                 setUserDoc(null);
             }

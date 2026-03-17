@@ -7,9 +7,11 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { fetchAllSources } from "./signal-scout/fetcher.js";
 import { classifyArticles } from "./signal-scout/classifier.js";
 import { storeSignals } from "./signal-scout/store.js";
-import { trackUsage, updatePipelineHealth, writeAgentRunSummary } from "./usage-monitor.js";
+import { updatePipelineHealth, writeAgentRunSummary } from "./usage-monitor.js";
+// import { trackUsage } from "./usage-monitor.js"; // v1 only — used by commented-out signalScout
 import { DATA_SOURCES } from "./config/sources.js";
-import { runDataLifecycle } from "./data-lifecycle.js";
+// import { runDataLifecycle } from "./data-lifecycle.js"; // v1 only — used by commented-out dataLifecycle
+import { runDataLifecycle as runDataLifecycleV2 } from "./agents/data-lifecycle/index.js";
 import { analyzeSignals, UnmatchedSignal, PendingProposal } from "./discovery-agent/analyzer.js";
 import { storeDiscoveryProposals } from "./discovery-agent/store.js";
 import { assessRisk, assessSolution } from "./validator-agent/assessor.js";
@@ -46,7 +48,8 @@ const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 const BATCH_SIZE = 25; // matches classifier batch size
 
-export const signalScout = onSchedule(
+// v1 — replaced by v2 agents in functions/src/agents/
+/* export const signalScout = onSchedule(
   {
     schedule: "every 12 hours",
     timeoutSeconds: 300,
@@ -211,7 +214,7 @@ export const signalScout = onSchedule(
       }, null);
     }
   }
-);
+); */
 
 /**
  * Simple HTTP endpoint to check current usage stats.
@@ -320,7 +323,8 @@ export const pipelineHealth = onRequest(
 
 // ─── Feature 3: Data Lifecycle (daily at 03:00 UTC) ─────────────────────────
 
-export const dataLifecycle = onSchedule(
+// v1 — replaced by v2 agents in functions/src/agents/
+/* export const dataLifecycle = onSchedule(
   {
     schedule: "0 3 * * *",
     timeoutSeconds: 300,
@@ -331,11 +335,12 @@ export const dataLifecycle = onSchedule(
     const stats = await runDataLifecycle();
     logger.info("Data lifecycle complete:", stats);
   }
-);
+); */
 
 // ─── Discovery Agent Pipeline ────────────────────────────────────────────────
 
-export const discoveryAgent = onSchedule(
+// v1 — replaced by v2 agents in functions/src/agents/
+/* export const discoveryAgent = onSchedule(
   {
     schedule: "0 10 * * 0",  // Weekly, Sunday 10:00 UTC
     timeoutSeconds: 300,
@@ -475,11 +480,12 @@ export const discoveryAgent = onSchedule(
       });
     }
   }
-);
+); */
 
 // ─── Validator Agent Pipeline ─────────────────────────────────────────────────
 
-export const validatorAgent = onSchedule(
+// v1 — replaced by v2 agents in functions/src/agents/
+/* export const validatorAgent = onSchedule(
   {
     schedule: "0 9 * * 1",  // Weekly, Monday 09:00 UTC
     timeoutSeconds: 540,
@@ -612,7 +618,7 @@ export const validatorAgent = onSchedule(
       });
     }
   }
-);
+); */
 
 // ─── Callable: Apply Validation Proposal ─────────────────────────────────────
 
@@ -718,6 +724,8 @@ export const triggerAgentRun = onCall(
 
     const agentId = request.data.agentId as string | undefined;
     if (!agentId) throw new HttpsError("invalid-argument", "agentId required");
+
+    logger.warn(`triggerAgentRun is deprecated for ${agentId}. Use the v2 trigger* callables directly.`);
 
     const validAgents = ["signal-scout", "discovery-agent", "validator-agent"];
     if (!validAgents.includes(agentId)) {
@@ -878,3 +886,28 @@ export const triggerAgentRun = onCall(
     }
   }
 );
+
+// ─── Data Lifecycle v2 (daily at 03:00 UTC) ─────────────────────────────────
+
+export const dataLifecycleV2 = onSchedule(
+  {
+    schedule: "0 3 * * *",
+    timeoutSeconds: 300,
+    memory: "512MiB",
+  },
+  async () => {
+    logger.info("Data lifecycle v2: starting daily run");
+    const stats = await runDataLifecycleV2();
+    logger.info("Data lifecycle v2 complete:", stats);
+  }
+);
+
+// --- v2 agents ---
+export { buildGraph } from "./agents/graph-builder/index.js";
+export { scheduledFeedCurator, triggerFeedCurator } from "./agents/feed-curator/index.js";
+export { onVoteWritten } from "./triggers/vote-aggregation.js";
+export { migrateV1toV2 } from "./migration/v1-to-v2.js";
+export { scheduledSignalScout, triggerSignalScout } from "./agents/signal-scout/index.js";
+export { scheduledDiscovery, triggerDiscovery } from "./agents/discovery/index.js";
+export { scheduledValidator, triggerValidator } from "./agents/validator/index.js";
+export { approveGraphProposal, rejectGraphProposal } from "./agents/approval/index.js";

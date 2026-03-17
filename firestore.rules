@@ -39,6 +39,13 @@ service cloud.firestore {
       return isAdmin() || hasAnyRole(roles);
     }
 
+    // Any active user holding at least one reviewer or lead role
+    function isActiveReviewer() {
+      return isActiveUser()
+        && getUserDoc().data.roles.hasAny(
+             ['signal-reviewer', 'discovery-reviewer', 'scoring-reviewer', 'lead']);
+    }
+
     // ─── Users Collection (RBAC) ──────────────────────────────────────────────
 
     match /users/{userId} {
@@ -72,6 +79,12 @@ service cloud.firestore {
 
       // No deletes (audit trail preserved)
       allow delete: if false;
+
+      // User preferences subcollection — each user can only read/write their own
+      match /preferences/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // ─── Admins Collection (Legacy — kept during migration) ───────────────────
@@ -157,17 +170,17 @@ service cloud.firestore {
     }
 
     match /agents/{agentId}/config/{doc} {
-      allow read: if canRead(['lead']);
-      allow write: if canWrite(['lead']);
+      allow read: if isActiveReviewer();
+      allow write: if hasRole('lead');
     }
 
     match /agents/{agentId}/health/{doc} {
-      allow read: if canRead(['lead']);
+      allow read: if isActiveReviewer();
       allow write: if false;
     }
 
     match /agents/{agentId}/runs/{runId} {
-      allow read: if canRead(['lead']);
+      allow read: if isActiveReviewer();
       allow write: if false;
     }
 
@@ -182,5 +195,78 @@ service cloud.firestore {
       allow read: if canRead(['scoring-reviewer', 'lead']);
       allow write: if canWrite(['scoring-reviewer', 'lead']);
     }
+
+    // ─── V2 Helper Functions ──────────────────────────────────────────────────
+
+    function isV2Admin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isV2Reviewer() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isReviewer == true;
+    }
+
+    function isV2ReviewerOrAdmin() {
+      return request.auth != null
+        && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+            || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isReviewer == true);
+    }
+
+    // ─── V2 Graph Model Collections ──────────────────────────────────────────
+
+    match /nodes/{nodeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /edges/{edgeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /graph_snapshot/{docId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /node_summaries/{nodeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    match /feed_items/{itemId} {
+      allow read: if true;
+      allow write: if false; // server-only (Feed Curator)
+    }
+
+    // Votes subcollection on nodes
+    match /nodes/{nodeId}/votes/{voteId} {
+      allow read: if request.auth != null && request.auth.uid == voteId;
+      allow create: if request.auth != null
+                    && request.auth.uid == voteId
+                    && request.resource.data.keys().hasAll(['userId', 'value', 'createdAt'])
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.value in [1, -1];
+      allow update: if request.auth != null
+                    && request.auth.uid == voteId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['value', 'updatedAt'])
+                    && request.resource.data.value in [1, -1];
+      allow delete: if request.auth != null && request.auth.uid == voteId;
+    }
+
+    match /graph_proposals/{proposalId} {
+      allow read: if isV2ReviewerOrAdmin();
+      allow write: if isV2Admin();
+    }
+
+    // V2: changelogs become public read (v1 rule above restricts to lead-only)
+    match /changelogs/{changelogId} {
+      allow read: if true;
+    }
+
+    // Note: v1 signals rules remain above; v2 signals will use same collection
+    // but once v2 UI ships, signal rules will be updated to use isV2Reviewer
   }
 }
