@@ -8,6 +8,7 @@ import {
   writeFeedItems,
   deleteCollection,
 } from "../../shared/firestore.js";
+import { writeAgentRunSummary } from "../../usage-monitor.js";
 
 async function buildFeed() {
   // Clear existing feed items
@@ -85,13 +86,48 @@ async function buildFeed() {
 export const scheduledFeedCurator = onSchedule(
   { schedule: "every 6 hours", memory: "256MiB", timeoutSeconds: 60 },
   async () => {
+    const startedAt = new Date();
     const db = getFirestore();
     const configSnap = await db.collection("agents").doc("feed-curator").collection("config").doc("current").get();
     if (configSnap.exists && configSnap.data()?.paused === true) {
       logger.info("Feed Curator is paused, skipping scheduled run");
       return;
     }
-    await buildFeed();
+    try {
+      const result = await buildFeed();
+      await writeAgentRunSummary({
+        agentId: "feed-curator",
+        startedAt,
+        outcome: "success",
+        error: null,
+        modelId: "none",
+        memoryMiB: 256,
+        metrics: {
+          articlesFetched: 0,
+          signalsStored: result.itemsWritten,
+          geminiCalls: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+          firestoreReads: 2,
+          firestoreWrites: result.itemsWritten,
+        },
+        sourcesUsed: [],
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("Feed Curator failed:", msg);
+      await writeAgentRunSummary({
+        agentId: "feed-curator",
+        startedAt,
+        outcome: "error",
+        error: msg,
+        modelId: "none",
+        memoryMiB: 256,
+        metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 0, firestoreWrites: 0 },
+        sourcesUsed: [],
+      });
+      throw err;
+    }
   }
 );
 
