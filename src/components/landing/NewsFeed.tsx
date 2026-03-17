@@ -5,12 +5,15 @@ import FeedCard from "./FeedCard";
 import type { FeedItem } from "../../types/graph";
 
 function rankFeedItems(items: FeedItem[], interests: string[]): FeedItem[] {
-  if (interests.length === 0) return items;
+  // Show only approved signals — no milestones
+  const signals = items.filter((item) => item.type === "signal");
+
+  if (interests.length === 0) return signals;
 
   const interestSet = new Set(interests);
   const BOOST = 1.5;
 
-  return [...items].sort((a, b) => {
+  return [...signals].sort((a, b) => {
     const aMatch = a.related_node_ids.some((id) => interestSet.has(id));
     const bMatch = b.related_node_ids.some((id) => interestSet.has(id));
     const aScore = a.impact_score * (aMatch ? BOOST : 1);
@@ -39,7 +42,7 @@ export default function NewsFeed() {
   if (ranked.length === 0) {
     return (
       <div className="py-8 text-center text-gray-500 text-xs">
-        No feed items yet. Check back soon.
+        No approved signals yet. Check back soon.
       </div>
     );
   }

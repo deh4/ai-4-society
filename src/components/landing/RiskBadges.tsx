@@ -5,6 +5,37 @@ import { getLocalPreferences } from "../../lib/preferences";
 import BadgeDrawer from "./BadgeDrawer";
 import type { NodeSummary } from "../../types/graph";
 
+const VELOCITY_RING: Record<string, string> = {
+  Critical: "from-red-500 via-orange-500 to-red-600",
+  High:     "from-orange-400 via-amber-500 to-orange-500",
+  Medium:   "from-blue-400 via-cyan-400 to-blue-500",
+  Low:      "from-gray-500 via-gray-400 to-gray-500",
+};
+
+const VELOCITY_BG: Record<string, string> = {
+  Critical: "bg-red-950/80",
+  High:     "bg-orange-950/80",
+  Medium:   "bg-blue-950/80",
+  Low:      "bg-gray-900/80",
+};
+
+const VELOCITY_TEXT: Record<string, string> = {
+  Critical: "text-red-300",
+  High:     "text-orange-300",
+  Medium:   "text-blue-300",
+  Low:      "text-gray-400",
+};
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
 function selectTrendingRisks(
   summaries: NodeSummary[],
   preferenceIds: Set<string>
@@ -30,10 +61,10 @@ function selectTrendingRisks(
         (preferenceIds.has(b.node_id) ? PREF_BOOST : 0);
       return bScore - aScore;
     })
-    .slice(0, 5);
+    .slice(0, 10);
 }
 
-export default function RiskBadges() {
+export default function RiskReels() {
   const { summaries, loading } = useGraph();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [prefIds] = useState(
@@ -55,26 +86,55 @@ export default function RiskBadges() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-3 text-left">
+        Trending risks this week
+      </p>
+
+      {/* Horizontally scrollable reel strip */}
+      <div className="flex items-start gap-4 overflow-x-auto pb-2 scrollbar-hide">
         {trending.map((summary) => {
           const isActive = summary.node_id === selectedId;
-          const isMostActive =
-            summary.node_id === trending[0]?.node_id && !selectedId;
+          const velocity = summary.velocity ?? "Medium";
+          const ring = VELOCITY_RING[velocity] ?? VELOCITY_RING.Medium;
+          const bg = VELOCITY_BG[velocity] ?? VELOCITY_BG.Medium;
+          const textColor = VELOCITY_TEXT[velocity] ?? VELOCITY_TEXT.Medium;
 
           return (
             <button
               key={summary.node_id}
               onClick={() => toggle(summary.node_id)}
-              className={`shrink-0 text-xs px-4 py-2 rounded-full border transition-all ${
-                isActive
-                  ? "border-red-500/60 bg-red-500/15 text-red-400"
-                  : "border-white/15 text-gray-400 hover:border-white/30 hover:text-white"
-              } ${isMostActive ? "animate-pulse-subtle" : ""}`}
+              className="flex flex-col items-center gap-1.5 shrink-0 group"
             >
-              {summary.name}
+              {/* Gradient ring + circle avatar */}
+              <div
+                className={`p-[2.5px] rounded-full bg-gradient-to-br ${ring} transition-all duration-200 ${
+                  isActive
+                    ? "scale-110 shadow-[0_0_16px_rgba(255,100,50,0.4)]"
+                    : "opacity-75 group-hover:opacity-100 group-hover:scale-105"
+                }`}
+              >
+                <div
+                  className={`w-14 h-14 rounded-full ${bg} flex items-center justify-center border-[3px] border-[var(--bg-primary)]`}
+                >
+                  <span className={`text-sm font-bold ${textColor}`}>
+                    {initials(summary.name)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Label */}
+              <span
+                className={`text-[10px] w-16 text-center leading-tight line-clamp-2 transition-colors ${
+                  isActive ? "text-white" : "text-gray-400 group-hover:text-gray-200"
+                }`}
+              >
+                {summary.name}
+              </span>
+
+              {/* Signal count */}
               {summary.signal_count_7d > 0 && (
-                <span className="ml-1.5 text-[10px] text-gray-600">
-                  {summary.signal_count_7d}
+                <span className="text-[9px] text-gray-600">
+                  {summary.signal_count_7d} signal{summary.signal_count_7d !== 1 ? "s" : ""}
                 </span>
               )}
             </button>
@@ -82,6 +142,7 @@ export default function RiskBadges() {
         })}
       </div>
 
+      {/* Detail drawer opens below the strip */}
       <AnimatePresence>
         {selected && (
           <BadgeDrawer
