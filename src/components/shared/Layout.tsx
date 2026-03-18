@@ -167,6 +167,7 @@ export default function Layout({ children, bare }: LayoutProps) {
           <div className="flex items-center gap-4">
             <Link to="/about" className="hover:text-white transition-colors">About</Link>
             <Link to="/observatory" className="hover:text-white transition-colors">Observatory</Link>
+            <Link to="/about#release-notes" className="hover:text-white transition-colors">Release Notes</Link>
             <a href="https://github.com/ai-4-society" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
           </div>
           <span>&copy; {new Date().getFullYear()} AI 4 Society</span>

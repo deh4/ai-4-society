@@ -31,6 +31,82 @@ const SOURCE_TIERS = [
   },
 ];
 
+const RELEASE_NOTES = [
+  {
+    version: "v0.6",
+    date: "March 2026",
+    title: "Polish & Observability",
+    changes: [
+      "Node labels on all graph nodes (risk, solution, milestone, stakeholder)",
+      "Mobile bottom sheet for Observatory detail panel",
+      "7 new signal sources added (Alignment Forum, CAIS, Nature Machine Intelligence, IEEE Spectrum, The Guardian AI, AI Now, Ben's Bites)",
+      "Admin source config grouped by tier with toggle fixes",
+      "Feed Curator and Data Lifecycle run summaries now visible in admin",
+      "README and design spec updated to reflect v2 state",
+    ],
+  },
+  {
+    version: "v0.5",
+    date: "February–March 2026",
+    title: "Admin Panel",
+    changes: [
+      "Agent dashboard with health cards, run history charts, and manual triggers",
+      "Source config table with per-source enable/disable toggles",
+      "Unified review list with bulk approve/reject",
+      "User management for role assignment",
+      "Paused-state checks for all scheduled agents",
+    ],
+  },
+  {
+    version: "v0.4",
+    date: "February 2026",
+    title: "Landing Page",
+    changes: [
+      "Instagram-style Risk Reels with gradient velocity rings",
+      "Personalised news feed with recency-decay scoring",
+      "Preference picker with interest tracking",
+      "Hamburger nav for mobile",
+    ],
+  },
+  {
+    version: "v0.3",
+    date: "February 2026",
+    title: "Observatory",
+    changes: [
+      "Interactive force-directed graph (react-force-graph-2d)",
+      "Node type filter (risk, solution, stakeholder, milestone)",
+      "Detail panel with narrative, voting, evidence list, and connections",
+      "Chronological timeline view",
+      "Deep-link routing: /observatory/:nodeId",
+    ],
+  },
+  {
+    version: "v0.2",
+    date: "January–February 2026",
+    title: "Agent Pipeline",
+    changes: [
+      "Signal Scout: 17 RSS/API sources + Gemini 2.5 Flash classification",
+      "Discovery Agent: clusters unmatched signals into new node proposals",
+      "Validator Agent: proposes score and field updates for existing nodes",
+      "Feed Curator: rebuilds ranked feed_items every 6 hours",
+      "Data Lifecycle: archives and purges stale data daily",
+      "Graph Builder: rebuilds graph_snapshot and node summaries on demand",
+    ],
+  },
+  {
+    version: "v0.1",
+    date: "January 2026",
+    title: "Foundation",
+    changes: [
+      "React 19 + Vite 7 + TypeScript + Tailwind 3.4 + Firebase",
+      "Firebase Auth with Google OAuth and role-based access control",
+      "Firestore graph model: nodes, edges, signals, graph_snapshot, feed_items",
+      "GraphContext with real-time Firestore listeners",
+      "Human-in-the-loop review gates (Gate 1: Signal Review, Gate 2: Proposal Review)",
+    ],
+  },
+];
+
 function Section({
   title,
   children,
@@ -295,6 +371,39 @@ export default function About() {
               we do not create it.
             </li>
           </ul>
+        </Section>
+
+        {/* === Release Notes === */}
+        <Section id="release-notes" title="Release Notes">
+          <p className="text-sm text-gray-400 mb-6">
+            A record of what's been built and shipped.
+          </p>
+          <div className="space-y-6">
+            {RELEASE_NOTES.map((release) => (
+              <div key={release.version} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <span className="text-xs font-mono text-[var(--accent-structural)] bg-[var(--accent-structural)]/10 px-2 py-0.5 rounded whitespace-nowrap">
+                    {release.version}
+                  </span>
+                  <div className="flex-1 w-px bg-white/10 mt-2" />
+                </div>
+                <div className="pb-6 min-w-0">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-sm font-semibold">{release.title}</span>
+                    <span className="text-xs text-gray-500">{release.date}</span>
+                  </div>
+                  <ul className="space-y-1">
+                    {release.changes.map((change, i) => (
+                      <li key={i} className="text-xs text-gray-400 flex gap-2">
+                        <span className="text-gray-600 mt-0.5 shrink-0">–</span>
+                        <span>{change}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
         </Section>
       </div>
     </Layout>
