@@ -238,7 +238,7 @@ export default function GraphView({
           cooldownTicks={100}
           onEngineStop={() => {
             if (fgRef.current) {
-              fgRef.current.zoom(1.5, 400);
+              fgRef.current.zoom(2.5, 400);
             }
           }}
         />

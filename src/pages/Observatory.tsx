@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Layout from "../components/shared/Layout";
@@ -18,10 +18,23 @@ export default function Observatory() {
     urlNodeId ?? null
   );
 
+  const autoSelectedRef = useRef(false);
+
   // Sync URL param to state
   useEffect(() => {
     if (urlNodeId) setSelectedNodeId(urlNodeId);
   }, [urlNodeId]);
+
+  // Auto-select the first risk node on initial load (no URL node)
+  useEffect(() => {
+    if (autoSelectedRef.current || !snapshot || selectedNodeId || urlNodeId) return;
+    const firstRisk = snapshot.nodes.find((n) => n.type === "risk");
+    if (firstRisk) {
+      autoSelectedRef.current = true;
+      setSelectedNodeId(firstRisk.id);
+      navigate(`/observatory/${firstRisk.id}`, { replace: true });
+    }
+  }, [snapshot, selectedNodeId, urlNodeId, navigate]);
 
   const handleSelectNode = useCallback(
     (id: string | null) => {
