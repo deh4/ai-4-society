@@ -2,7 +2,7 @@
 
 A real-time AI risk intelligence platform with a **Human-in-the-Loop (HITL)** agentic pipeline. Automated agents continuously scan, classify, and propose updates — humans approve everything before it reaches the public.
 
-**Live:** [ai-4-society.web.app](https://ai-4-society.web.app)
+**Live:** [ai4society.io](https://ai4society.io)
 
 ---
 
