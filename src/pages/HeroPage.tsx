@@ -29,8 +29,8 @@ export default function HeroPage() {
         </div>
 
         {/* Risk Reels — directly below nav, above hero content */}
-        <div className="relative z-10 w-full border-b border-white/5 bg-[var(--bg-primary)]/80 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="relative z-10 w-full border-b border-white/5 bg-[var(--bg-primary)]/80 backdrop-blur-sm overflow-visible">
+          <div className="max-w-7xl mx-auto px-4 py-3 overflow-visible">
             <RiskReels />
           </div>
         </div>

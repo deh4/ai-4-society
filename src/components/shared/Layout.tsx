@@ -3,6 +3,7 @@ import { useAuth } from "../../store/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import type { ReactNode } from "react";
+import LoginModal from "../auth/LoginModal";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,9 +17,10 @@ const NAV_LINKS = [
 ];
 
 export default function Layout({ children, bare }: LayoutProps) {
-  const { user, userDoc, signIn, logOut } = useAuth();
+  const { user, userDoc, logOut } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   if (bare) return <>{children}</>;
 
@@ -68,7 +70,7 @@ export default function Layout({ children, bare }: LayoutProps) {
                   </button>
                 </>
               ) : (
-                <button onClick={signIn} className="text-xs px-3 py-1.5 rounded border border-white/20 text-gray-300 hover:bg-white/10 transition-colors">
+                <button onClick={() => setShowLogin(true)} className="text-xs px-3 py-1.5 rounded border border-white/20 text-gray-300 hover:bg-white/10 transition-colors">
                   Sign In
                 </button>
               )}
@@ -139,7 +141,7 @@ export default function Layout({ children, bare }: LayoutProps) {
                     </button>
                   ) : (
                     <button
-                      onClick={() => { signIn(); setMenuOpen(false); }}
+                      onClick={() => { setMenuOpen(false); setShowLogin(true); }}
                       className="text-sm px-3 py-1.5 rounded border border-white/20 text-gray-300 hover:bg-white/10 transition-colors"
                     >
                       Sign In
@@ -161,6 +163,8 @@ export default function Layout({ children, bare }: LayoutProps) {
       >
         {children}
       </motion.main>
+
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
 
       <footer className="border-t border-white/10 py-8 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">

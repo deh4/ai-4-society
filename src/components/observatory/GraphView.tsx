@@ -3,12 +3,12 @@ import ForceGraph2D from "react-force-graph-2d";
 import type { ForceGraphMethods, NodeObject } from "react-force-graph-2d";
 import { useGraph } from "../../store/GraphContext";
 import { getLocalPreferences } from "../../lib/preferences";
-import NodeTypeFilter from "./NodeTypeFilter";
 import type { NodeType, GraphSnapshot } from "../../types/graph";
 
 interface GraphViewProps {
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string | null) => void;
+  activeTypes: Set<NodeType>;
 }
 
 interface ForceNode {
@@ -69,14 +69,12 @@ function buildGraphData(
 export default function GraphView({
   selectedNodeId,
   onSelectNode,
+  activeTypes,
 }: GraphViewProps) {
   const { snapshot, loading } = useGraph();
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods<NodeObject<ForceNode>>>(undefined);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [activeTypes, setActiveTypes] = useState<Set<NodeType>>(
-    () => new Set<NodeType>(["risk", "solution", "stakeholder", "milestone"])
-  );
 
   const prefs = getLocalPreferences();
   const preferenceIds = useMemo(
@@ -210,7 +208,6 @@ export default function GraphView({
 
   return (
     <div className="flex flex-col gap-3">
-      <NodeTypeFilter active={activeTypes} onChange={setActiveTypes} />
       <div
         ref={containerRef}
         className="relative rounded-lg border border-white/10 bg-black/50 overflow-hidden"
@@ -231,8 +228,8 @@ export default function GraphView({
             ctx.fill();
           }}
           onNodeClick={handleNodeClick}
-          linkColor={() => "rgba(255,255,255,0.08)"}
-          linkWidth={0.5}
+          linkColor={() => "rgba(255,255,255,0.3)"}
+          linkWidth={1}
           linkLabel={(link) => (link as unknown as GraphLink).relationship}
           backgroundColor="transparent"
           cooldownTicks={100}

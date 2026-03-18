@@ -241,6 +241,11 @@ export default function DetailPanel({
         </div>
       )}
 
+      {/* Evidence */}
+      {(node.type === "risk" || node.type === "solution") && (
+        <EvidenceList nodeId={nodeId} />
+      )}
+
       {/* Connected Nodes */}
       {connectedNodes.length > 0 && (
         <div className="space-y-2">
@@ -248,56 +253,33 @@ export default function DetailPanel({
             Connected ({connectedNodes.length})
           </h4>
           <div className="space-y-1">
-            {connectedNodes.map((cn) => (
-              <button
-                key={`${cn.id}-${cn.relationship}`}
-                onClick={() => onNavigate(cn.id)}
-                className="w-full text-left flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-white/5 hover:bg-white/[0.08] transition-colors"
-              >
-                <span className="text-gray-500 text-[10px] italic shrink-0">
-                  {cn.direction === "out" ? cn.relationship : `← ${cn.relationship}`}
-                </span>
-                <span className="text-[var(--accent-structural)] truncate">
-                  {cn.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Related Milestones (highlighted separately) */}
-      {connectedNodes.filter((cn) => {
-        const snapshotNode = snapshot?.nodes.find((n) => n.id === cn.id);
-        return snapshotNode?.type === "milestone";
-      }).length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">
-            Related Milestones
-          </h4>
-          <div className="space-y-1">
-            {connectedNodes
-              .filter((cn) => {
-                const snapshotNode = snapshot?.nodes.find((n) => n.id === cn.id);
-                return snapshotNode?.type === "milestone";
-              })
-              .map((cn) => (
+            {connectedNodes.map((cn) => {
+              const snapshotNode = snapshot?.nodes.find((n) => n.id === cn.id);
+              const nodeType = snapshotNode?.type ?? "stakeholder";
+              const typeColors: Record<string, string> = {
+                risk: "text-red-400",
+                solution: "text-green-400",
+                stakeholder: "text-blue-400",
+                milestone: "text-yellow-400",
+              };
+              const nameColor = typeColors[nodeType] ?? "text-[var(--accent-structural)]";
+              return (
                 <button
-                  key={cn.id}
+                  key={`${cn.id}-${cn.relationship}`}
                   onClick={() => onNavigate(cn.id)}
-                  className="w-full text-left flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-yellow-500/5 border border-yellow-500/20 hover:bg-yellow-500/10 transition-colors"
+                  className="w-full text-left flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-white/5 hover:bg-white/[0.08] transition-colors"
                 >
-                  <span className="text-yellow-400">⬢</span>
-                  <span className="text-yellow-300">{cn.name}</span>
+                  <span className="text-gray-500 text-[10px] italic shrink-0">
+                    {cn.direction === "out" ? cn.relationship : `← ${cn.relationship}`}
+                  </span>
+                  <span className={`${nameColor} truncate`}>
+                    {cn.name}
+                  </span>
                 </button>
-              ))}
+              );
+            })}
           </div>
         </div>
-      )}
-
-      {/* Evidence */}
-      {(node.type === "risk" || node.type === "solution") && (
-        <EvidenceList nodeId={nodeId} />
       )}
 
       {/* Signal count summary */}

@@ -38,18 +38,16 @@ export default function BadgeDrawer({ summary, onClose }: BadgeDrawerProps) {
   // Narrow via type discriminant for full TypeScript safety.
   const rawDescription =
     node && (node.type === "risk" || node.type === "solution") ? node.summary : null;
-  const description = rawDescription
-    ? rawDescription.length > 120 ? rawDescription.slice(0, 119) + "…" : rawDescription
-    : null;
+  const description = rawDescription ?? null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      className="overflow-hidden"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.18 }}
     >
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-3">
+      <div className="bg-[var(--bg-primary)] border border-white/15 rounded-lg p-4 mt-2 shadow-xl">
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="text-sm font-semibold">{summary.name}</h3>

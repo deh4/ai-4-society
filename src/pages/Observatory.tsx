@@ -5,7 +5,9 @@ import Layout from "../components/shared/Layout";
 import GraphView from "../components/observatory/GraphView";
 import DetailPanel from "../components/observatory/DetailPanel";
 import ObservatoryTimeline from "../components/observatory/ObservatoryTimeline";
+import NodeTypeFilter from "../components/observatory/NodeTypeFilter";
 import { useGraph } from "../store/GraphContext";
+import type { NodeType } from "../types/graph";
 
 type Tab = "graph" | "timeline";
 
@@ -19,6 +21,9 @@ export default function Observatory() {
   );
 
   const autoSelectedRef = useRef(false);
+  const [activeTypes, setActiveTypes] = useState<Set<NodeType>>(
+    () => new Set<NodeType>(["risk", "solution", "stakeholder", "milestone"])
+  );
 
   // Sync URL param to state
   useEffect(() => {
@@ -61,12 +66,17 @@ export default function Observatory() {
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <div>
-            <h1 className="text-xl font-bold">Observatory</h1>
-            {snapshot && (
-              <p className="text-xs text-gray-500">
-                {snapshot.nodeCount} nodes · {snapshot.edgeCount} edges
-              </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div>
+              <h1 className="text-xl font-bold">Observatory</h1>
+              {snapshot && (
+                <p className="text-xs text-gray-500">
+                  {snapshot.nodeCount} nodes · {snapshot.edgeCount} edges
+                </p>
+              )}
+            </div>
+            {activeTab === "graph" && (
+              <NodeTypeFilter active={activeTypes} onChange={setActiveTypes} />
             )}
           </div>
 
@@ -104,6 +114,7 @@ export default function Observatory() {
               <GraphView
                 selectedNodeId={selectedNodeId}
                 onSelectNode={handleSelectNode}
+                activeTypes={activeTypes}
               />
             </div>
 

@@ -85,13 +85,14 @@ export default function RiskReels() {
   };
 
   return (
-    <div className="w-full">
-      <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-3 text-left">
-        Trending risks this week
-      </p>
+    <div className="w-full relative">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+        <p className="text-[10px] uppercase tracking-widest text-gray-500 shrink-0">
+          Trending risks this week
+        </p>
 
-      {/* Scrolls on mobile; wraps on sm+ (desktop gets full-width strip from Task 1) */}
-      <div className="flex items-start gap-4 overflow-x-auto sm:flex-wrap pb-2 scrollbar-hide">
+        {/* Scrolls on mobile; centered on desktop */}
+        <div className="flex items-start gap-4 overflow-x-auto sm:flex-wrap sm:justify-center pb-2 scrollbar-hide flex-1">
         {trending.map((summary) => {
           const isActive = summary.node_id === selectedId;
           const velocity = summary.velocity ?? "Medium";
@@ -140,16 +141,19 @@ export default function RiskReels() {
             </button>
           );
         })}
+        </div>
       </div>
 
-      {/* Detail drawer opens below the strip */}
+      {/* Detail drawer — absolute overlay, does not shift page layout */}
       <AnimatePresence>
         {selected && (
-          <BadgeDrawer
-            key={selected.node_id}
-            summary={selected}
-            onClose={() => setSelectedId(null)}
-          />
+          <div className="absolute top-full left-0 right-0 z-50 pt-1">
+            <BadgeDrawer
+              key={selected.node_id}
+              summary={selected}
+              onClose={() => setSelectedId(null)}
+            />
+          </div>
         )}
       </AnimatePresence>
     </div>
