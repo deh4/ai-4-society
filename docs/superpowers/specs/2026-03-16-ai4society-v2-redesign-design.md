@@ -1,7 +1,8 @@
 # AI 4 Society v2 — Complete Redesign Spec
 
 **Date:** 2026-03-16
-**Status:** Draft
+**Last updated:** 2026-03-18
+**Status:** Implemented — v2 live at [ai-4-society.web.app](https://ai-4-society.web.app)
 **Approach:** Clean slate, same stack (Firebase), graph-based data model, migrated data
 
 ---
@@ -530,21 +531,23 @@ Expected to cut Gemini API calls by 40-60%.
 
 ### 3.2 Source Tiers
 
-| Tier | Sources | Credibility | Fetch Frequency |
-|------|---------|-------------|-----------------|
-| **T1 — Institutional** | OECD AI Observatory, EU AI Office, UNESCO, national AI strategies, Nature, Science, SSRN | 0.85-0.95 | Every 12h |
-| **T2 — Quality journalism** | MIT Tech Review, Ars Technica, Wired, Reuters, AP | 0.7-0.85 | Every 12h |
-| **T3 — Tech/community** | TechCrunch, The Verge, Hacker News, Reddit r/artificial | 0.5-0.7 | Every 12h |
-| **T4 — Active search** | Google Custom Search API queries for specific risk topics, GDELT | 0.4-0.7 (varies) | Every 24h |
-| **T5 — Newsletters** | TLDR AI, Import AI, Last Week in AI | 0.6-0.75 | Every 24h |
+17 sources deployed across 5 tiers. All sources are RSS feeds except GDELT (JSON API). Source definitions live in `functions/src/config/sources.ts` — the single source of truth. The admin panel allows toggling any source on/off and overriding credibility scores without a code deploy.
 
-Source credibility scores are configurable by admin and feed directly into the signal's `impact_score`.
+| Tier | Category | Sources | Credibility |
+|------|----------|---------|-------------|
+| **T1** | Research & Safety | arXiv CS.AI, Alignment Forum, AI Safety Newsletter (CAIS), Nature Machine Intelligence, AI Now Institute | 0.85–0.90 |
+| **T2** | Journalism | MIT Technology Review, Wired AI, Ars Technica AI, IEEE Spectrum AI, The Guardian AI | 0.75–0.80 |
+| **T3** | Tech / Community | The Verge AI, TechCrunch AI | 0.60–0.65 |
+| **T4** | Active Search | GDELT DOC API | 0.50 |
+| **T5** | Newsletter | TLDR AI, Import AI, Last Week in AI, Ben's Bites | 0.65–0.70 |
+
+All sources run on the Signal Scout's every-6h schedule. Source credibility scores feed directly into the signal's `impact_score`.
 
 ### 3.3 Agent Architecture
 
 | Agent | Schedule | Purpose |
 |-------|----------|---------|
-| **Signal Scout** | Every 12h | Fetch → Stage 1 Filter → Stage 2 Classify → Store |
+| **Signal Scout** | Every 6h | Fetch → Stage 1 Filter → Stage 2 Classify → Store |
 | **Discovery Agent** | Weekly (Sun 10 UTC) | Propose new graph nodes AND edges from accumulated signals |
 | **Validator Agent** | Weekly (Mon 09 UTC) | Propose updates to existing nodes (scores, narratives) |
 | **Graph Builder** | On trigger (after graph change) | Rebuild `graph_snapshot` and `node_summaries` |
@@ -620,12 +623,15 @@ interface AgentConfig {
 
 ### 4.1 Roles
 
+Roles are stored as a `roles: string[]` array on the `users/{uid}` document. A user can hold multiple roles simultaneously.
+
 | Role | How you get it | Capabilities |
 |------|---------------|--------------|
 | **Visitor** | Anonymous, pick interests | Browse landing page, browse observatory, personalized feed |
-| **Member** | Sign in with Google | Everything Visitor + upvote/downvote risks & solutions, follow risks |
-| **Reviewer** | Admin grants access | Everything Member + approve/reject/edit signals, review graph proposals |
-| **Admin** | Reviewer + admin flag | Everything Reviewer + agent config, user management, source management |
+| **Authenticated** | Sign in with Google | Everything Visitor + upvote/downvote risks & solutions |
+| **`reviewer`** | Admin grants in Users tab | Everything Authenticated + approve/reject/edit signals + review graph proposals in Review tab |
+| **`agent_steward`** | Admin grants in Users tab | Everything `reviewer` + agent dashboard + source config toggles |
+| **`admin`** | Assigned directly in Firestore | Full access including user management, all tabs |
 
 ### 4.2 Review Gates
 
@@ -702,57 +708,56 @@ The "What is AI-4-Society?" page. Linked from the hero CTA. Explains the platfor
 
 **Top-to-bottom flow:**
 
-1. **Hero Section**
-   - Rotating earth animation (Three.js, carried from v1)
-   - Punchy headline: "Are we shaping AI, or is it shaping us?"
-   - Subtitle with live stat (e.g., "Real-time tracking of 40+ existential shifts redefining human society")
-   - Three CTAs: "Enter Observatory" / "What is AI-4-Society?" / "Get Involved"
+**Navigation:** Sticky top nav on desktop. Hamburger menu (≡→✕ animated) on mobile — slides down a full-width drawer with all links and auth actions.
 
-2. **Risk Badges Row**
-   - Instagram stories style — small circular/pill badges, always visible
-   - Shows 3-5 trending risks (from `node_summaries`, sorted by signal count + velocity)
-   - Subtle pulse/glow on the most active badge
-   - **On tap: drawer slides down** containing:
-     - Risk name + one-line hook (curiosity-driven, e.g., "AI is making hiring decisions about you — and getting it wrong")
-     - Velocity indicator (visual: flame for critical, arrow-up for high, etc.)
-     - Signal count ("12 new signals this week")
-     - CTA button: "Explore in Observatory →"
-   - Tapping another badge swaps drawer content; tapping outside closes it
+1. **Hero Section**
+   - Rotating earth animation (Three.js)
+   - Eyebrow label: "Real-time AI risk intelligence"
+   - Headline + two CTAs: "Enter Observatory" / "What is AI-4-Society?"
+
+2. **Risk Reels (Instagram-style)**
+   - Horizontally scrollable row of round circles (not pills), `overflow-x-auto`
+   - Shows up to 10 trending risk nodes (from `node_summaries`, sorted by signal velocity)
+   - Gradient ring color by velocity: Critical=red, High=orange, Medium=blue, Low=gray
+   - Circle shows node initials as avatar
+   - **On tap: `BadgeDrawer` slides down** below the reels row containing:
+     - Risk name + signal counts (7d / 30d)
+     - Trending direction
+     - CTA: "Explore in Observatory →"
+   - Tapping another circle swaps drawer content; tapping outside closes it
 
 3. **News Feed**
-   - Vertically scrollable cards
-   - Powered by `feed_items` collection (pre-ranked by Feed Curator)
-   - Each card: headline, one-line summary, source name + credibility indicator, timestamp, related risk badge(s)
-   - Milestone cards get distinct visual treatment (different card style, marker/pin icon)
-   - Soft personalization: if anonymous preferences set, relevant cards rank higher
-
-4. **Footer**
-   - About, links
-   - Lightweight "Pick your interests" prompt (if preferences not yet set)
+   - Vertically scrollable `FeedCard` components
+   - Powered by `feed_items` collection (pre-ranked by Feed Curator with recency decay)
+   - Shows approved signals only — milestones excluded from feed
+   - Soft personalisation: signals related to preference node IDs get 1.5× impact score boost
+   - Each card: headline, one-line summary, source name, timestamp, related node badge(s)
 
 ### 5.4 Observatory (`/observatory`)
 
-Three switchable views:
+Two switchable views (Graph / Timeline):
 
 **Graph View**
-- Interactive node-edge visualization (D3.js or react-force-graph)
-- Powered by `graph_snapshot` (single document read)
-- Color-coded by node type (risks = red, solutions = green, stakeholders = blue, milestones = gold)
-- Zoom, pan, filter by node type
-- Click a node → opens Detail Panel
-- Edge labels visible on hover
-- Personalized: user's interest areas highlighted if preferences set
+- Interactive node-edge visualization using `react-force-graph-2d` (canvas, force-directed)
+- Powered by `graph_snapshot` (single document read, real-time listener)
+- Color-coded by node type: risks=red, solutions=green, stakeholders=blue, milestones=gold
+- Labels on all nodes: risk/solution/milestone nodes show truncated name in their type color; stakeholder nodes show first word in dim gray; selected node gets a bold white label with dark background pill
+- Filter by node type (NodeTypeFilter component)
+- Click a node → opens Detail Panel + camera smooth-centers on selected node
+- Personalized: user's interest nodes rendered larger and with glow
 
 **Detail Panel** (opens when a node is clicked)
+- **Mobile:** slides up as bottom sheet (58vh, rounded top, drag handle pill)
+- **Desktop:** slides in from right as fixed side panel (420px)
 - Node name + type badge
-- Narrative summary (plain language) with deep dive toggle
-- Connected nodes (clickable, navigate the graph)
-- Evidence feed: approved signals related to this node, sorted by impact
+- Narrative summary with deep dive toggle
 - Timeline projection (near/mid/long term)
-- Perception gap: expert severity score vs. community vote aggregate
-- Related milestones
-- Vote button (Members only)
-- "Share" link (future)
+- Perception gap: expert severity score vs. community vote aggregate (risks only)
+- Vote button (authenticated users)
+- Connected nodes (clickable, navigates the graph)
+- Related milestones (highlighted separately)
+- Evidence feed: approved signals related to this node (`EvidenceList`)
+- Signal count summary (7d / 30d / trending)
 
 **Timeline View**
 - Chronological view: milestones + high-impact signals on a scrollable timeline
@@ -801,9 +806,11 @@ Three sections:
 - Sign in with Google → preferences migrate to Firestore account
 - Unlocks: voting, following risks, reviewer application
 
-### 5.7 SEO & GEO (Generative Engine Optimization)
+### 5.7 SEO & GEO (Generative Engine Optimization) *(not yet implemented — see §9)*
 
 The platform must be discoverable by both traditional search engines and LLM-powered search (Perplexity, ChatGPT Browse, Gemini, AI Overviews, etc.). This is critical for both audiences — public finds us via Google, researchers increasingly find us via LLM tools.
+
+> **Current state:** The app is a client-rendered SPA. Public pages have basic `<title>` and `<meta description>` tags but no pre-rendering, no RSS feeds, no sitemap, and no `llms.txt`. The design below remains the intended approach when prioritised.
 
 **The SPA problem:** Currently the app is a client-rendered SPA. Search engines and LLM crawlers see an empty `<div id="root">` until JavaScript executes. Most LLM crawlers do NOT execute JavaScript.
 
@@ -878,21 +885,20 @@ This also gives you a **free newsletter substitute** — users who prefer RSS ov
 
 ## 6. Tech Stack
 
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| Frontend | Vite 7 + React 19 + TypeScript | Current, proven, existing team knowledge |
-| Styling | Tailwind 4 + Motion (Framer Motion v12) | Upgrade from Tailwind 3.4, Motion is latest rebrand |
-| Graph visualization | D3.js or react-force-graph | Lightweight, customizable, handles hundreds of nodes |
-| 3D hero | Three.js | Existing rotating earth animation, carry forward |
-| Backend | Firebase Cloud Functions v2 (Node 20) | Zero ops, existing infrastructure |
-| Database | Firestore | Existing, sufficient for 12-18 months at expected scale |
-| Auth | Firebase Auth (Google OAuth) | Existing, proven |
-| Search | Algolia free tier (deferred) | Full-text search — add when needed |
-| AI classification | Gemini 2.5 Flash (signals) + Pro (discovery/validation) | Existing, proven |
-| Active search | Google Custom Search API or SerpAPI | New — targeted topic searches |
-| Hosting | Firebase Hosting via GitHub Actions | Existing CI/CD pipeline |
-| Pre-rendering | vite-plugin-ssr or prerender-spa-plugin | Static HTML for SEO/GEO on public pages |
-| RSS parsing | rss-parser | Existing, proven |
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Frontend | Vite 7 + React 19 + TypeScript 5.9 | |
+| Styling | Tailwind 3.4 + Framer Motion | Tailwind 4 upgrade deferred |
+| Graph visualization | react-force-graph-2d | Canvas, force-directed, custom `nodeCanvasObject` for labels |
+| 3D hero | Three.js | Rotating earth animation |
+| Backend | Firebase Cloud Functions v2 (Node 20) | |
+| Database | Firestore | |
+| Auth | Firebase Auth (Google OAuth) | |
+| AI | Gemini 2.5 Flash | Used for all agents (Signal Scout, Discovery, Validator) |
+| Hosting | Firebase Hosting via GitHub Actions | CI deploys hosting on push to `main`; functions deployed manually |
+| RSS parsing | rss-parser | |
+| Search | — | Algolia deferred (see §9) |
+| Pre-rendering | — | SEO/GEO deferred (see §9) |
 
 ### Scalability Assessment
 
@@ -908,7 +914,9 @@ This also gives you a **free newsletter substitute** — users who prefer RSS ov
 
 ---
 
-## 7. Migration Strategy
+## 7. Migration Strategy *(complete)*
+
+> Migration ran successfully in March 2026. v1 collections (`risks`, `solutions`, `milestones`) were migrated to `nodes/{id}` with type tags. Edges were derived from `who_affected[]`, `connected_to[]`, and `parent_risk_id` fields. The initial graph seeded 75 nodes (10 risks + 11 solutions + 14 milestones + 40 stakeholders) and 77 edges. The original R01–R10 / S01–S10 IDs were preserved. This section is kept for historical reference.
 
 ### 7.1 Field Mapping
 
@@ -1104,6 +1112,7 @@ ai-4-society/
 
 | Feature | Why deferred | When to reconsider |
 |---------|-------------|-------------------|
+| SEO/GEO — pre-rendering, RSS feeds, sitemap, llms.txt | MVP launched as SPA; SEO impact not yet bottleneck | When organic search becomes a growth priority |
 | Full-text search (Algolia) | Not critical for launch, adds dependency | When users/researchers request search |
 | Persona narrative view | Requires per-persona content generation, hard to validate | When stakeholder nodes are rich enough |
 | Comments / sharing | Needs moderation infrastructure, community too small | When 50+ active members |
