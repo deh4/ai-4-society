@@ -90,8 +90,8 @@ export default function RiskReels() {
         Trending risks this week
       </p>
 
-      {/* Horizontally scrollable reel strip */}
-      <div className="flex items-start gap-4 overflow-x-auto pb-2 scrollbar-hide">
+      {/* Scrolls on mobile; wraps on sm+ (desktop gets full-width strip from Task 1) */}
+      <div className="flex items-start gap-4 overflow-x-auto sm:flex-wrap pb-2 scrollbar-hide">
         {trending.map((summary) => {
           const isActive = summary.node_id === selectedId;
           const velocity = summary.velocity ?? "Medium";
