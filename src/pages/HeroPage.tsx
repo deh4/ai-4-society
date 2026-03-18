@@ -36,12 +36,11 @@ export default function HeroPage() {
         </div>
 
         {/* Hero Section */}
+        {/* 3.5rem = nav h-14, ~5rem = reels strip (py-3 + badge height) */}
         <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem-5rem)] text-center px-4 py-16">
-          {/* Hero statement — eyebrow changed from "Real-time AI risk intelligence" to "AI Observatory" */}
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--accent-structural)] mb-4 font-medium">
             AI Observatory
           </p>
-          {/* h1 changed from "Are we shaping AI, or is it shaping us?" */}
           <h1
             className="text-4xl md:text-6xl font-bold mb-4 tracking-tight drop-shadow-xl"
             style={{ fontFamily: "var(--font-heading)" }}
