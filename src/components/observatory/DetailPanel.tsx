@@ -22,6 +22,7 @@ interface DetailPanelProps {
   nodeId: string;
   onClose: () => void;
   onNavigate: (nodeId: string) => void;
+  inline?: boolean;
 }
 
 const TYPE_BADGES: Record<NodeType, { label: string; color: string }> = {
@@ -35,6 +36,7 @@ export default function DetailPanel({
   nodeId,
   onClose,
   onNavigate,
+  inline = false,
 }: DetailPanelProps) {
   const isMobile = useIsMobile();
   const { summaries, snapshot } = useGraph();
@@ -75,6 +77,13 @@ export default function DetailPanel({
   }, [nodeId]);
 
   if (loading) {
+    if (inline) {
+      return (
+        <div className="overflow-y-auto rounded-lg border border-white/10 bg-[var(--bg-primary)] h-[calc(100vh-220px)] p-4">
+          <div className="text-gray-500 text-xs animate-pulse">Loading...</div>
+        </div>
+      );
+    }
     return (
       <motion.div
         {...panelAnim}
@@ -88,6 +97,16 @@ export default function DetailPanel({
   }
 
   if (!node) {
+    if (inline) {
+      return (
+        <div className="overflow-y-auto rounded-lg border border-white/10 bg-[var(--bg-primary)] h-[calc(100vh-220px)] p-4">
+          <button onClick={onClose} className="text-xs text-gray-400 mb-4">
+            ← Back
+          </button>
+          <div className="text-gray-500 text-xs">Node not found.</div>
+        </div>
+      );
+    }
     return (
       <motion.div
         {...panelAnim}
@@ -123,6 +142,182 @@ export default function DetailPanel({
       direction: isOutgoing ? "out" : "in",
     };
   });
+
+  if (inline) {
+    return (
+      <div className="overflow-y-auto rounded-lg border border-white/10 bg-[var(--bg-primary)] h-[calc(100vh-220px)]">
+        <div className="p-4 space-y-5">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div>
+              <button
+                onClick={onClose}
+                className="text-xs text-gray-400 hover:text-white mb-2 block"
+              >
+                ← Back
+              </button>
+              <h2 className="text-lg font-bold leading-tight">{node.name}</h2>
+              <span
+                className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded border ${badge.color}`}
+              >
+                {badge.label}
+              </span>
+            </div>
+          </div>
+
+          {/* Summary */}
+          {hasNarrative && (
+            <div>
+              <p className="text-sm text-gray-300 leading-relaxed">
+                {narrativeSummary}
+              </p>
+              {deepDive && (
+                <div className="mt-2">
+                  <button
+                    onClick={() => setShowDeepDive(!showDeepDive)}
+                    className="text-[10px] text-[var(--accent-structural)] hover:underline"
+                  >
+                    {showDeepDive ? "Hide deep dive ▲" : "Show deep dive ▼"}
+                  </button>
+                  {showDeepDive && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="mt-2 text-xs text-gray-400 leading-relaxed whitespace-pre-line"
+                    >
+                      {deepDive}
+                    </motion.div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Voting (risks and solutions only) */}
+          {(node.type === "risk" || node.type === "solution") && summary && (
+            <VoteButton
+              nodeId={nodeId}
+              voteUp={summary.vote_up}
+              voteDown={summary.vote_down}
+            />
+          )}
+
+          {/* Perception Gap (risks only) */}
+          {node.type === "risk" && summary && (
+            <PerceptionGap
+              expertSeverity={(nodeData.expert_severity as number) ?? 50}
+              voteUp={summary.vote_up}
+              voteDown={summary.vote_down}
+            />
+          )}
+
+          {/* Timeline Projection */}
+          {timelineNarrative && (
+            <div className="space-y-2">
+              <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">
+                Timeline Projection
+              </h4>
+              {(["near_term", "mid_term", "long_term"] as const).map((period) => {
+                const text = timelineNarrative[period];
+                if (!text) return null;
+                const labels = {
+                  near_term: "Near Term",
+                  mid_term: "Mid Term",
+                  long_term: "Long Term",
+                };
+                return (
+                  <div key={period} className="bg-white/5 rounded p-2">
+                    <span className="text-[10px] text-gray-500 font-medium">
+                      {labels[period]}
+                    </span>
+                    <p className="text-xs text-gray-300 mt-0.5">{text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Connected Nodes */}
+          {connectedNodes.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">
+                Connected ({connectedNodes.length})
+              </h4>
+              <div className="space-y-1">
+                {connectedNodes.map((cn) => (
+                  <button
+                    key={`${cn.id}-${cn.relationship}`}
+                    onClick={() => onNavigate(cn.id)}
+                    className="w-full text-left flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-white/5 hover:bg-white/[0.08] transition-colors"
+                  >
+                    <span className="text-gray-500 text-[10px] italic shrink-0">
+                      {cn.direction === "out" ? cn.relationship : `← ${cn.relationship}`}
+                    </span>
+                    <span className="text-[var(--accent-structural)] truncate">
+                      {cn.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Related Milestones (highlighted separately) */}
+          {connectedNodes.filter((cn) => {
+            const snapshotNode = snapshot?.nodes.find((n) => n.id === cn.id);
+            return snapshotNode?.type === "milestone";
+          }).length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">
+                Related Milestones
+              </h4>
+              <div className="space-y-1">
+                {connectedNodes
+                  .filter((cn) => {
+                    const snapshotNode = snapshot?.nodes.find((n) => n.id === cn.id);
+                    return snapshotNode?.type === "milestone";
+                  })
+                  .map((cn) => (
+                    <button
+                      key={cn.id}
+                      onClick={() => onNavigate(cn.id)}
+                      className="w-full text-left flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-yellow-500/5 border border-yellow-500/20 hover:bg-yellow-500/10 transition-colors"
+                    >
+                      <span className="text-yellow-400">⬢</span>
+                      <span className="text-yellow-300">{cn.name}</span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Evidence */}
+          {(node.type === "risk" || node.type === "solution") && (
+            <EvidenceList nodeId={nodeId} />
+          )}
+
+          {/* Signal count summary */}
+          {summary && (
+            <div className="text-[10px] text-gray-600 pt-2 border-t border-white/5">
+              {summary.signal_count_7d} signals this week ·{" "}
+              {summary.signal_count_30d} this month ·{" "}
+              <span
+                className={
+                  summary.trending === "rising"
+                    ? "text-red-400"
+                    : summary.trending === "declining"
+                      ? "text-green-400"
+                      : ""
+                }
+              >
+                {summary.trending}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div

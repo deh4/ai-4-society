@@ -99,10 +99,29 @@ export default function Observatory() {
 
         {/* Tab content */}
         {!loading && activeTab === "graph" && (
-          <GraphView
-            selectedNodeId={selectedNodeId}
-            onSelectNode={handleSelectNode}
-          />
+          <div className={selectedNodeId ? "lg:grid lg:grid-cols-[3fr_2fr] gap-4" : ""}>
+            <div className="min-w-0">
+              <GraphView
+                selectedNodeId={selectedNodeId}
+                onSelectNode={handleSelectNode}
+              />
+            </div>
+
+            {/* Desktop inline panel — lg+ only */}
+            <AnimatePresence>
+              {selectedNodeId && (
+                <div className="hidden lg:block min-w-0">
+                  <DetailPanel
+                    key={`inline-${selectedNodeId}`}
+                    nodeId={selectedNodeId}
+                    onClose={() => handleSelectNode(null)}
+                    onNavigate={handleNavigateNode}
+                    inline
+                  />
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
 
         {!loading && activeTab === "timeline" && (
@@ -110,15 +129,17 @@ export default function Observatory() {
         )}
       </div>
 
-      {/* Detail Panel (overlay) */}
+      {/* Mobile/tablet overlay panel — hidden on lg */}
       <AnimatePresence>
         {selectedNodeId && (
-          <DetailPanel
-            key={selectedNodeId}
-            nodeId={selectedNodeId}
-            onClose={() => handleSelectNode(null)}
-            onNavigate={handleNavigateNode}
-          />
+          <div className="lg:hidden">
+            <DetailPanel
+              key={`overlay-${selectedNodeId}`}
+              nodeId={selectedNodeId}
+              onClose={() => handleSelectNode(null)}
+              onNavigate={handleNavigateNode}
+            />
+          </div>
         )}
       </AnimatePresence>
     </Layout>
