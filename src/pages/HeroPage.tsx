@@ -28,27 +28,35 @@ export default function HeroPage() {
           </Canvas>
         </div>
 
+        {/* Risk Reels — directly below nav, above hero content */}
+        <div className="relative z-10 w-full border-b border-white/5 bg-[var(--bg-primary)]/80 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <RiskReels />
+          </div>
+        </div>
+
         {/* Hero Section */}
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4 py-16">
-          {/* Hero statement */}
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem-5rem)] text-center px-4 py-16">
+          {/* Hero statement — eyebrow changed from "Real-time AI risk intelligence" to "AI Observatory" */}
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--accent-structural)] mb-4 font-medium">
-            Real-time AI risk intelligence
+            AI Observatory
           </p>
+          {/* h1 changed from "Are we shaping AI, or is it shaping us?" */}
           <h1
             className="text-4xl md:text-6xl font-bold mb-4 tracking-tight drop-shadow-xl"
             style={{ fontFamily: "var(--font-heading)" }}
           >
-            Are we shaping AI, <br />
-            or is it shaping us?
+            Humanity's window <br />
+            into AI's trajectory
           </h1>
 
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-xl font-light">
-            Track 40+ existential shifts redefining human society — curated by
-            AI, reviewed by humans.
+            40+ tracked risks and solutions, reviewed by humans. Watch how AI is
+            reshaping society — in real time.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-12">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => setShowDisclaimer(true)}
               className="px-7 py-3.5 text-sm font-semibold tracking-wider uppercase border-2 border-[var(--accent-structural)] text-[var(--accent-structural)] hover:bg-[var(--accent-structural)] hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(42,157,255,0.25)] rounded"
@@ -61,11 +69,6 @@ export default function HeroPage() {
             >
               Learn More
             </button>
-          </div>
-
-          {/* Risk Reels */}
-          <div className="w-full max-w-2xl">
-            <RiskReels />
           </div>
         </div>
 
