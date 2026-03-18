@@ -35,6 +35,20 @@ AI 4 Society Observatory — a real-time AI risk intelligence platform with huma
 - **Auth:** Firebase Auth with Google OAuth + role-based access control (`src/lib/roles.ts`)
 - **State:** `RiskContext` (risks/solutions/signals), `AuthContext` (user/roles)
 
+## Documentation Rule
+
+**After any change that affects the system's architecture, agent pipeline, sources, features, or deployment process — update `README.md` to reflect the current implemented state.** The README is the authoritative public description of the project; it must never describe planned or removed features as if they exist.
+
+What counts as a doc-worthy change:
+- Adding, removing, or renaming an agent or its schedule
+- Adding or removing signal sources
+- Changing the pipeline flow or human review gates
+- Changing roles/permissions
+- Changing deployment process
+- Adding or removing major UI features (pages, views, components)
+
+When in doubt: if someone reading the README would be misled about how the system actually works, update it.
+
 ## Key Conventions
 
 - All signals start as `status: "pending"` and require human approval
