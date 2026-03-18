@@ -36,14 +36,12 @@ export default function BadgeDrawer({ summary, onClose }: BadgeDrawerProps) {
     return () => { cancelled = true; };
   }, [summary.node_id]);
 
-  // GraphNode is a union — RiskNode/SolutionNode have `summary`, Stakeholder/Milestone have `description`.
-  // Risk reels only show risk nodes, so `summary` will be present, but we narrow for TS safety.
+  // RiskNode and SolutionNode have `summary`; Stakeholder/Milestone have `description`.
+  // Narrow via type discriminant for full TypeScript safety.
   const rawDescription =
-    node && "summary" in node && typeof (node as { summary?: string }).summary === "string"
-      ? (node as { summary: string }).summary
-      : null;
+    node && (node.type === "risk" || node.type === "solution") ? node.summary : null;
   const description = rawDescription
-    ? rawDescription.length > 120 ? rawDescription.slice(0, 118) + "…" : rawDescription
+    ? rawDescription.length > 120 ? rawDescription.slice(0, 119) + "…" : rawDescription
     : null;
 
   return (
