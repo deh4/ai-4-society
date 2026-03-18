@@ -23,8 +23,6 @@ export default function BadgeDrawer({ summary, onClose }: BadgeDrawerProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingNode(true);
-    setNode(null);
     graphClient.getNode(summary.node_id).then((n) => {
       if (!cancelled) {
         setNode(n);
