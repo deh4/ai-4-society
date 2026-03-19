@@ -761,12 +761,12 @@ export const triggerAgentRun = onCall(
           logger.warn("Failed to read agent config:", err);
         }
 
-        const articles = await fetchAllSources(enabledSourceIds);
+        const { articles, sourceHealth } = await fetchAllSources(enabledSourceIds);
         const enabledSourcesList = enabledSourceIds ? [...enabledSourceIds] : DATA_SOURCES.map((s) => s.id);
 
         if (articles.length === 0) {
           await updatePipelineHealth("empty", { articlesFetched: 0, signalsStored: 0 });
-          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
+          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList, sourceHealth });
           return { success: true, message: "Signal Scout completed (no articles found)" };
         }
 
@@ -778,7 +778,7 @@ export const triggerAgentRun = onCall(
 
         if (newArticles.length === 0) {
           await updatePipelineHealth("empty", { articlesFetched: 0, signalsStored: 0 });
-          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1 + existingSnap.size, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
+          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1 + existingSnap.size, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList, sourceHealth });
           return { success: true, message: `Signal Scout completed: ${articles.length} articles fetched, 0 new after dedup` };
         }
 
@@ -787,14 +787,14 @@ export const triggerAgentRun = onCall(
 
         if (signals.length === 0) {
           await updatePipelineHealth("empty", { articlesFetched: newArticles.length, signalsStored: 0 });
-          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + existingSnap.size, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList });
+          await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome: "empty", error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: 0, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + existingSnap.size, firestoreWrites: 3 }, sourcesUsed: enabledSourcesList, sourceHealth });
           return { success: true, message: `Signal Scout completed: ${newArticles.length} new articles, 0 relevant signals` };
         }
 
         const stored = await storeSignals(signals);
         const outcome = stored > 0 ? "success" : "partial";
         await updatePipelineHealth(outcome, { articlesFetched: newArticles.length, signalsStored: stored });
-        await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome, error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: stored, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + existingSnap.size + signals.length, firestoreWrites: stored + 3 }, sourcesUsed: enabledSourcesList });
+        await writeAgentRunSummary({ agentId: "signal-scout", startedAt: runStartedAt, outcome, error: null, modelId: "gemini-2.5-flash", memoryMiB: 512, metrics: { articlesFetched: articles.length, signalsStored: stored, geminiCalls, tokensInput: tokenUsage.input, tokensOutput: tokenUsage.output, firestoreReads: 1 + existingSnap.size + signals.length, firestoreWrites: stored + 3 }, sourcesUsed: enabledSourcesList, sourceHealth });
         return { success: true, message: `Signal Scout completed: ${newArticles.length} new articles, ${stored} signals stored` };
 
       } else if (agentId === "discovery-agent") {

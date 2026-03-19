@@ -173,6 +173,7 @@ export function AgentDetailPanel({ agentId, onBack }: Props) {
             agentId={agentId}
             config={config}
             uid={user?.uid ?? ""}
+            sourceHealth={health?.sourceHealth}
           />
         </div>
       )}

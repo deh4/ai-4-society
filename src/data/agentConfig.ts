@@ -26,6 +26,12 @@ export interface AgentConfig {
   updatedBy: string | null;
 }
 
+export interface SourceFetchHealth {
+  status: "ok" | "empty" | "error";
+  count: number;
+  error?: string;
+}
+
 export interface AgentHealthDoc {
   lastRunAt: Timestamp | null;
   lastRunOutcome: string;
@@ -41,6 +47,7 @@ export interface AgentHealthDoc {
   lastRunArticlesFetched: number;
   lastRunSignalsStored: number;
   totalSignalsLifetime: number;
+  sourceHealth?: Record<string, SourceFetchHealth>;
 }
 
 export interface CostBreakdown {

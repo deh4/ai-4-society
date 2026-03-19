@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AgentConfig } from "../../data/agentConfig";
+import type { AgentConfig, SourceFetchHealth } from "../../data/agentConfig";
 import { toggleAgentSource } from "../../data/agentConfig";
 
 // Source metadata — IDs must match functions/src/config/sources.ts exactly
@@ -51,9 +51,10 @@ interface Props {
   agentId: string;
   config: AgentConfig | null;
   uid: string;
+  sourceHealth?: Record<string, SourceFetchHealth>;
 }
 
-export function SourceConfigTable({ agentId, config, uid }: Props) {
+export function SourceConfigTable({ agentId, config, uid, sourceHealth }: Props) {
   const [toggling, setToggling] = useState<string | null>(null);
 
   const sources = config?.sources ?? {};
@@ -87,6 +88,7 @@ export function SourceConfigTable({ agentId, config, uid }: Props) {
                   <th className="text-left py-2 px-3">Source</th>
                   <th className="text-center py-2 px-3 w-12">Tier</th>
                   <th className="text-center py-2 px-3 w-20">Credibility</th>
+                  {sourceHealth && <th className="text-center py-2 px-3 w-16">Last</th>}
                   <th className="text-center py-2 px-3 w-16">On</th>
                 </tr>
               </thead>
@@ -114,6 +116,11 @@ export function SourceConfigTable({ agentId, config, uid }: Props) {
                       <td className="py-2 px-3 text-center text-white/50 text-xs">
                         {(credibility * 100).toFixed(0)}%
                       </td>
+                      {sourceHealth && (
+                        <td className="py-2 px-3 text-center">
+                          <SourceHealthDot health={sourceHealth[id]} />
+                        </td>
+                      )}
                       <td className="py-2 px-3 text-center">
                         <button
                           onClick={() => handleToggle(id, !enabled)}
@@ -139,5 +146,33 @@ export function SourceConfigTable({ agentId, config, uid }: Props) {
         </div>
       ))}
     </div>
+  );
+}
+
+function SourceHealthDot({ health }: { health?: SourceFetchHealth }) {
+  if (!health) {
+    return <span className="inline-block w-2 h-2 rounded-full bg-white/20" title="No data yet" />;
+  }
+  if (health.status === "ok") {
+    return (
+      <span
+        className="inline-block w-2 h-2 rounded-full bg-green-500"
+        title={`${health.count} articles fetched`}
+      />
+    );
+  }
+  if (health.status === "empty") {
+    return (
+      <span
+        className="inline-block w-2 h-2 rounded-full bg-yellow-500"
+        title="Fetched OK but 0 articles"
+      />
+    );
+  }
+  return (
+    <span
+      className="inline-block w-2 h-2 rounded-full bg-red-500"
+      title={health.error ?? "Fetch failed"}
+    />
   );
 }

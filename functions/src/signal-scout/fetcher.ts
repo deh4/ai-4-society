@@ -46,8 +46,20 @@ async function fetchGDELT(source: DataSource): Promise<RawArticle[]> {
   }));
 }
 
-export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<RawArticle[]> {
+export interface SourceFetchHealth {
+  status: "ok" | "empty" | "error";
+  count: number;
+  error?: string;
+}
+
+export interface FetchAllResult {
+  articles: RawArticle[];
+  sourceHealth: Record<string, SourceFetchHealth>;
+}
+
+export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<FetchAllResult> {
   const results: RawArticle[] = [];
+  const sourceHealth: Record<string, SourceFetchHealth> = {};
 
   for (const source of DATA_SOURCES) {
     if (enabledSourceIds && !enabledSourceIds.has(source.id)) {
@@ -63,18 +75,25 @@ export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<R
         articles = articles.slice(0, source.maxItems);
       }
       results.push(...articles);
+      sourceHealth[source.id] = { status: articles.length > 0 ? "ok" : "empty", count: articles.length };
       logger.info(`Fetched ${articles.length} articles from ${source.name}`);
     } catch (err) {
       logger.warn(`Failed to fetch from ${source.name}:`, err);
-      // Continue with other sources
+      sourceHealth[source.id] = {
+        status: "error",
+        count: 0,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
   }
 
   // Deduplicate by URL
   const seen = new Set<string>();
-  return results.filter((article) => {
+  const articles = results.filter((article) => {
     if (!article.url || seen.has(article.url)) return false;
     seen.add(article.url);
     return true;
   });
+
+  return { articles, sourceHealth };
 }

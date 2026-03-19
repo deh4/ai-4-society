@@ -79,7 +79,7 @@ async function runSignalScout(apiKey: string): Promise<{
     }
 
     // Step 1: Fetch articles
-    const articles = await fetchAllSources(enabledSourceIds);
+    const { articles, sourceHealth } = await fetchAllSources(enabledSourceIds);
     logger.info(`Fetched ${articles.length} unique articles`);
 
     if (articles.length === 0) {
@@ -89,6 +89,7 @@ async function runSignalScout(apiKey: string): Promise<{
         modelId: "gemini-2.5-flash", memoryMiB: 512,
         metrics: { articlesFetched: 0, signalsStored: 0, geminiCalls: 0, tokensInput: 0, tokensOutput: 0, firestoreReads: 1, firestoreWrites: 3 },
         sourcesUsed: enabledSourcesList,
+        sourceHealth,
       });
       return { success: true, message: "No articles fetched" };
     }
@@ -117,6 +118,7 @@ async function runSignalScout(apiKey: string): Promise<{
           firestoreReads: 1 + existingSnap.size, firestoreWrites: 3,
         },
         sourcesUsed: enabledSourcesList,
+        sourceHealth,
       }, usage);
       return { success: true, message: `${articles.length} fetched, 0 passed filter` };
     }
@@ -152,6 +154,7 @@ async function runSignalScout(apiKey: string): Promise<{
           firestoreReads: 1 + existingSnap.size + nodesSnap.size, firestoreWrites: 3,
         },
         sourcesUsed: enabledSourcesList,
+        sourceHealth,
       }, usage);
       return { success: true, message: `${filteredArticles.length} classified, 0 relevant signals` };
     }
@@ -178,6 +181,7 @@ async function runSignalScout(apiKey: string): Promise<{
         firestoreWrites: stored + 3,
       },
       sourcesUsed: enabledSourcesList,
+      sourceHealth,
     }, usage);
 
     return {

@@ -205,6 +205,12 @@ export interface CostBreakdown {
   total: number;
 }
 
+export interface SourceFetchHealth {
+  status: "ok" | "empty" | "error";
+  count: number;
+  error?: string;
+}
+
 export interface AgentRunData {
   agentId: string;
   modelId: string;
@@ -222,6 +228,7 @@ export interface AgentRunData {
     firestoreWrites: number;
   };
   sourcesUsed: string[];
+  sourceHealth?: Record<string, SourceFetchHealth>;
 }
 
 function calculateCostBreakdown(
@@ -278,7 +285,7 @@ export async function writeAgentRunSummary(
   const runCost = calculateCostBreakdown(data, duration, cumulativeUsage);
 
   // Write run summary doc
-  await db.collection("agents").doc(data.agentId).collection("runs").add({
+  const runDoc: Record<string, unknown> = {
     startedAt: data.startedAt,
     completedAt: FieldValue.serverTimestamp(),
     duration,
@@ -288,7 +295,9 @@ export async function writeAgentRunSummary(
     modelId: data.modelId,
     cost: runCost,
     sourcesUsed: data.sourcesUsed,
-  });
+  };
+  if (data.sourceHealth) runDoc.sourceHealth = data.sourceHealth;
+  await db.collection("agents").doc(data.agentId).collection("runs").add(runDoc);
 
   // Update health doc
   const healthRef = db.collection("agents").doc(data.agentId).collection("health").doc("latest");
@@ -349,7 +358,7 @@ export async function writeAgentRunSummary(
 
   const totalSignalsLifetime = ((prev.totalSignalsLifetime as number) ?? 0) + data.metrics.signalsStored;
 
-  await healthRef.set({
+  const healthUpdate: Record<string, unknown> = {
     lastRunAt: FieldValue.serverTimestamp(),
     lastRunOutcome: data.outcome,
     lastError: data.error,
@@ -365,7 +374,9 @@ export async function writeAgentRunSummary(
     lastRunArticlesFetched: data.metrics.articlesFetched,
     lastRunSignalsStored: data.metrics.signalsStored,
     totalSignalsLifetime,
-  });
+  };
+  if (data.sourceHealth) healthUpdate.sourceHealth = data.sourceHealth;
+  await healthRef.set(healthUpdate);
 
   logger.info(`Agent run summary written for ${data.agentId}: ${data.outcome}, ${duration}ms, cost $${runCost.total}`);
 }
