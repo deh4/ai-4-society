@@ -74,6 +74,8 @@ export default function GraphView({
   const { snapshot, loading } = useGraph();
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods<NodeObject<ForceNode>>>(undefined);
+  const selectedNodeRef = useRef<string | null>(null);
+  selectedNodeRef.current = selectedNodeId;
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   const prefs = getLocalPreferences();
@@ -128,7 +130,7 @@ export default function GraphView({
     (node: NodeObject<ForceNode>, ctx: CanvasRenderingContext2D) => {
       const x = node.x ?? 0;
       const y = node.y ?? 0;
-      const isSelected = node.id === selectedNodeId;
+      const isSelected = node.id === selectedNodeRef.current;
       const radius = node.isPreference ? 6 : isSelected ? 7 : 4;
 
       // Glow for selected/preference nodes
@@ -183,7 +185,7 @@ export default function GraphView({
         ctx.fillText(label, x, y + radius + 4);
       }
     },
-    [selectedNodeId]
+    []
   );
 
   if (loading) {

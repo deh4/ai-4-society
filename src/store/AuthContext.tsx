@@ -67,7 +67,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             });
                             setUserDoc(migratedDoc);
                         } else {
-                            setUserDoc(null);
+                            // New user: create pending entry
+                            const newUserDoc: UserDoc = {
+                                email: firebaseUser.email ?? '',
+                                displayName: firebaseUser.displayName ?? '',
+                                photoURL: firebaseUser.photoURL ?? null,
+                                roles: [],
+                                status: 'pending',
+                                appliedRoles: [],
+                                applicationNote: '',
+                                appliedAt: null,
+                                approvedAt: null,
+                                approvedBy: null,
+                                lastActiveAt: null,
+                                totalReviews: 0,
+                                acknowledgedAt: null,
+                                onboardingCompleted: {},
+                            };
+                            await setDoc(userRef, {
+                                ...newUserDoc,
+                                appliedAt: serverTimestamp(),
+                            });
+                            setUserDoc(newUserDoc);
                         }
                     }
                 } catch (err) {
