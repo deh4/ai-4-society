@@ -184,7 +184,13 @@ export const approveGraphProposal = onCall(
         const proposedChanges = updateData.proposed_changes as Record<string, { proposed_value: unknown }>;
 
         const nodeRef = db.doc(`nodes/${nodeId}`);
-        const nodeSnap = await tx.get(nodeRef);
+        const reviewerRef = db.collection("users").doc(uid);
+
+        // All reads must happen before any writes in a Firestore transaction
+        const [nodeSnap, reviewerSnap] = await Promise.all([
+          tx.get(nodeRef),
+          tx.get(reviewerRef),
+        ]);
         if (!nodeSnap.exists) throw new HttpsError("not-found", `Node ${nodeId} not found`);
 
         const currentDoc = nodeSnap.data()!;
@@ -230,9 +236,6 @@ export const approveGraphProposal = onCall(
           reviewed_by: uid,
         });
 
-        // Increment reviewer's totalReviews counter
-        const reviewerRef = db.collection("users").doc(uid);
-        const reviewerSnap = await tx.get(reviewerRef);
         if (reviewerSnap.exists) {
           tx.update(reviewerRef, { totalReviews: FieldValue.increment(1) });
         }
