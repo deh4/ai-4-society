@@ -109,7 +109,7 @@ export default function Observatory() {
 
         {/* Tab content */}
         {!loading && activeTab === "graph" && (
-          <div className={selectedNodeId ? "lg:grid lg:grid-cols-[3fr_2fr] gap-4" : ""}>
+          <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-4">
             <div className="min-w-0">
               <GraphView
                 selectedNodeId={selectedNodeId}
@@ -119,9 +119,9 @@ export default function Observatory() {
             </div>
 
             {/* Desktop inline panel — lg+ only */}
-            <AnimatePresence>
-              {selectedNodeId && (
-                <div className="hidden lg:block min-w-0">
+            <div className="hidden lg:block min-w-0">
+              <AnimatePresence>
+                {selectedNodeId && (
                   <DetailPanel
                     key={`inline-${selectedNodeId}`}
                     nodeId={selectedNodeId}
@@ -129,9 +129,9 @@ export default function Observatory() {
                     onNavigate={handleNavigateNode}
                     inline
                   />
-                </div>
-              )}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         )}
 

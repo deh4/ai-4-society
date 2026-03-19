@@ -22,7 +22,7 @@ service cloud.firestore {
 
     function hasRole(role) {
       return isActiveUser()
-        && role in getUserDoc().data.roles;
+        && getUserDoc().data.roles.hasAny([role]);
     }
 
     function hasAnyRole(roles) {
@@ -60,7 +60,6 @@ service cloud.firestore {
                     && request.auth.uid == userId
                     && request.resource.data.status == 'pending'
                     && request.resource.data.roles.size() == 0
-                    && request.resource.data.appliedRoles.size() > 0
                     && request.resource.data.keys().hasAll(
                          ['email', 'displayName', 'status', 'roles',
                           'appliedRoles', 'applicationNote', 'appliedAt']);
@@ -196,24 +195,6 @@ service cloud.firestore {
       allow write: if canWrite(['scoring-reviewer', 'lead']);
     }
 
-    // ─── V2 Helper Functions ──────────────────────────────────────────────────
-
-    function isV2Admin() {
-      return request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    function isV2Reviewer() {
-      return request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isReviewer == true;
-    }
-
-    function isV2ReviewerOrAdmin() {
-      return request.auth != null
-        && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
-            || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isReviewer == true);
-    }
-
     // ─── V2 Graph Model Collections ──────────────────────────────────────────
 
     match /nodes/{nodeId} {
@@ -257,8 +238,8 @@ service cloud.firestore {
     }
 
     match /graph_proposals/{proposalId} {
-      allow read: if isV2ReviewerOrAdmin();
-      allow write: if isV2Admin();
+      allow read: if isActiveReviewer() || isAdmin();
+      allow write: if isAdmin() || hasRole('lead');
     }
 
     // V2: changelogs become public read (v1 rule above restricts to lead-only)

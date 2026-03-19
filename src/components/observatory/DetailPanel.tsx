@@ -129,10 +129,10 @@ export default function DetailPanel({
   }
 
   const badge = TYPE_BADGES[node.type];
-  const hasNarrative = "summary" in node && (node as { summary?: string }).summary;
   const nodeData = node as unknown as Record<string, unknown>;
   const deepDive = (nodeData.deep_dive as string) ?? "";
   const narrativeSummary = (nodeData.summary as string) ?? "";
+  const hasNarrative = narrativeSummary.length > 0;
   const timelineNarrative = nodeData.timeline_narrative as
     | { near_term: string; mid_term: string; long_term: string }
     | undefined;
@@ -169,7 +169,12 @@ export default function DetailPanel({
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary or placeholder for newly-approved nodes */}
+      {!hasNarrative && (
+        <div className="text-xs text-gray-500 italic bg-white/5 rounded p-3">
+          Content pending — the Validator Agent will enrich this node in its next weekly run.
+        </div>
+      )}
       {hasNarrative && (
         <div>
           <p className="text-sm text-gray-300 leading-relaxed">
