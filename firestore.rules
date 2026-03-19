@@ -55,10 +55,10 @@ service cloud.firestore {
       // Lead can read all users
       allow read: if isAdmin() || hasRole('lead');
 
-      // Application: user creates own doc with pending status, no self-assigned roles
+      // Sign-up: user creates own doc with no self-assigned roles
       allow create: if request.auth != null
                     && request.auth.uid == userId
-                    && request.resource.data.status == 'pending'
+                    && request.resource.data.status in ['active', 'pending']
                     && request.resource.data.roles.size() == 0
                     && request.resource.data.keys().hasAll(
                          ['email', 'displayName', 'status', 'roles',

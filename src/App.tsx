@@ -2,7 +2,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HeroPage from "./pages/HeroPage";
 import Dashboard from "./pages/Dashboard";
-import Contribute from "./pages/Contribute";
 import Admin from "./pages/Admin";
 import Observatory from "./pages/Observatory";
 import About from "./pages/About";
@@ -30,7 +29,6 @@ export default function App() {
                 {/* v1 pages (preserved) */}
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/:riskId" element={<Dashboard />} />
-                <Route path="/contribute" element={<Contribute />} />
                 <Route path="/help" element={
                   <ProtectedRoute>
                     <Help />

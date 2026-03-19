@@ -67,13 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             });
                             setUserDoc(migratedDoc);
                         } else {
-                            // New user: create pending entry
+                            // New user: create active entry with no roles.
+                            // Basic access (e.g. voting) works for any signed-in user.
+                            // Admin can grant reviewer/editor roles if needed.
                             const newUserDoc: UserDoc = {
                                 email: firebaseUser.email ?? '',
                                 displayName: firebaseUser.displayName ?? '',
                                 photoURL: firebaseUser.photoURL ?? null,
                                 roles: [],
-                                status: 'pending',
+                                status: 'active',
                                 appliedRoles: [],
                                 applicationNote: '',
                                 appliedAt: null,
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             await setDoc(userRef, {
                                 ...newUserDoc,
                                 appliedAt: serverTimestamp(),
+                                lastActiveAt: serverTimestamp(),
                             });
                             setUserDoc(newUserDoc);
                         }
