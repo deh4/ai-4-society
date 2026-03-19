@@ -80,7 +80,15 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       q,
       (snap) => {
         setFeedItems(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() } as FeedItem))
+          snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ...data,
+              // Ensure required fields exist with defaults
+              related_node_ids: data.related_node_ids ?? [],
+            } as FeedItem;
+          })
         );
       },
       (err) => {
