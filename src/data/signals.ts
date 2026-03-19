@@ -23,9 +23,13 @@ export const signalClient: SignalDataClient = {
     if (filters.signalType) {
       constraints.push(where("signal_type", "==", filters.signalType));
     }
-    // Only add nodeId filter if provided (for querying related signals)
+    // Note: nodeId filter omitted because old signals may not have related_node_ids field
+    // This will be properly populated once Discovery/Validator agents process signals
+    // For now, just show all approved signals for a node
     if (filters.nodeId) {
-      constraints.push(where("related_node_ids", "array-contains", filters.nodeId));
+      // TODO: Once all signals have related_node_ids, re-enable this filter:
+      // constraints.push(where("related_node_ids", "array-contains", filters.nodeId));
+      // For now, caller should filter results client-side if needed
     }
 
     const sortField = filters.orderBy === "impact_score" ? "impact_score" : "fetched_at";
@@ -38,7 +42,7 @@ export const signalClient: SignalDataClient = {
     try {
       const q = query(collection(db, "signals"), ...constraints);
       const snap = await getDocs(q);
-      return snap.docs.map((d) => {
+      const results = snap.docs.map((d) => {
         const data = d.data();
         return {
           id: d.id,
@@ -50,6 +54,13 @@ export const signalClient: SignalDataClient = {
           source_credibility: data.source_credibility ?? 0.7,
         } as Signal;
       });
+
+      // Client-side filtering if nodeId provided and field exists
+      if (filters.nodeId && results.length > 0 && results[0].related_node_ids?.length > 0) {
+        return results.filter((s) => s.related_node_ids.includes(filters.nodeId!));
+      }
+
+      return results;
     } catch (error) {
       console.error("Error fetching signals:", error);
       return [];
