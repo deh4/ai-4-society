@@ -121,24 +121,40 @@ export default function GraphView({
     return () => observer.disconnect();
   }, []);
 
-  // Center camera on selected node when selection changes
-  useEffect(() => {
-    if (!selectedNodeId || !fgRef.current) return;
-    const found = graphData.nodes.find((n) => n.id === selectedNodeId);
-    if (!found) return;
-    const nx = (found as unknown as { x?: number }).x;
-    const ny = (found as unknown as { y?: number }).y;
-    if (nx !== undefined && ny !== undefined) {
-      fgRef.current.centerAt(nx, ny, 500);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNodeId]);
-
   const handleNodeClick = useCallback(
     (node: NodeObject<ForceNode>) => {
       if (node.id) onSelectNode(String(node.id));
     },
     [onSelectNode]
+  );
+
+  const handleEngineStop = useCallback(() => {
+    if (!hasInitialLayoutRef.current && fgRef.current) {
+      hasInitialLayoutRef.current = true;
+      fgRef.current.zoom(2.5, 400);
+      fgRef.current.d3Force("charge", null);
+      fgRef.current.d3Force("link", null);
+      fgRef.current.d3Force("center", null);
+    }
+  }, []);
+
+  const handlePointerAreaPaint = useCallback(
+    (node: NodeObject<ForceNode>, color: string, ctx: CanvasRenderingContext2D) => {
+      const x = node.x ?? 0;
+      const y = node.y ?? 0;
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+    },
+    []
+  );
+
+  const getLinkColor = useCallback(() => "rgba(255,255,255,0.3)", []);
+
+  const getLinkLabel = useCallback(
+    (link: object) => (link as unknown as GraphLink).relationship,
+    []
   );
 
   const paintNode = useCallback(
@@ -247,32 +263,14 @@ export default function GraphView({
           width={dimensions.width}
           height={dimensions.height}
           nodeCanvasObject={paintNode}
-          nodePointerAreaPaint={(node: NodeObject<ForceNode>, color: string, ctx: CanvasRenderingContext2D) => {
-            const x = node.x ?? 0;
-            const y = node.y ?? 0;
-            ctx.beginPath();
-            ctx.arc(x, y, 8, 0, 2 * Math.PI);
-            ctx.fillStyle = color;
-            ctx.fill();
-          }}
+          nodePointerAreaPaint={handlePointerAreaPaint}
           onNodeClick={handleNodeClick}
-          linkColor={() => "rgba(255,255,255,0.3)"}
+          linkColor={getLinkColor}
           linkWidth={1}
-          linkLabel={(link) => (link as unknown as GraphLink).relationship}
+          linkLabel={getLinkLabel}
           backgroundColor="transparent"
           cooldownTicks={100}
-          onEngineStop={() => {
-            if (!hasInitialLayoutRef.current && fgRef.current) {
-              hasInitialLayoutRef.current = true;
-              fgRef.current.zoom(2.5, 400);
-              // Freeze the layout: remove all forces so that if graphData ever
-              // gets a new reference (e.g. after an approval), the simulation
-              // reheats but nodes have nothing pulling them and stay in place.
-              fgRef.current.d3Force("charge", null);
-              fgRef.current.d3Force("link", null);
-              fgRef.current.d3Force("center", null);
-            }
-          }}
+          onEngineStop={handleEngineStop}
         />
       </div>
     </div>
