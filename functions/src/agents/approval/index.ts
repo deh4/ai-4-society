@@ -15,8 +15,10 @@ export const approveGraphProposal = onCall(
     const userSnap = await db.collection("users").doc(uid).get();
     if (!userSnap.exists) throw new HttpsError("permission-denied", "No user profile found");
     const userData = userSnap.data()!;
-    if (!userData.isAdmin && !userData.isReviewer) {
-      throw new HttpsError("permission-denied", "Requires reviewer or admin role");
+    const roles = (userData.roles as string[]) ?? [];
+    const hasReviewerRole = roles.some(r => r === "lead" || r === "reviewer");
+    if (!hasReviewerRole) {
+      throw new HttpsError("permission-denied", "Requires lead or reviewer role");
     }
 
     const proposalId = request.data.proposalId as string | undefined;
@@ -217,8 +219,10 @@ export const rejectGraphProposal = onCall(
     const userSnap = await db.collection("users").doc(request.auth.uid).get();
     if (!userSnap.exists) throw new HttpsError("permission-denied", "No user profile found");
     const userData = userSnap.data()!;
-    if (!userData.isAdmin && !userData.isReviewer) {
-      throw new HttpsError("permission-denied", "Requires reviewer or admin role");
+    const roles = (userData.roles as string[]) ?? [];
+    const hasReviewerRole = roles.some(r => r === "lead" || r === "reviewer");
+    if (!hasReviewerRole) {
+      throw new HttpsError("permission-denied", "Requires lead or reviewer role");
     }
 
     const proposalId = request.data.proposalId as string | undefined;
