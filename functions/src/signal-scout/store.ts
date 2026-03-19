@@ -43,6 +43,11 @@ export async function storeSignals(signals: ClassifiedSignal[]): Promise<number>
         confidence_score: signal.confidence_score,
         status: "pending",
         fetched_at: FieldValue.serverTimestamp(),
+        // Initialize related fields as empty — will be populated by Discovery/Validator agents
+        related_nodes: [],
+        related_node_ids: [],
+        impact_score: 0,
+        source_credibility: 0.7,
         ...(signal.proposed_topic ? { proposed_topic: signal.proposed_topic } : {}),
       });
     }

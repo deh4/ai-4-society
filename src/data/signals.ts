@@ -23,6 +23,7 @@ export const signalClient: SignalDataClient = {
     if (filters.signalType) {
       constraints.push(where("signal_type", "==", filters.signalType));
     }
+    // Only add nodeId filter if provided (for querying related signals)
     if (filters.nodeId) {
       constraints.push(where("related_node_ids", "array-contains", filters.nodeId));
     }
@@ -34,9 +35,25 @@ export const signalClient: SignalDataClient = {
       constraints.push(firestoreLimit(filters.limit));
     }
 
-    const q = query(collection(db, "signals"), ...constraints);
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Signal));
+    try {
+      const q = query(collection(db, "signals"), ...constraints);
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          // Ensure required fields exist with defaults
+          related_node_ids: data.related_node_ids ?? [],
+          related_nodes: data.related_nodes ?? [],
+          impact_score: data.impact_score ?? 0,
+          source_credibility: data.source_credibility ?? 0.7,
+        } as Signal;
+      });
+    } catch (error) {
+      console.error("Error fetching signals:", error);
+      return [];
+    }
   },
 
   async approveSignal(id: string, notes?: string): Promise<void> {
