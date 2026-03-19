@@ -110,6 +110,13 @@ export default function Admin() {
     }
   };
 
+  /** Remove an item from the filtered list immediately (optimistic update) */
+  const removeItemFromList = (itemId: string, itemType: ReviewItem["type"]) => {
+    setFilteredItems((prev) =>
+      prev.filter((item) => !(item.id === itemId && item.type === itemType))
+    );
+  };
+
   /** Approve or reject a signal via direct Firestore write */
   const handleSignalAction = async (
     id: string,
@@ -132,6 +139,8 @@ export default function Admin() {
           totalReviews: increment(1),
         }).catch(() => {});
       }
+      // Optimistically remove from list and select next
+      removeItemFromList(id, "signal");
       selectNextItem();
     } finally {
       setUpdating(false);
@@ -144,6 +153,10 @@ export default function Admin() {
     try {
       const approve = httpsCallable(functions, "approveGraphProposal");
       await approve({ proposalId });
+      // Optimistically remove from list and select next
+      // Determine type based on selectedItem
+      const itemType = selectedItem?.type ?? "discovery";
+      removeItemFromList(proposalId, itemType);
       selectNextItem();
     } finally {
       setUpdating(false);
@@ -160,6 +173,9 @@ export default function Admin() {
     try {
       const reject = httpsCallable(functions, "rejectGraphProposal");
       await reject({ proposalId, reason: adminNotes });
+      // Optimistically remove from list and select next
+      const itemType = selectedItem?.type ?? "discovery";
+      removeItemFromList(proposalId, itemType);
       selectNextItem();
     } finally {
       setUpdating(false);
