@@ -38,7 +38,19 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       doc(db, "graph_snapshot", "current"),
       (snap) => {
         if (snap.exists()) {
-          setSnapshot(snap.data() as GraphSnapshot);
+          const newData = snap.data() as GraphSnapshot;
+          // Avoid creating a new snapshot reference (and restarting the force
+          // simulation) when the graph topology hasn't actually changed.
+          setSnapshot((prev) => {
+            if (
+              prev &&
+              prev.nodeCount === newData.nodeCount &&
+              prev.edgeCount === newData.edgeCount
+            ) {
+              return prev;
+            }
+            return newData;
+          });
         }
         setLoading(false);
       },

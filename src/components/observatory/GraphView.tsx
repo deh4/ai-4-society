@@ -262,12 +262,15 @@ export default function GraphView({
           backgroundColor="transparent"
           cooldownTicks={100}
           onEngineStop={() => {
-            // Only zoom on initial layout — not on every simulation tick/restart.
-            // Without this guard, any prop change that restarts the simulation
-            // (e.g. snapshot update) triggers a jarring re-zoom.
             if (!hasInitialLayoutRef.current && fgRef.current) {
               hasInitialLayoutRef.current = true;
               fgRef.current.zoom(2.5, 400);
+              // Freeze the layout: remove all forces so that if graphData ever
+              // gets a new reference (e.g. after an approval), the simulation
+              // reheats but nodes have nothing pulling them and stay in place.
+              fgRef.current.d3Force("charge", null);
+              fgRef.current.d3Force("link", null);
+              fgRef.current.d3Force("center", null);
             }
           }}
         />
