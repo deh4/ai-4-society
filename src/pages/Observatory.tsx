@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Layout from "../components/shared/Layout";
 import GraphView from "../components/observatory/GraphView";
@@ -13,7 +13,6 @@ type Tab = "graph" | "timeline";
 
 export default function Observatory() {
   const { nodeId: urlNodeId } = useParams<{ nodeId?: string }>();
-  const navigate = useNavigate();
   const { snapshot, loading } = useGraph();
   const [activeTab, setActiveTab] = useState<Tab>("graph");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
@@ -37,29 +36,20 @@ export default function Observatory() {
     if (firstRisk) {
       autoSelectedRef.current = true;
       setSelectedNodeId(firstRisk.id);
-      navigate(`/observatory/${firstRisk.id}`, { replace: true });
+      window.history.replaceState(null, "", `/observatory/${firstRisk.id}`);
     }
-  }, [snapshot, selectedNodeId, urlNodeId, navigate]);
+  }, [snapshot, selectedNodeId, urlNodeId]);
 
-  const handleSelectNode = useCallback(
-    (id: string | null) => {
-      setSelectedNodeId(id);
-      if (id) {
-        navigate(`/observatory/${id}`, { replace: true });
-      } else {
-        navigate("/observatory", { replace: true });
-      }
-    },
-    [navigate]
-  );
+  const handleSelectNode = useCallback((id: string | null) => {
+    setSelectedNodeId(id);
+    const path = id ? `/observatory/${id}` : "/observatory";
+    window.history.replaceState(null, "", path);
+  }, []);
 
-  const handleNavigateNode = useCallback(
-    (id: string) => {
-      setSelectedNodeId(id);
-      navigate(`/observatory/${id}`, { replace: true });
-    },
-    [navigate]
-  );
+  const handleNavigateNode = useCallback((id: string) => {
+    setSelectedNodeId(id);
+    window.history.replaceState(null, "", `/observatory/${id}`);
+  }, []);
 
   return (
     <Layout>
