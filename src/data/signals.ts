@@ -55,9 +55,10 @@ export const signalClient: SignalDataClient = {
         } as Signal;
       });
 
-      // Client-side filtering if nodeId provided and field exists
-      if (filters.nodeId && results.length > 0 && results[0].related_node_ids?.length > 0) {
-        return results.filter((s) => s.related_node_ids.includes(filters.nodeId!));
+      // Client-side filtering if nodeId provided
+      // Only filter if the field actually contains data
+      if (filters.nodeId && results.some((s) => s.related_node_ids?.length > 0)) {
+        return results.filter((s) => s.related_node_ids?.includes(filters.nodeId!) ?? false);
       }
 
       return results;
