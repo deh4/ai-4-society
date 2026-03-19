@@ -17,6 +17,8 @@ interface Props {
   onBulkToggle: (id: string) => void;
   onBulkSelectAll: (ids: string[]) => void;
   onBulkClear: () => void;
+  /** Called whenever filtered items change, so parent can auto-select next item on action */
+  onFilteredItemsChange?: (items: ReviewItem[]) => void;
 }
 
 const TYPE_FILTERS: { key: ReviewItemType; label: string }[] = [
@@ -34,6 +36,7 @@ export function UnifiedReviewList({
   onBulkToggle,
   onBulkSelectAll,
   onBulkClear,
+  onFilteredItemsChange,
 }: Props) {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [activeTypes, setActiveTypes] = useState<Set<ReviewItemType>>(
@@ -188,6 +191,11 @@ export function UnifiedReviewList({
         return bTime - aTime;
       });
   }, [items, activeTypes]);
+
+  // Notify parent of filtered items for auto-selection
+  useEffect(() => {
+    onFilteredItemsChange?.(filtered);
+  }, [filtered, onFilteredItemsChange]);
 
   const pendingCounts = useMemo(() => {
     const counts: Record<ReviewItemType, number> = { signal: 0, discovery: 0, validation: 0 };

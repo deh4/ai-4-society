@@ -83,6 +83,7 @@ export default function Admin() {
   const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(
     new Set()
   );
+  const [filteredItems, setFilteredItems] = useState<ReviewItem[]>([]);
 
   // -------------------------------------------------------------------------
   // Handlers
@@ -91,6 +92,22 @@ export default function Admin() {
   const selectItem = (item: ReviewItem | null) => {
     setSelectedItem(item);
     setAdminNotes("");
+  };
+
+  /** After an action, auto-select next pending item from filtered list */
+  const selectNextItem = () => {
+    if (!selectedItem || filteredItems.length === 0) return;
+    const currentIndex = filteredItems.findIndex(
+      (item) => item.id === selectedItem.id && item.type === selectedItem.type
+    );
+    if (currentIndex === -1) return;
+
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < filteredItems.length) {
+      selectItem(filteredItems[nextIndex]);
+    } else {
+      selectItem(null);
+    }
   };
 
   /** Approve or reject a signal via direct Firestore write */
@@ -115,8 +132,7 @@ export default function Admin() {
           totalReviews: increment(1),
         }).catch(() => {});
       }
-      setSelectedItem(null);
-      setAdminNotes("");
+      selectNextItem();
     } finally {
       setUpdating(false);
     }
@@ -128,8 +144,7 @@ export default function Admin() {
     try {
       const approve = httpsCallable(functions, "approveGraphProposal");
       await approve({ proposalId });
-      setSelectedItem(null);
-      setAdminNotes("");
+      selectNextItem();
     } finally {
       setUpdating(false);
     }
@@ -145,8 +160,7 @@ export default function Admin() {
     try {
       const reject = httpsCallable(functions, "rejectGraphProposal");
       await reject({ proposalId, reason: adminNotes });
-      setSelectedItem(null);
-      setAdminNotes("");
+      selectNextItem();
     } finally {
       setUpdating(false);
     }
@@ -646,6 +660,7 @@ export default function Admin() {
               onBulkToggle={onBulkToggle}
               onBulkSelectAll={onBulkSelectAll}
               onBulkClear={onBulkClear}
+              onFilteredItemsChange={setFilteredItems}
             />
 
             {/* Bulk reject bar */}
