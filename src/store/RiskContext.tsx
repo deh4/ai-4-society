@@ -129,10 +129,19 @@ export function RiskProvider({ children }: { children: ReactNode }) {
             where('status', 'in', ['approved', 'edited'])
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const signals: LiveSignal[] = snapshot.docs.map((d) => ({
-                id: d.id,
-                ...d.data(),
-            })) as LiveSignal[];
+            const signals: LiveSignal[] = snapshot.docs.map((d) => {
+                const data = d.data();
+                return {
+                    id: d.id,
+                    title: data.title ?? '',
+                    summary: data.summary ?? '',
+                    source_url: data.source_url ?? '',
+                    source_name: data.source_name ?? '',
+                    published_date: data.published_date ?? '',
+                    // Ensure required fields exist with defaults
+                    risk_categories: data.risk_categories ?? [],
+                } as LiveSignal;
+            });
             setLiveSignals(signals);
         }, (err) => {
             console.error("Error subscribing to live signals:", err);
@@ -146,7 +155,7 @@ export function RiskProvider({ children }: { children: ReactNode }) {
 
         return baseRisks.map((risk) => {
             const matching = liveSignals.filter((s) =>
-                s.risk_categories.includes(risk.id)
+                s.risk_categories?.includes(risk.id) ?? false
             );
             if (matching.length === 0) return risk;
 
