@@ -18,6 +18,7 @@ interface ForceNode {
   val: number;
   color: string;
   isPreference: boolean;
+  isOrphan: boolean;
 }
 
 interface GraphLink {
@@ -40,20 +41,8 @@ function buildGraphData(
 ): { nodes: ForceNode[]; links: GraphLink[] } {
   const nodeIds = new Set<string>();
 
-  const nodes: ForceNode[] = snapshot.nodes
-    .filter((n) => activeTypes.has(n.type))
-    .map((n) => {
-      nodeIds.add(n.id);
-      const isPreference = preferenceIds.has(n.id);
-      return {
-        id: n.id,
-        name: n.name,
-        type: n.type,
-        val: isPreference ? 6 : 3,
-        color: TYPE_COLORS[n.type],
-        isPreference,
-      };
-    });
+  const activeNodes = snapshot.nodes.filter((n) => activeTypes.has(n.type));
+  activeNodes.forEach((n) => nodeIds.add(n.id));
 
   const links: GraphLink[] = snapshot.edges
     .filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to))
@@ -62,6 +51,27 @@ function buildGraphData(
       target: e.to,
       relationship: e.relationship,
     }));
+
+  // Track which nodes have at least one edge so orphans can be styled differently
+  const connectedIds = new Set<string>();
+  for (const link of links) {
+    connectedIds.add(link.source);
+    connectedIds.add(link.target);
+  }
+
+  const nodes: ForceNode[] = activeNodes.map((n) => {
+    const isPreference = preferenceIds.has(n.id);
+    const isOrphan = !connectedIds.has(n.id);
+    return {
+      id: n.id,
+      name: n.name,
+      type: n.type,
+      val: isPreference ? 6 : isOrphan ? 1.5 : 3,
+      color: TYPE_COLORS[n.type],
+      isPreference,
+      isOrphan,
+    };
+  });
 
   return { nodes, links };
 }
@@ -76,12 +86,17 @@ export default function GraphView({
   const fgRef = useRef<ForceGraphMethods<NodeObject<ForceNode>>>(undefined);
   const selectedNodeRef = useRef<string | null>(null);
   selectedNodeRef.current = selectedNodeId;
+  const hasInitialLayoutRef = useRef(false);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
-  const prefs = getLocalPreferences();
+  // Stable ref — localStorage doesn't change during a session, so we read once.
+  // Previously calling getLocalPreferences() in render returned a new object each
+  // time, making preferenceIds a new Set every render, which caused graphData to
+  // recalculate on every render and ForceGraph2D to restart its simulation on every
+  // node click.
   const preferenceIds = useMemo(
-    () => new Set(prefs.interests),
-    [prefs.interests]
+    () => new Set(getLocalPreferences().interests),
+    []
   );
 
   const graphData = useMemo(() => {
@@ -131,7 +146,18 @@ export default function GraphView({
       const x = node.x ?? 0;
       const y = node.y ?? 0;
       const isSelected = node.id === selectedNodeRef.current;
-      const radius = node.isPreference ? 6 : isSelected ? 7 : 4;
+      const isOrphan = node.isOrphan;
+      const radius = node.isPreference ? 6 : isSelected ? 7 : isOrphan ? 2 : 4;
+
+      // Orphan nodes (no edges yet) render as small, dim dots — still clickable
+      // but don't dominate the canvas visually
+      if (isOrphan && !isSelected) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = (node.color ?? "#ffffff") + "40"; // 25% opacity
+        ctx.fill();
+        return;
+      }
 
       // Glow for selected/preference nodes
       if (isSelected || node.isPreference) {
@@ -236,7 +262,11 @@ export default function GraphView({
           backgroundColor="transparent"
           cooldownTicks={100}
           onEngineStop={() => {
-            if (fgRef.current) {
+            // Only zoom on initial layout — not on every simulation tick/restart.
+            // Without this guard, any prop change that restarts the simulation
+            // (e.g. snapshot update) triggers a jarring re-zoom.
+            if (!hasInitialLayoutRef.current && fgRef.current) {
+              hasInitialLayoutRef.current = true;
               fgRef.current.zoom(2.5, 400);
             }
           }}

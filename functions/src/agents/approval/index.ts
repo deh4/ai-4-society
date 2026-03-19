@@ -16,9 +16,11 @@ export const approveGraphProposal = onCall(
     if (!userSnap.exists) throw new HttpsError("permission-denied", "No user profile found");
     const userData = userSnap.data()!;
     const roles = (userData.roles as string[]) ?? [];
-    const hasReviewerRole = roles.some(r => r === "lead" || r === "reviewer");
+    const hasReviewerRole = roles.some(
+      r => r === "lead" || r === "signal-reviewer" || r === "discovery-reviewer" || r === "scoring-reviewer"
+    );
     if (!hasReviewerRole) {
-      throw new HttpsError("permission-denied", "Requires lead or reviewer role");
+      throw new HttpsError("permission-denied", "Requires a reviewer or lead role");
     }
 
     const proposalId = request.data.proposalId as string | undefined;
@@ -57,13 +59,74 @@ export const approveGraphProposal = onCall(
       if (proposalType === "new_node") {
         const nodeData = proposal.node_data as Record<string, unknown>;
         const nodeRef = db.collection("nodes").doc(); // auto-ID for new nodes
-        tx.set(nodeRef, {
-          ...nodeData,
+
+        // Map discovery proposal fields → full node schema so DetailPanel has
+        // something to render immediately. The Validator Agent will propose
+        // proper scored updates in its next weekly run.
+        const nodeType = nodeData.type as string;
+        const description = (nodeData.description as string) ?? "";
+        const whyNovel = (nodeData.why_novel as string) ?? "";
+        const keyThemes = (nodeData.key_themes as string[]) ?? [];
+
+        // Build a deep_dive from all available context
+        const deepDiveParts = [
+          description,
+          whyNovel ? `Why this is a distinct topic: ${whyNovel}` : "",
+          keyThemes.length ? `Key themes: ${keyThemes.join(", ")}` : "",
+        ].filter(Boolean);
+        const deepDive = deepDiveParts.join("\n\n");
+
+        // Shared fields for all node types
+        const baseNode: Record<string, unknown> = {
           id: nodeRef.id,
+          type: nodeType,
+          name: nodeData.name,
+          summary: description,
+          deep_dive: deepDive,
+          key_themes: keyThemes,
+          timeline_narrative: { near_term: "", mid_term: "", long_term: "" },
+          version: 1,
           createdAt: FieldValue.serverTimestamp(),
+          lastUpdated: FieldValue.serverTimestamp(),
+          lastUpdatedBy: uid,
           created_by: proposal.created_by ?? "discovery-agent",
           approved_by: uid,
-        });
+        };
+
+        // Type-specific defaults — numeric fields default to neutral midpoints so
+        // charts render, not crash. Validator will propose real values.
+        if (nodeType === "risk") {
+          Object.assign(baseNode, {
+            score_2026: 50,
+            score_2035: 50,
+            velocity: "Medium",
+            expert_severity: 50,
+            public_perception: 50,
+            connected_to: [],
+            mitigation_strategies: [],
+            who_affected: [],
+            signal_evidence: [],
+          });
+          if (nodeData.suggested_parent_risk_id) {
+            baseNode.category = nodeData.suggested_parent_risk_id;
+          }
+        } else if (nodeType === "solution") {
+          Object.assign(baseNode, {
+            implementation_stage: "Research",
+            adoption_score_2026: 20,
+            adoption_score_2035: 50,
+            key_players: [],
+            barriers: [],
+            solution_type: "Structural",
+          });
+          if (nodeData.suggested_parent_risk_id) {
+            baseNode.parent_risk_id = nodeData.suggested_parent_risk_id;
+          }
+        } else if (nodeType === "stakeholder") {
+          Object.assign(baseNode, { significance: "medium" });
+        }
+
+        tx.set(nodeRef, baseNode);
 
         tx.update(proposalRef, {
           status: "approved",
@@ -220,9 +283,11 @@ export const rejectGraphProposal = onCall(
     if (!userSnap.exists) throw new HttpsError("permission-denied", "No user profile found");
     const userData = userSnap.data()!;
     const roles = (userData.roles as string[]) ?? [];
-    const hasReviewerRole = roles.some(r => r === "lead" || r === "reviewer");
+    const hasReviewerRole = roles.some(
+      r => r === "lead" || r === "signal-reviewer" || r === "discovery-reviewer" || r === "scoring-reviewer"
+    );
     if (!hasReviewerRole) {
-      throw new HttpsError("permission-denied", "Requires lead or reviewer role");
+      throw new HttpsError("permission-denied", "Requires a reviewer or lead role");
     }
 
     const proposalId = request.data.proposalId as string | undefined;
