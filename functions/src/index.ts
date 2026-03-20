@@ -70,9 +70,9 @@ const BATCH_SIZE = 25; // matches classifier batch size
           const config = configSnap.data()!;
           const sources = config.sources as Record<string, { enabled: boolean }>;
           enabledSourceIds = new Set(
-            Object.entries(sources)
-              .filter(([, v]) => v.enabled)
-              .map(([k]) => k)
+            DATA_SOURCES
+              .filter((src) => sources[src.id]?.enabled !== false)
+              .map((src) => src.id)
           );
           logger.info(`Config loaded: ${enabledSourceIds.size} sources enabled`);
         }
@@ -754,7 +754,9 @@ export const triggerAgentRun = onCall(
             const config = configSnap.data()!;
             const sources = config.sources as Record<string, { enabled: boolean }>;
             enabledSourceIds = new Set(
-              Object.entries(sources).filter(([, v]) => v.enabled).map(([k]) => k)
+              DATA_SOURCES
+                .filter((src) => sources[src.id]?.enabled !== false)
+                .map((src) => src.id)
             );
           }
         } catch (err) {

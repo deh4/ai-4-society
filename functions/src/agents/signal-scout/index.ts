@@ -47,10 +47,13 @@ async function runSignalScout(apiKey: string): Promise<{
         agentConfig = configSnap.data() as Record<string, unknown>;
         const sources = agentConfig.sources as Record<string, { enabled: boolean }> | undefined;
         if (sources) {
+          // Sources not present in the config doc default to enabled.
+          // Previously, only explicitly-listed sources were included, which
+          // silently skipped any source added after the config was first written.
           enabledSourceIds = new Set(
-            Object.entries(sources)
-              .filter(([, v]) => v.enabled)
-              .map(([k]) => k)
+            DATA_SOURCES
+              .filter((src) => sources[src.id]?.enabled !== false)
+              .map((src) => src.id)
           );
           logger.info(`Config loaded: ${enabledSourceIds.size} sources enabled`);
         }
