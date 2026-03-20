@@ -8,48 +8,73 @@ import DetailPanel from "../components/observatory/DetailPanel";
 import ObservatoryTimeline from "../components/observatory/ObservatoryTimeline";
 import NodeTypeFilter from "../components/observatory/NodeTypeFilter";
 import { useGraph } from "../store/GraphContext";
+import { toSlug } from "../lib/slugs";
 import type { NodeType } from "../types/graph";
 
 type Tab = "graph" | "timeline";
 
 export default function Observatory() {
-  const { nodeId: urlNodeId } = useParams<{ nodeId?: string }>();
+  const { nodeId: urlParam } = useParams<{ nodeId?: string }>();
   const { snapshot, loading } = useGraph();
   const [activeTab, setActiveTab] = useState<Tab>("graph");
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
-    urlNodeId ?? null
-  );
+  // selectedNodeId is always the Firestore document ID (never a slug)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const autoSelectedRef = useRef(false);
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+
   const [activeTypes, setActiveTypes] = useState<Set<NodeType>>(
     () => new Set<NodeType>(["risk", "solution", "stakeholder", "milestone"])
   );
 
-  // Sync URL param to state
+  // Resolve URL param (slug or legacy Firestore ID) → Firestore node ID.
+  // Runs whenever the URL param or snapshot changes.
   useEffect(() => {
-    if (urlNodeId) setSelectedNodeId(urlNodeId);
-  }, [urlNodeId]);
+    if (!urlParam || !snapshot) return;
+    // Try slug match first (new-style URLs)
+    const bySlug = snapshot.nodes.find((n) => toSlug(n.name) === urlParam);
+    if (bySlug) { setSelectedNodeId(bySlug.id); return; }
+    // Fall back to direct ID match (legacy links / shared URLs with old format)
+    const byId = snapshot.nodes.find((n) => n.id === urlParam);
+    if (byId) {
+      // Silently upgrade the URL to the slug form
+      setSelectedNodeId(byId.id);
+      window.history.replaceState(null, "", `/observatory/${toSlug(byId.name)}`);
+    }
+  }, [urlParam, snapshot]);
 
-  // Auto-select the first risk node on initial load (no URL node)
+  // Auto-select the first risk node when no URL param is present
   useEffect(() => {
-    if (autoSelectedRef.current || !snapshot || selectedNodeId || urlNodeId) return;
+    if (autoSelectedRef.current || !snapshot || selectedNodeId || urlParam) return;
     const firstRisk = snapshot.nodes.find((n) => n.type === "risk");
     if (firstRisk) {
       autoSelectedRef.current = true;
       setSelectedNodeId(firstRisk.id);
-      window.history.replaceState(null, "", `/observatory/${firstRisk.id}`);
+      window.history.replaceState(null, "", `/observatory/${toSlug(firstRisk.name)}`);
     }
-  }, [snapshot, selectedNodeId, urlNodeId]);
+  }, [snapshot, selectedNodeId, urlParam]);
 
+  // Stable callbacks — use snapshotRef so we don't add snapshot to deps
+  // (which would give GraphView a new onSelectNode reference on every snapshot update)
   const handleSelectNode = useCallback((id: string | null) => {
     setSelectedNodeId(id);
-    const path = id ? `/observatory/${id}` : "/observatory";
-    window.history.replaceState(null, "", path);
+    if (id && snapshotRef.current) {
+      const node = snapshotRef.current.nodes.find((n) => n.id === id);
+      const slug = node ? toSlug(node.name) : id;
+      window.history.replaceState(null, "", `/observatory/${slug}`);
+    } else {
+      window.history.replaceState(null, "", "/observatory");
+    }
   }, []);
 
   const handleNavigateNode = useCallback((id: string) => {
     setSelectedNodeId(id);
-    window.history.replaceState(null, "", `/observatory/${id}`);
+    if (snapshotRef.current) {
+      const node = snapshotRef.current.nodes.find((n) => n.id === id);
+      const slug = node ? toSlug(node.name) : id;
+      window.history.replaceState(null, "", `/observatory/${slug}`);
+    }
   }, []);
 
   const selectedNode = useMemo(
@@ -66,7 +91,7 @@ export default function Observatory() {
     : "Explore the live AI risk and solution knowledge graph. Track 40+ risks, solutions, stakeholders and milestones as AI reshapes society.";
 
   const canonicalUrl = selectedNode
-    ? `https://ai4society.io/observatory/${selectedNode.id}`
+    ? `https://ai4society.io/observatory/${toSlug(selectedNode.name)}`
     : "https://ai4society.io/observatory";
 
   return (

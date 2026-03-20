@@ -4,6 +4,14 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
 import { getAllNodes, getAllEdges, writeGraphSnapshot } from "../../shared/firestore.js";
 
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export const approveGraphProposal = onCall(
   { memory: "256MiB", timeoutSeconds: 60 },
   async (request) => {
@@ -81,6 +89,7 @@ export const approveGraphProposal = onCall(
           id: nodeRef.id,
           type: nodeType,
           name: nodeData.name,
+          slug: toSlug(nodeData.name as string),
           summary: description,
           deep_dive: deepDive,
           key_themes: keyThemes,
