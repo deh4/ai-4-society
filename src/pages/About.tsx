@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import Layout from "../components/shared/Layout";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/AuthContext";
@@ -139,6 +140,14 @@ export default function About() {
 
   return (
     <Layout>
+      <Helmet>
+        <title>About — AI 4 Society Observatory</title>
+        <meta name="description" content="How the AI 4 Society Observatory works: our methodology, data sources, human review pipeline, and mission to track AI's impact on society." />
+        <link rel="canonical" href="https://ai4society.io/about" />
+        <meta property="og:url" content="https://ai4society.io/about" />
+        <meta property="og:title" content="About — AI 4 Society Observatory" />
+        <meta property="og:description" content="How the AI 4 Society Observatory works: our methodology, data sources, human review pipeline, and mission to track AI's impact on society." />
+      </Helmet>
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Page header */}
         <h1 className="text-3xl md:text-4xl font-bold mb-2">

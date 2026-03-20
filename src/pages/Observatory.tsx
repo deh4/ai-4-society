@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { Helmet } from "react-helmet-async";
 import { useParams } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Layout from "../components/shared/Layout";
@@ -51,8 +52,33 @@ export default function Observatory() {
     window.history.replaceState(null, "", `/observatory/${id}`);
   }, []);
 
+  const selectedNode = useMemo(
+    () => snapshot?.nodes.find((n) => n.id === selectedNodeId) ?? null,
+    [snapshot, selectedNodeId]
+  );
+
+  const pageTitle = selectedNode
+    ? `${selectedNode.name} — AI 4 Society Observatory`
+    : "Observatory — AI 4 Society";
+
+  const pageDescription = selectedNode
+    ? `Explore ${selectedNode.name}: a ${selectedNode.type} tracked by the AI 4 Society Observatory. Real-time signals, expert analysis, and connections to related risks and solutions.`
+    : "Explore the live AI risk and solution knowledge graph. Track 40+ risks, solutions, stakeholders and milestones as AI reshapes society.";
+
+  const canonicalUrl = selectedNode
+    ? `https://ai4society.io/observatory/${selectedNode.id}`
+    : "https://ai4society.io/observatory";
+
   return (
     <Layout>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+      </Helmet>
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

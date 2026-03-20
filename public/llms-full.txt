@@ -1,0 +1,73 @@
+# AI 4 Society Observatory — Full Context
+
+> Comprehensive technical and content reference for AI systems and researchers.
+
+## Platform purpose
+
+AI 4 Society Observatory exists to give humans a clear, continuously updated window into how artificial intelligence is transforming society. It is not a news aggregator — it is a curated intelligence layer with human expert review at every publication decision.
+
+## Data model
+
+The platform maintains a knowledge graph with four node types:
+
+### Risk nodes
+Each risk represents a distinct societal threat vector from AI acceleration. Fields include: name, summary, deep dive analysis, key themes, velocity (Fast/Medium/Slow), severity scores (0–100) for 2026 and 2035 horizons, expert severity rating, public perception score, affected populations, mitigation strategies, and signal evidence.
+
+Examples: Autonomous Weapons Proliferation, AI-Enabled Surveillance States, Labour Market Displacement, Algorithmic Bias in Criminal Justice, AI-Generated Disinformation, Loss of Human Agency, Critical Infrastructure Vulnerability, Existential Risk from Misaligned AGI.
+
+### Solution nodes
+Each solution represents a technical, policy, or social response to AI risks. Fields include: name, summary, implementation stage (Research/Pilot/Early Adoption/Scaling/Mature), adoption scores for 2026 and 2035, key players, barriers to adoption, and solution type (Technical/Regulatory/Social/Structural).
+
+Examples: Constitutional AI Alignment, EU AI Act Compliance Framework, AI Safety Research Funding, Algorithmic Auditing Standards, Universal Basic Income Pilots, Open Source AI Governance, AI Incident Reporting Systems.
+
+### Stakeholder nodes
+Key actors shaping AI's societal trajectory. Includes frontier AI labs, national governments, regulatory bodies, civil society organisations, standards bodies, and academic institutions.
+
+### Milestone nodes
+Significant events, policy decisions, technical breakthroughs, or societal inflection points in AI development.
+
+## Agent pipeline
+
+1. **Signal Scout** (every 6 hours): Fetches articles from 16 data sources, filters by relevance and credibility, classifies against the risk/solution taxonomy using Gemini AI. Produces pending signals awaiting human review.
+
+2. **Discovery Agent** (weekly, Sundays): Clusters unmatched signals into proposals for new risk or solution nodes. Triggers when 5+ classified or 3+ unmatched signals accumulate.
+
+3. **Validator Agent** (weekly, Mondays): Proposes score and field updates for existing nodes based on recent signal evidence.
+
+4. **Human review**: Expert reviewers approve or reject every proposal before it affects the published knowledge graph.
+
+5. **Graph Builder** (on demand): Rebuilds the knowledge graph snapshot after each approved change.
+
+6. **Feed Curator** (every 6 hours): Maintains a ranked feed of the most impactful recent signals.
+
+## Data sources (16 total)
+
+**Research & Safety (Tier 1):** arXiv CS.AI, Alignment Forum, CAIS AI Safety Newsletter, Nature Machine Intelligence, AI Now Institute
+
+**Journalism (Tier 2):** MIT Technology Review, Wired AI, Ars Technica AI, IEEE Spectrum AI, The Guardian AI
+
+**Tech / Community (Tier 3):** The Verge AI, TechCrunch AI
+
+**Active Search (Tier 4):** GDELT DOC API
+
+**Newsletters (Tier 5):** TLDR AI, Import AI (Jack Clark), Last Week in AI, Ben's Bites
+
+## Access model
+
+- Knowledge graph and signal feed: publicly readable
+- Signal submission and review: requires account with reviewer role
+- Admin functions: requires lead role
+
+## Technical stack
+
+Frontend: React 19, TypeScript, Vite, Tailwind CSS, Firebase Auth
+Backend: Firebase Firestore, Cloud Functions (Node.js 22)
+AI: Google Gemini 2.5 Flash for classification and analysis
+Hosting: Firebase Hosting (https://ai4society.io)
+
+## Contact and attribution
+
+Platform: https://ai4society.io
+Observatory: https://ai4society.io/observatory
+About: https://ai4society.io/about
+Data freshness: Updated every 6 hours (signal collection), continuously (on approval)

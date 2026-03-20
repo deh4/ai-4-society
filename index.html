@@ -14,10 +14,13 @@
   <meta name="description"
     content="Real-time observatory tracking 40+ risks and solutions as AI reshapes society. Signals curated by AI, reviewed by humans. Monitor AI safety, governance, economic displacement, and more." />
   <meta name="keywords"
-    content="AI observatory, AI risk tracking, artificial intelligence society, AI safety, AI governance, AI impact, existential risk, AI signals, human-in-the-loop" />
+    content="AI observatory, AI risk tracking, artificial intelligence society, AI safety, AI governance, AI impact, existential risk, AI signals, human-in-the-loop, AI alignment, autonomous weapons, labour displacement, algorithmic bias" />
   <meta name="author" content="AI 4 Society" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://ai4society.io/" />
+
+  <!-- LLM context discovery -->
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="https://ai4society.io/llms.txt" />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
@@ -41,7 +44,23 @@
   <meta name="geo.region" content="GB" />
   <meta name="geo.placename" content="United Kingdom" />
 
-  <!-- Structured data -->
+  <!-- Structured data: Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "AI 4 Society",
+    "url": "https://ai4society.io/",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://ai4society.io/og-image.png"
+    },
+    "description": "AI 4 Society operates the Observatory — a real-time intelligence platform tracking how artificial intelligence is reshaping society, monitored by AI agents and reviewed by human experts.",
+    "sameAs": []
+  }
+  </script>
+
+  <!-- Structured data: WebSite + SearchAction -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -50,15 +69,11 @@
     "alternateName": "ai4society.io",
     "url": "https://ai4society.io/",
     "description": "Real-time observatory tracking the risks and solutions emerging from AI acceleration. Signals curated by AI, reviewed by humans.",
-    "inLanguage": "en",
+    "inLanguage": "en-GB",
     "publisher": {
       "@type": "Organization",
       "name": "AI 4 Society",
-      "url": "https://ai4society.io/",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://ai4society.io/og-image.png"
-      }
+      "url": "https://ai4society.io/"
     },
     "potentialAction": {
       "@type": "SearchAction",
@@ -68,6 +83,27 @@
       },
       "query-input": "required name=search_term_string"
     }
+  }
+  </script>
+
+  <!-- Structured data: Dataset (knowledge graph) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "name": "AI Society Risk & Solution Knowledge Graph",
+    "description": "A continuously updated knowledge graph of AI-driven societal risks, solutions, stakeholders, and milestones. Signals collected from 16 sources every 6 hours, classified by AI, reviewed by human experts before publication.",
+    "url": "https://ai4society.io/observatory",
+    "creator": {
+      "@type": "Organization",
+      "name": "AI 4 Society",
+      "url": "https://ai4society.io/"
+    },
+    "keywords": ["AI safety", "AI governance", "existential risk", "labour displacement", "algorithmic bias", "autonomous weapons", "AI alignment", "AI regulation"],
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "inLanguage": "en-GB",
+    "temporalCoverage": "2024/..",
+    "updateFrequency": "P6H"
   }
   </script>
 </head>

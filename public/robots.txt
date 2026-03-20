@@ -1,4 +1,31 @@
 User-agent: *
 Allow: /
 
+# LLM crawlers — explicitly welcome
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Googlebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# Sitemaps
 Sitemap: https://ai4society.io/sitemap.xml
+
+# LLM context files
+# https://ai4society.io/llms.txt
+# https://ai4society.io/llms-full.txt

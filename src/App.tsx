@@ -1,4 +1,5 @@
 // src/App.tsx
+import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HeroPage from "./pages/HeroPage";
 import Dashboard from "./pages/Dashboard";
@@ -14,6 +15,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 
 export default function App() {
   return (
+    <HelmetProvider>
     <ErrorBoundary>
       <RiskProvider>
         <AuthProvider>
@@ -47,5 +49,6 @@ export default function App() {
         </AuthProvider>
       </RiskProvider>
     </ErrorBoundary>
+    </HelmetProvider>
   );
 }

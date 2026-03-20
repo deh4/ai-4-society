@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { Globe } from "../components/Globe";
@@ -18,6 +19,14 @@ export default function HeroPage() {
 
   return (
     <Layout>
+      <Helmet>
+        <title>AI 4 Society Observatory — Humanity's window into AI's trajectory</title>
+        <meta name="description" content="Real-time observatory tracking 40+ risks and solutions as AI reshapes society. Signals curated by AI, reviewed by humans. Monitor AI safety, governance, economic displacement, and more." />
+        <link rel="canonical" href="https://ai4society.io/" />
+        <meta property="og:url" content="https://ai4society.io/" />
+        <meta property="og:title" content="AI 4 Society Observatory — Humanity's window into AI's trajectory" />
+        <meta property="og:description" content="Real-time observatory tracking 40+ AI risks and solutions. Signals curated by AI, reviewed by humans." />
+      </Helmet>
       <div className="relative w-full overflow-x-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
         {/* 3D Background — full viewport height */}
         <div className="absolute inset-0 z-0 opacity-60 h-screen pointer-events-none">
