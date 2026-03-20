@@ -1,6 +1,7 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
 import type { RawArticle } from "../../signal-scout/fetcher.js";
+import { DATA_SOURCES, type KeywordStrategy } from "../../config/sources.js";
 
 export interface FilterStats {
   input: number;
@@ -20,7 +21,7 @@ const RECENCY_DAYS = 7;
 const TITLE_SIMILARITY_THRESHOLD = 0.6;
 const DEFAULT_CREDIBILITY_THRESHOLD = 0.3;
 
-const DEFAULT_FILTER_TERMS = [
+export const DEFAULT_FILTER_TERMS = [
   "artificial intelligence", "ai", "machine learning", "deep learning",
   "neural network", "large language model", "llm", "generative ai",
   "algorithmic", "bias", "discrimination", "privacy", "surveillance",
@@ -29,7 +30,29 @@ const DEFAULT_FILTER_TERMS = [
   "ai alignment", "ai ethics", "facial recognition", "data scraping",
   "model collapse", "synthetic data", "open source ai", "ai act",
   "federated learning", "content provenance", "ai audit",
+  "biosecurity", "pandemic", "outbreak", "pathogen", "gain of function",
+  "climate change", "carbon emissions", "global warming", "climate risk",
+  "autonomous systems", "lethal autonomous", "ai arms race",
+  "misinformation", "synthetic media", "content authenticity",
+  "existential risk", "x-risk", "superintelligence", "agi",
 ];
+
+/** Build a map from source_id → keyword filter strategy + optional allowlist */
+function buildSourceFilterMap(): Map<
+  string,
+  { strategy: KeywordStrategy; allowlistTerms?: string[] }
+> {
+  const map = new Map<string, { strategy: KeywordStrategy; allowlistTerms?: string[] }>();
+  for (const src of DATA_SOURCES) {
+    map.set(src.id, {
+      strategy: src.keywordFilter,
+      allowlistTerms: src.allowlistTerms,
+    });
+  }
+  return map;
+}
+
+const sourceFilterMap = buildSourceFilterMap();
 
 export async function loadFilterTerms(): Promise<string[]> {
   try {
@@ -76,6 +99,10 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : intersection / union;
 }
 
+function matchesTerms(haystack: string, terms: string[]): boolean {
+  return terms.some((term) => haystack.includes(term));
+}
+
 export function filterArticles(
   articles: RawArticle[],
   existingUrls: Set<string>,
@@ -113,7 +140,7 @@ export function filterArticles(
   remaining = remaining.filter((a) => a.url && !existingUrls.has(a.url));
   stats.afterUrlDedup = remaining.length;
 
-  // 4. Title similarity dedup: within this batch, drop articles with > 0.6 Jaccard to an earlier article
+  // 4. Title similarity dedup: within this batch, drop near-duplicates
   const kept: RawArticle[] = [];
   const keptWordSets: Set<string>[] = [];
 
@@ -130,15 +157,41 @@ export function filterArticles(
   remaining = kept;
   stats.afterTitleDedup = remaining.length;
 
-  // 5. Keyword relevance: article title or snippet must contain at least one filter term
+  // 5. Keyword relevance — branch by source filter strategy
+  let passAllCount = 0;
+  let allowlistCount = 0;
+  let sharedKeywordCount = 0;
+
   remaining = remaining.filter((a) => {
+    const sourceFilter = sourceFilterMap.get(a.source_id);
+    const strategy = sourceFilter?.strategy ?? "shared-keyword-list";
+
+    // pass-all, karma, api-query: already pre-filtered, skip keyword check
+    if (strategy === "pass-all" || strategy === "karma" || strategy === "api-query") {
+      passAllCount++;
+      return true;
+    }
+
     const haystack = `${a.title} ${a.snippet ?? ""}`.toLowerCase();
-    return filterTerms.some((term) => haystack.includes(term));
+
+    // allowlist: check source-specific terms
+    if (strategy === "allowlist") {
+      const terms = sourceFilter?.allowlistTerms ?? [];
+      if (terms.length === 0) return true; // no terms = pass
+      const matched = matchesTerms(haystack, terms);
+      if (matched) allowlistCount++;
+      return matched;
+    }
+
+    // shared-keyword-list: check against common filter terms
+    const matched = matchesTerms(haystack, filterTerms);
+    if (matched) sharedKeywordCount++;
+    return matched;
   });
   stats.afterKeyword = remaining.length;
 
   logger.info(
-    `Filter: ${stats.input} → credibility ${stats.afterCredibility} → recency ${stats.afterRecency} → URL dedup ${stats.afterUrlDedup} → title dedup ${stats.afterTitleDedup} → keyword ${stats.afterKeyword}`
+    `Filter: ${stats.input} → credibility ${stats.afterCredibility} → recency ${stats.afterRecency} → URL dedup ${stats.afterUrlDedup} → title dedup ${stats.afterTitleDedup} → keyword ${stats.afterKeyword} (pass-all: ${passAllCount}, allowlist: ${allowlistCount}, shared: ${sharedKeywordCount})`
   );
 
   return { articles: remaining, stats };

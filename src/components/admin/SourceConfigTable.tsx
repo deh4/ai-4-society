@@ -5,46 +5,106 @@ import { toggleAgentSource } from "../../data/agentConfig";
 // Source metadata — IDs must match functions/src/config/sources.ts exactly
 const SOURCE_META: Record<
   string,
-  { name: string; tier: number; defaultCredibility: number; category: string }
+  { name: string; tier: number; defaultCredibility: number; category: string; domain: string }
 > = {
-  // Research & Safety
-  "arxiv-ai":         { name: "arXiv CS.AI",                   tier: 1, defaultCredibility: 0.85, category: "Research & Safety" },
-  "alignment-forum":  { name: "Alignment Forum",               tier: 1, defaultCredibility: 0.85, category: "Research & Safety" },
-  "cais-newsletter":  { name: "AI Safety Newsletter (CAIS)",   tier: 1, defaultCredibility: 0.85, category: "Research & Safety" },
-  "nature-mach-intel":{ name: "Nature Machine Intelligence",   tier: 1, defaultCredibility: 0.90, category: "Research & Safety" },
-  "ai-now-institute": { name: "AI Now Institute",              tier: 1, defaultCredibility: 0.85, category: "Research & Safety" },
-  // Journalism
-  "mit-tech-review":  { name: "MIT Technology Review",         tier: 2, defaultCredibility: 0.80, category: "Journalism" },
-  "wired-ai":         { name: "Wired AI",                      tier: 2, defaultCredibility: 0.75, category: "Journalism" },
-  "ars-ai":           { name: "Ars Technica AI",               tier: 2, defaultCredibility: 0.75, category: "Journalism" },
-  "ieee-spectrum-ai": { name: "IEEE Spectrum AI",              tier: 2, defaultCredibility: 0.80, category: "Journalism" },
-  "guardian-ai":      { name: "The Guardian AI",               tier: 2, defaultCredibility: 0.75, category: "Journalism" },
-  // Tech / Community
-  "verge-ai":         { name: "The Verge AI",                  tier: 3, defaultCredibility: 0.65, category: "Tech / Community" },
-  "techcrunch-ai":    { name: "TechCrunch AI",                 tier: 3, defaultCredibility: 0.60, category: "Tech / Community" },
-  // Active Search
-  "gdelt-ai":         { name: "GDELT DOC API",                 tier: 4, defaultCredibility: 0.50, category: "Active Search" },
-  // Newsletters
-  "tldr-ai":          { name: "TLDR AI",                       tier: 5, defaultCredibility: 0.65, category: "Newsletter" },
-  "import-ai":        { name: "Import AI",                     tier: 5, defaultCredibility: 0.70, category: "Newsletter" },
-  "last-week-in-ai":  { name: "Last Week in AI",               tier: 5, defaultCredibility: 0.65, category: "Newsletter" },
-  "bens-bites":       { name: "Ben's Bites",                   tier: 5, defaultCredibility: 0.65, category: "Newsletter" },
+  // T0 — Regulatory
+  "eu-ai-office":      { name: "EU AI Office / EUR-Lex",        tier: 0, defaultCredibility: 0.93, category: "Regulatory",          domain: "Regulatory" },
+  "nist-ai":           { name: "NIST AI / Federal Register",    tier: 0, defaultCredibility: 0.91, category: "Regulatory",          domain: "Regulatory" },
+  "oecd-ai":           { name: "OECD AI Observatory",           tier: 0, defaultCredibility: 0.90, category: "Regulatory",          domain: "Regulatory" },
+  // T1 — Institutional
+  "arxiv-ai":          { name: "arXiv CS.AI",                   tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI research" },
+  "alignment-forum":   { name: "Alignment Forum",               tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI safety" },
+  "cais-newsletter":   { name: "AI Safety Newsletter (CAIS)",   tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI safety" },
+  "nature-mach-intel": { name: "Nature Machine Intelligence",   tier: 1, defaultCredibility: 0.90, category: "Institutional",       domain: "AI research" },
+  "ai-now-institute":  { name: "AI Now Institute",              tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI policy" },
+  "future-of-life":    { name: "Future of Life Institute",      tier: 1, defaultCredibility: 0.88, category: "Institutional",       domain: "AI safety" },
+  "anthropic-blog":    { name: "Anthropic Research Blog",       tier: 1, defaultCredibility: 0.88, category: "Institutional",       domain: "AI safety" },
+  "deepmind-blog":     { name: "DeepMind Blog",                 tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI safety" },
+  "aiid":              { name: "AI Incident Database (AIID)",   tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI harms" },
+  "miri-blog":         { name: "MIRI Blog",                     tier: 1, defaultCredibility: 0.82, category: "Institutional",       domain: "AI alignment" },
+  "promedmail":        { name: "ProMED (ISID)",                 tier: 1, defaultCredibility: 0.90, category: "Institutional",       domain: "Biosecurity" },
+  "who-don":           { name: "WHO Disease Outbreak News",     tier: 1, defaultCredibility: 0.92, category: "Institutional",       domain: "Biosecurity" },
+  "crisis-group":      { name: "International Crisis Group",    tier: 1, defaultCredibility: 0.88, category: "Institutional",       domain: "Geopolitical" },
+  "wef-agenda":        { name: "WEF Global Risks / Agenda",    tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "Geopolitical" },
+  "nature-climate":    { name: "Nature Climate Change",         tier: 1, defaultCredibility: 0.90, category: "Institutional",       domain: "Climate" },
+  "rand-corp":         { name: "RAND Corporation",              tier: 1, defaultCredibility: 0.87, category: "Institutional",       domain: "Policy / security" },
+  "brookings":         { name: "Brookings Institution",         tier: 1, defaultCredibility: 0.87, category: "Institutional",       domain: "Policy / AI" },
+  "digichina":         { name: "DigiChina (Stanford FSI)",      tier: 1, defaultCredibility: 0.87, category: "Institutional",       domain: "China / AI policy" },
+  // T2 — Journalism
+  "mit-tech-review":   { name: "MIT Technology Review",         tier: 2, defaultCredibility: 0.80, category: "Journalism",          domain: "AI journalism" },
+  "wired-ai":          { name: "Wired AI",                      tier: 2, defaultCredibility: 0.75, category: "Journalism",          domain: "AI journalism" },
+  "ars-ai":            { name: "Ars Technica AI",               tier: 2, defaultCredibility: 0.75, category: "Journalism",          domain: "AI journalism" },
+  "ieee-spectrum-ai":  { name: "IEEE Spectrum AI",              tier: 2, defaultCredibility: 0.80, category: "Journalism",          domain: "AI journalism" },
+  "guardian-ai":       { name: "The Guardian AI",               tier: 2, defaultCredibility: 0.75, category: "Journalism",          domain: "AI journalism" },
+  "healthmap":         { name: "HealthMap (Harvard)",            tier: 2, defaultCredibility: 0.78, category: "Journalism",          domain: "Biosecurity" },
+  "stat-news":         { name: "STAT News",                     tier: 2, defaultCredibility: 0.80, category: "Journalism",          domain: "Biosecurity" },
+  "carbon-brief":      { name: "Carbon Brief",                  tier: 2, defaultCredibility: 0.82, category: "Journalism",          domain: "Climate" },
+  "climate-central":   { name: "Climate Central",               tier: 2, defaultCredibility: 0.78, category: "Journalism",          domain: "Climate" },
+  "bellingcat":        { name: "Bellingcat",                     tier: 2, defaultCredibility: 0.78, category: "Journalism",          domain: "Geopolitical" },
+  "foreign-policy":    { name: "Foreign Policy",                tier: 2, defaultCredibility: 0.78, category: "Journalism",          domain: "Geopolitical" },
+  "platformer":        { name: "Platformer",                    tier: 2, defaultCredibility: 0.78, category: "Journalism",          domain: "AI accountability" },
+  // T3 — Community
+  "verge-ai":          { name: "The Verge AI",                  tier: 3, defaultCredibility: 0.65, category: "Community",           domain: "AI tech" },
+  "techcrunch-ai":     { name: "TechCrunch AI",                 tier: 3, defaultCredibility: 0.60, category: "Community",           domain: "AI tech" },
+  "lesswrong":         { name: "LessWrong",                     tier: 3, defaultCredibility: 0.68, category: "Community",           domain: "AI safety community" },
+  "ea-forum":          { name: "EA Forum / 80,000 Hours",       tier: 3, defaultCredibility: 0.72, category: "Community",           domain: "AI safety community" },
+  // T4 — Search
+  "gdelt-ai":          { name: "GDELT DOC API",                 tier: 4, defaultCredibility: 0.50, category: "Search",              domain: "Media monitoring" },
+  "newsapi":           { name: "NewsAPI / MediaStack",           tier: 4, defaultCredibility: 0.60, category: "Search",              domain: "News search" },
+  // T5 — Newsletter
+  "tldr-ai":           { name: "TLDR AI",                       tier: 5, defaultCredibility: 0.65, category: "Newsletter",          domain: "AI newsletter" },
+  "import-ai":         { name: "Import AI",                     tier: 5, defaultCredibility: 0.70, category: "Newsletter",          domain: "AI newsletter" },
+  "last-week-in-ai":   { name: "Last Week in AI",               tier: 5, defaultCredibility: 0.65, category: "Newsletter",          domain: "AI newsletter" },
+  "bens-bites":        { name: "Ben's Bites",                   tier: 5, defaultCredibility: 0.65, category: "Newsletter",          domain: "AI newsletter" },
+  "chinai-newsletter": { name: "ChinAI Newsletter",             tier: 5, defaultCredibility: 0.72, category: "Newsletter",          domain: "China / AI" },
+  "cdc-mmwr":          { name: "CDC / MMWR",                    tier: 5, defaultCredibility: 0.90, category: "Newsletter",          domain: "Biosecurity" },
+  "the-batch":         { name: "The Batch (deeplearning.ai)",   tier: 5, defaultCredibility: 0.68, category: "Newsletter",          domain: "AI newsletter" },
+  // T6 — Data Infrastructure
+  "semantic-scholar":  { name: "Semantic Scholar API",           tier: 6, defaultCredibility: 0.65, category: "Data Infrastructure", domain: "Academic search" },
 };
 
 const CATEGORY_ORDER = [
-  "Research & Safety",
+  "Regulatory",
+  "Institutional",
   "Journalism",
-  "Tech / Community",
-  "Active Search",
+  "Community",
+  "Search",
   "Newsletter",
+  "Data Infrastructure",
 ];
 
 const TIER_COLORS: Record<number, string> = {
+  0: "text-red-400",
   1: "text-purple-400",
   2: "text-blue-400",
   3: "text-cyan-400",
   4: "text-orange-400",
   5: "text-yellow-400",
+  6: "text-emerald-400",
+};
+
+const DOMAIN_COLORS: Record<string, string> = {
+  "Regulatory":         "bg-red-500/20 text-red-400",
+  "AI research":        "bg-purple-500/20 text-purple-400",
+  "AI safety":          "bg-violet-500/20 text-violet-400",
+  "AI policy":          "bg-indigo-500/20 text-indigo-400",
+  "AI alignment":       "bg-violet-500/20 text-violet-400",
+  "AI harms":           "bg-rose-500/20 text-rose-400",
+  "AI journalism":      "bg-blue-500/20 text-blue-400",
+  "AI tech":            "bg-cyan-500/20 text-cyan-400",
+  "AI accountability":  "bg-blue-500/20 text-blue-400",
+  "AI newsletter":      "bg-yellow-500/20 text-yellow-400",
+  "AI safety community":"bg-violet-500/20 text-violet-400",
+  "Biosecurity":        "bg-emerald-500/20 text-emerald-400",
+  "Climate":            "bg-green-500/20 text-green-400",
+  "Geopolitical":       "bg-amber-500/20 text-amber-400",
+  "Policy / security":  "bg-indigo-500/20 text-indigo-400",
+  "Policy / AI":        "bg-indigo-500/20 text-indigo-400",
+  "China / AI policy":  "bg-orange-500/20 text-orange-400",
+  "China / AI":         "bg-orange-500/20 text-orange-400",
+  "Media monitoring":   "bg-gray-500/20 text-gray-400",
+  "News search":        "bg-gray-500/20 text-gray-400",
+  "Academic search":    "bg-emerald-500/20 text-emerald-400",
 };
 
 interface Props {
@@ -86,8 +146,9 @@ export function SourceConfigTable({ agentId, config, uid, sourceHealth }: Props)
               <thead>
                 <tr className="text-white/40 text-[10px] uppercase tracking-wider border-b border-white/10 bg-white/[0.02]">
                   <th className="text-left py-2 px-3">Source</th>
+                  <th className="text-left py-2 px-3 w-24 hidden sm:table-cell">Domain</th>
                   <th className="text-center py-2 px-3 w-12">Tier</th>
-                  <th className="text-center py-2 px-3 w-20">Credibility</th>
+                  <th className="text-center py-2 px-3 w-20">Cred.</th>
                   {sourceHealth && <th className="text-center py-2 px-3 w-16">Last</th>}
                   <th className="text-center py-2 px-3 w-16">On</th>
                 </tr>
@@ -99,6 +160,7 @@ export function SourceConfigTable({ agentId, config, uid, sourceHealth }: Props)
                   const credibility =
                     sourceConfig?.credibilityOverride ?? meta.defaultCredibility;
                   const isLast = i === catSources.length - 1;
+                  const domainColor = DOMAIN_COLORS[meta.domain] ?? "bg-white/10 text-white/60";
 
                   return (
                     <tr
@@ -109,6 +171,11 @@ export function SourceConfigTable({ agentId, config, uid, sourceHealth }: Props)
                     >
                       <td className="py-2 px-3 text-white/80 text-xs">
                         {meta.name}
+                      </td>
+                      <td className="py-2 px-3 hidden sm:table-cell">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${domainColor}`}>
+                          {meta.domain}
+                        </span>
                       </td>
                       <td className={`py-2 px-3 text-center text-[10px] font-mono ${TIER_COLORS[meta.tier]}`}>
                         T{meta.tier}

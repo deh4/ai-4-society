@@ -14,7 +14,7 @@ export interface RawArticle {
 const rssParser = new Parser({
   timeout: 10_000,
   headers: {
-    "User-Agent": "AI4Society-SignalScout/1.0",
+    "User-Agent": "AI4Society-SignalScout/2.0",
   },
 });
 
@@ -30,20 +30,51 @@ async function fetchRSS(source: DataSource): Promise<RawArticle[]> {
   }));
 }
 
-async function fetchGDELT(source: DataSource): Promise<RawArticle[]> {
-  const res = await fetch(source.url);
-  if (!res.ok) throw new Error(`GDELT returned ${res.status}`);
+function parseApiDate(raw: string | undefined): string {
+  if (!raw) return new Date().toISOString();
+  try {
+    return new Date(raw).toISOString();
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
+async function fetchAPI(source: DataSource): Promise<RawArticle[]> {
+  const res = await fetch(source.url, {
+    headers: { "User-Agent": "AI4Society-SignalScout/2.0" },
+  });
+  if (!res.ok) throw new Error(`API returned ${res.status}`);
   const data = await res.json();
-  const articles = data.articles ?? [];
-  return articles.map((a: { title?: string; url?: string; seendate?: string; domain?: string }) => ({
-    title: a.title ?? "Untitled",
-    url: a.url ?? "",
-    source_name: a.domain ?? source.name,
-    source_id: source.id,
-    published_date: a.seendate
-      ? new Date(a.seendate).toISOString()
-      : new Date().toISOString(),
-  }));
+
+  // GDELT format: { articles: [{ title, url, seendate, domain }] }
+  if (data.articles && Array.isArray(data.articles)) {
+    return data.articles.map(
+      (a: { title?: string; url?: string; seendate?: string; domain?: string; publishedAt?: string; description?: string; source?: { name?: string } }) => ({
+        title: a.title ?? "Untitled",
+        url: a.url ?? "",
+        source_name: a.domain ?? a.source?.name ?? source.name,
+        source_id: source.id,
+        published_date: parseApiDate(a.seendate ?? a.publishedAt),
+        snippet: (a.description ?? "").slice(0, 500),
+      })
+    );
+  }
+
+  // Semantic Scholar format: { data: [{ title, year, abstract, url, paperId }] }
+  if (data.data && Array.isArray(data.data)) {
+    return data.data.map(
+      (a: { title?: string; year?: number; abstract?: string; url?: string; paperId?: string }) => ({
+        title: a.title ?? "Untitled",
+        url: a.url ?? (a.paperId ? `https://www.semanticscholar.org/paper/${a.paperId}` : ""),
+        source_name: source.name,
+        source_id: source.id,
+        published_date: a.year ? `${a.year}-01-01T00:00:00Z` : new Date().toISOString(),
+        snippet: (a.abstract ?? "").slice(0, 500),
+      })
+    );
+  }
+
+  throw new Error(`Unrecognized API response format from ${source.name}`);
 }
 
 export interface SourceFetchHealth {
@@ -70,7 +101,7 @@ export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<F
       let articles =
         source.type === "rss"
           ? await fetchRSS(source)
-          : await fetchGDELT(source);
+          : await fetchAPI(source);
       if (source.maxItems && articles.length > source.maxItems) {
         articles = articles.slice(0, source.maxItems);
       }
