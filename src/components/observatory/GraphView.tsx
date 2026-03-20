@@ -87,13 +87,12 @@ export default function GraphView({
   const selectedNodeRef = useRef<string | null>(null);
   selectedNodeRef.current = selectedNodeId;
   const hasInitialLayoutRef = useRef(false);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  // Start at 0 so the canvas never renders wider than its container before
+  // ResizeObserver fires. An 800px default on a 375px phone causes immediate
+  // horizontal overflow.
+  const [dimensions, setDimensions] = useState({ width: 0, height: 600 });
 
   // Stable ref — localStorage doesn't change during a session, so we read once.
-  // Previously calling getLocalPreferences() in render returned a new object each
-  // time, making preferenceIds a new Set every render, which caused graphData to
-  // recalculate on every render and ForceGraph2D to restart its simulation on every
-  // node click.
   const preferenceIds = useMemo(
     () => new Set(getLocalPreferences().interests),
     []
@@ -104,10 +103,15 @@ export default function GraphView({
     return buildGraphData(snapshot, activeTypes, preferenceIds);
   }, [snapshot, activeTypes, preferenceIds]);
 
-  // Resize observer for responsive canvas
+  // Resize observer — also reads the initial size synchronously so there is
+  // no flash before the first ResizeObserver callback.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0) {
+      setDimensions({ width: rect.width, height: rect.height || 600 });
+    }
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {

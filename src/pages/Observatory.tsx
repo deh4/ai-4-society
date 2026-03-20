@@ -104,7 +104,7 @@ export default function Observatory() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
       </Helmet>
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="max-w-7xl mx-auto px-4 py-4 overflow-x-hidden">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
