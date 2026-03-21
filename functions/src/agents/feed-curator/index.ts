@@ -14,6 +14,9 @@ import { writeAgentRunSummary } from "../../usage-monitor.js";
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
+const MAX_HOOKS = 15;
+const HOOKS_PER_RUN = 5;
+
 async function generateEditorialHooks(
   topItems: Array<{ id: string } & Record<string, unknown>>,
   apiKey: string,
@@ -22,7 +25,10 @@ async function generateEditorialHooks(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  for (const item of topItems.slice(0, 5)) {
+  let generated = 0;
+  for (const item of topItems) {
+    if (generated >= HOOKS_PER_RUN) break;
+
     const hookRef = db.collection("editorial_hooks").doc(item.id as string);
     const existing = await hookRef.get();
     if (existing.exists) continue; // Never overwrite existing hooks
@@ -53,11 +59,66 @@ Respond with ONLY the one-sentence hook. No quotes, no prefix.`;
         reviewed_at: null,
       });
 
+      generated++;
       logger.info(`Editorial hook generated for: ${item.title}`);
     } catch (err) {
       logger.warn(`Failed to generate editorial hook for ${item.id}:`, err);
     }
   }
+
+  return generated;
+}
+
+/**
+ * Circular buffer cleanup: keep max 15 hooks total.
+ * - Delete rejected hooks immediately
+ * - If still over limit, delete oldest by generated_at (pending first, then approved)
+ */
+async function purgeOldHooks() {
+  const db = getDb();
+  const hooksSnap = await db
+    .collection("editorial_hooks")
+    .orderBy("generated_at", "desc")
+    .get();
+
+  const toDelete: string[] = [];
+
+  // Phase 1: always delete rejected hooks
+  const nonRejected: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  hooksSnap.docs.forEach((doc) => {
+    if (doc.data().status === "rejected") {
+      toDelete.push(doc.id);
+    } else {
+      nonRejected.push(doc);
+    }
+  });
+
+  // Phase 2: if still over limit, trim oldest (pending before approved)
+  if (nonRejected.length > MAX_HOOKS) {
+    // Sort: approved first (keep), pending last (expendable), then by generated_at desc
+    const sorted = [...nonRejected].sort((a, b) => {
+      const aApproved = a.data().status === "approved" ? 0 : 1;
+      const bApproved = b.data().status === "approved" ? 0 : 1;
+      if (aApproved !== bApproved) return aApproved - bApproved;
+      // Within same status, newest first
+      const aTime = a.data().generated_at?.toMillis?.() ?? 0;
+      const bTime = b.data().generated_at?.toMillis?.() ?? 0;
+      return bTime - aTime;
+    });
+
+    // Keep first MAX_HOOKS, delete the rest
+    for (let i = MAX_HOOKS; i < sorted.length; i++) {
+      toDelete.push(sorted[i].id);
+    }
+  }
+
+  // Execute deletes
+  for (const id of toDelete) {
+    await db.collection("editorial_hooks").doc(id).delete();
+    logger.info(`Purged editorial hook: ${id}`);
+  }
+
+  return toDelete.length;
 }
 
 async function buildFeed(apiKey: string) {
@@ -129,13 +190,17 @@ async function buildFeed(apiKey: string) {
     await writeFeedItems(topItems);
   }
 
-  // Generate editorial hooks for the top 5 signal items
-  const top5Signals = topItems.filter((item) => item.type === "signal").slice(0, 5);
-  if (top5Signals.length > 0 && apiKey) {
-    await generateEditorialHooks(top5Signals, apiKey);
+  // Generate editorial hooks for top approved signals that don't have hooks yet
+  const signals = topItems.filter((item) => item.type === "signal");
+  let hooksGenerated = 0;
+  if (signals.length > 0 && apiKey) {
+    hooksGenerated = await generateEditorialHooks(signals, apiKey);
   }
 
-  return { itemsWritten: topItems.length };
+  // Circular buffer: purge oldest hooks beyond MAX_HOOKS, rejected hooks immediately
+  const hooksPurged = await purgeOldHooks();
+
+  return { itemsWritten: topItems.length, hooksGenerated, hooksPurged };
 }
 
 // Scheduled: every 6 hours
