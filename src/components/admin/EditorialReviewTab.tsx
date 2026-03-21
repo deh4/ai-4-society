@@ -2,10 +2,12 @@
 import { useState, useEffect } from "react";
 import { subscribeEditorialHooks, updateEditorialStatus } from "../../data/editorial";
 import { useAuth } from "../../store/AuthContext";
+import { useGraph } from "../../store/GraphContext";
 import type { EditorialHook } from "../../types/editorial";
 
 export default function EditorialReviewTab() {
   const { user } = useAuth();
+  const { snapshot } = useGraph();
   const [hooks, setHooks] = useState<EditorialHook[]>([]);
   const [selected, setSelected] = useState<EditorialHook | null>(null);
   const [editText, setEditText] = useState("");
@@ -101,8 +103,16 @@ export default function EditorialReviewTab() {
 
             <div>
               <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Linked Nodes</div>
-              <div className="text-xs text-gray-400">
-                {selected.related_node_ids.join(", ") || "None"}
+              <div className="text-xs text-gray-400 flex flex-wrap gap-1.5">
+                {selected.related_node_ids.length === 0 && "None"}
+                {selected.related_node_ids.map((id) => {
+                  const node = snapshot?.nodes.find((n) => n.id === id);
+                  return (
+                    <span key={id} className="px-2 py-0.5 bg-white/5 rounded text-[10px]">
+                      {node?.name ?? id}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 
