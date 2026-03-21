@@ -27,10 +27,10 @@ async function runDiscoveryAgent(apiKey: string): Promise<{
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
 
-    // Step 1: Read classified signals (last 30 days)
+    // Step 1: Read classified signals (last 30 days) — includes rejected for emergent pattern detection
     const signalsSnap = await db
       .collection("signals")
-      .where("status", "in", ["pending", "approved", "edited"])
+      .where("status", "in", ["pending", "approved", "edited", "rejected"])
       .where("fetched_at", ">", cutoff)
       .orderBy("fetched_at", "desc")
       .get();
@@ -46,6 +46,7 @@ async function runDiscoveryAgent(apiKey: string): Promise<{
         severity_hint: (d.data().severity_hint as string) ?? "Emerging",
         source_name: (d.data().source_name as string) ?? "",
         published_date: (d.data().published_date as string) ?? "",
+        review_status: (d.data().status as string) ?? "pending",
       }));
 
     // Step 2: Read unmatched signals (last 30 days)
@@ -64,6 +65,7 @@ async function runDiscoveryAgent(apiKey: string): Promise<{
       severity_hint: (d.data().severity_hint as string) ?? "Emerging",
       source_name: (d.data().source_name as string) ?? "",
       published_date: (d.data().published_date as string) ?? "",
+      review_status: (d.data().status as string) ?? "pending",
     }));
 
     logger.info(`Discovery v2: ${signals.length} classified + ${unmatchedSignals.length} unmatched signals`);
