@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import LoginModal from "../auth/LoginModal";
 import DisclaimerBanner from "./DisclaimerBanner";
+import MiniGlobe from "./MiniGlobe";
 
 interface LayoutProps {
   children: ReactNode;
@@ -31,8 +32,11 @@ export default function Layout({ children, bare }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-6">
-            <Link to="/" className="text-sm font-bold tracking-wider uppercase">
-              AI 4 Society
+            <Link to="/" className="flex items-center gap-2">
+              <MiniGlobe />
+              <span className="text-xs tracking-widest uppercase text-white/80">
+                AI 4 Society
+              </span>
             </Link>
             {/* Desktop nav links */}
             <div className="hidden sm:flex items-center gap-4">
