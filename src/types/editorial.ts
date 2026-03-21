@@ -14,4 +14,13 @@ export interface EditorialHook {
   generated_at: Timestamp | null;
   reviewed_by: string | null;
   reviewed_at: Timestamp | null;
+  /** Featured image for narrative display */
+  featured_image_url?: string;
+  featured_image_alt?: string;
+  /** Editable narrative headline (separate from hook_text) */
+  narrative_headline?: string;
+  /** Task assignment */
+  assigned_to?: string;
+  assigned_by?: string;
+  assigned_at?: Timestamp | null;
 }

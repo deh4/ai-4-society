@@ -29,16 +29,13 @@ export interface UserDoc {
 
 /** Which admin tabs each role can see */
 export const ROLE_TAB_ACCESS: Record<string, UserRole[]> = {
-    'review': ['signal-reviewer', 'discovery-reviewer', 'scoring-reviewer', 'lead'],
-    'agents': ['lead'],
-    'users': ['lead'],
-    // Legacy tab access kept for backward compat during migration
     'risk-signals': ['signal-reviewer', 'lead'],
     'solution-signals': ['signal-reviewer', 'lead'],
     'discovery': ['discovery-reviewer', 'lead'],
-    'validation': ['scoring-reviewer', 'lead'],
-    'milestones': ['editor', 'lead'],
+    'scoring': ['scoring-reviewer', 'lead'],
     'editorial': ['editor', 'lead'],
+    'agents': ['lead'],
+    'users': ['lead'],
 };
 
 /** Check if a user with given roles can see a specific tab */

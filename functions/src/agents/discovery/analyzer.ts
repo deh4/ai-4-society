@@ -18,6 +18,7 @@ export interface SignalInfo {
   severity_hint: string;
   source_name: string;
   published_date: string;
+  review_status: string;
 }
 
 export interface UnmatchedSignalInfo {
@@ -28,6 +29,15 @@ export interface UnmatchedSignalInfo {
   severity_hint: string;
   source_name: string;
   published_date: string;
+  review_status: string;
+}
+
+export interface SignalQualityMeta {
+  summary: string;
+  unmatched_count: number;
+  rejected_count: number;
+  pending_count: number;
+  approved_count: number;
 }
 
 export interface NewNodeProposal {
@@ -42,6 +52,7 @@ export interface NewNodeProposal {
   };
   supporting_signal_ids: string[];
   confidence: number;
+  signal_quality?: SignalQualityMeta;
 }
 
 export interface NewEdgeProposal {
@@ -54,6 +65,7 @@ export interface NewEdgeProposal {
   };
   supporting_signal_ids: string[];
   confidence: number;
+  signal_quality?: SignalQualityMeta;
 }
 
 export type DiscoveryProposal = NewNodeProposal | NewEdgeProposal;
@@ -98,7 +110,7 @@ export async function analyzeSignals(
     .map(
       (s) =>
         `[${s.id}] "${s.title}" (${s.source_name}, ${s.published_date})\n` +
-        `Type: ${s.signal_type} | Nodes: ${s.related_node_ids.join(",") || "none"}\n` +
+        `Type: ${s.signal_type} | Review: ${s.review_status} | Nodes: ${s.related_node_ids.join(",") || "none"}\n` +
         `Summary: ${s.summary}`
     )
     .join("\n\n");
@@ -108,7 +120,7 @@ export async function analyzeSignals(
         .map(
           (s) =>
             `[${s.id}] "${s.title}" (${s.source_name}, ${s.published_date})\n` +
-            `Proposed topic: ${s.proposed_topic}\n` +
+            `Proposed topic: ${s.proposed_topic} | Review: ${s.review_status}\n` +
             `Summary: ${s.summary}`
         )
         .join("\n\n")
@@ -119,6 +131,14 @@ export async function analyzeSignals(
 Your task: given a body of signals and the current graph (nodes + edges), identify:
 1. Genuinely NEW topics that warrant a new node (risk, solution, or stakeholder)
 2. Missing relationships between existing nodes that warrant a new edge
+
+IMPORTANT: Each signal has a "Review" status indicating human reviewer decisions:
+- "approved" / "edited": human-vetted, high trust
+- "pending": not yet reviewed, moderate trust
+- "rejected": human rejected (may be noise, but look for patterns — multiple rejected signals about the same topic may indicate an EMERGENT risk that reviewers missed individually)
+- Unmatched signals bypass review entirely — they represent topics outside the current taxonomy
+
+You should especially look for clusters of unmatched and rejected signals that converge on a common theme — these often represent genuinely novel risks or solutions that the existing taxonomy doesn't cover yet.
 
 CURRENT GRAPH NODES:
 ${nodeSection}
@@ -231,6 +251,35 @@ Only output valid JSON array. No markdown. No explanation outside JSON.`;
 
       return false;
     });
+
+    // Compute signal quality metadata for each proposal
+    const signalStatusMap = new Map<string, string>();
+    for (const s of signals) signalStatusMap.set(s.id, s.review_status);
+    for (const s of unmatchedSignals) signalStatusMap.set(s.id, "unmatched");
+
+    for (const p of filtered) {
+      let unmatched = 0, rejected = 0, pending = 0, approved = 0;
+      for (const sid of p.supporting_signal_ids) {
+        const status = signalStatusMap.get(sid) ?? "unknown";
+        if (status === "unmatched") unmatched++;
+        else if (status === "rejected") rejected++;
+        else if (status === "pending") pending++;
+        else approved++; // approved or edited
+      }
+      const total = p.supporting_signal_ids.length;
+      const parts: string[] = [];
+      if (unmatched > 0) parts.push(`${unmatched} unmatched`);
+      if (rejected > 0) parts.push(`${rejected} rejected`);
+      if (pending > 0) parts.push(`${pending} pending`);
+      if (approved > 0) parts.push(`${approved} approved`);
+      p.signal_quality = {
+        summary: `${parts.join(", ")} of ${total} supporting signals`,
+        unmatched_count: unmatched,
+        rejected_count: rejected,
+        pending_count: pending,
+        approved_count: approved,
+      };
+    }
 
     logger.info(`Discovery: ${parsed.length} proposals from Gemini, ${filtered.length} passed validation`);
     return { proposals: filtered, tokenUsage };

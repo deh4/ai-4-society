@@ -88,6 +88,7 @@ export const AGENT_IDS = [
   "data-lifecycle",
   "graph-builder",
   "feed-curator",
+  "podcast",
 ] as const;
 
 export type AgentId = (typeof AGENT_IDS)[number];
@@ -99,6 +100,7 @@ export const AGENT_LABELS: Record<AgentId, string> = {
   "data-lifecycle": "Data Lifecycle",
   "graph-builder": "Graph Builder",
   "feed-curator": "Feed Curator",
+  "podcast": "Podcast Agent",
 };
 
 export const AGENT_SCHEDULES: Record<AgentId, string> = {
@@ -108,6 +110,7 @@ export const AGENT_SCHEDULES: Record<AgentId, string> = {
   "data-lifecycle": "Daily (03:00 UTC)",
   "graph-builder": "On demand",
   "feed-curator": "Every 6 hours",
+  "podcast": "Weekly (Fri 12:00 UTC)",
 };
 
 // --- Read functions ---

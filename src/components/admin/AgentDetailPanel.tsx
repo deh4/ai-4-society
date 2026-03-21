@@ -30,6 +30,7 @@ const TRIGGER_MAP: Partial<Record<AgentId, string>> = {
   "data-lifecycle": "dataLifecycleV2",
   "graph-builder": "buildGraph",
   "feed-curator": "triggerFeedCurator",
+  "podcast": "triggerPodcast",
 };
 
 export function AgentDetailPanel({ agentId, onBack }: Props) {
