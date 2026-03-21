@@ -1,7 +1,9 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   getDb,
   FieldValue,
@@ -10,7 +12,55 @@ import {
 } from "../../shared/firestore.js";
 import { writeAgentRunSummary } from "../../usage-monitor.js";
 
-async function buildFeed() {
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
+
+async function generateEditorialHooks(
+  topItems: Array<{ id: string } & Record<string, unknown>>,
+  apiKey: string,
+) {
+  const db = getDb();
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  for (const item of topItems.slice(0, 5)) {
+    const hookRef = db.collection("editorial_hooks").doc(item.id as string);
+    const existing = await hookRef.get();
+    if (existing.exists) continue; // Never overwrite existing hooks
+
+    const prompt = `You are writing a one-sentence editorial hook for a general audience. Given this news signal about AI risks or solutions, explain what it means for ordinary people in plain, urgent language. No jargon. No hedging.
+
+Signal: "${item.title as string}"
+Source: ${item.source_name as string}
+
+Respond with ONLY the one-sentence hook. No quotes, no prefix.`;
+
+    try {
+      const result = await model.generateContent(prompt);
+      const hookText = result.response.text().trim();
+
+      await hookRef.set({
+        signal_id: item.id,
+        signal_title: item.title,
+        hook_text: hookText,
+        status: "pending",
+        related_node_ids: item.related_node_ids ?? [],
+        impact_score: item.impact_score ?? 0,
+        source_name: item.source_name ?? "",
+        source_credibility: item.source_credibility ?? 0.5,
+        published_date: item.published_date ?? "",
+        generated_at: FieldValue.serverTimestamp(),
+        reviewed_by: null,
+        reviewed_at: null,
+      });
+
+      logger.info(`Editorial hook generated for: ${item.title}`);
+    } catch (err) {
+      logger.warn(`Failed to generate editorial hook for ${item.id}:`, err);
+    }
+  }
+}
+
+async function buildFeed(apiKey: string) {
   // Clear existing feed items
   await deleteCollection("feed_items");
 
@@ -79,12 +129,18 @@ async function buildFeed() {
     await writeFeedItems(topItems);
   }
 
+  // Generate editorial hooks for the top 5 signal items
+  const top5Signals = topItems.filter((item) => item.type === "signal").slice(0, 5);
+  if (top5Signals.length > 0 && apiKey) {
+    await generateEditorialHooks(top5Signals, apiKey);
+  }
+
   return { itemsWritten: topItems.length };
 }
 
 // Scheduled: every 6 hours
 export const scheduledFeedCurator = onSchedule(
-  { schedule: "every 6 hours", memory: "256MiB", timeoutSeconds: 60 },
+  { schedule: "every 6 hours", memory: "256MiB", timeoutSeconds: 60, secrets: [geminiApiKey] },
   async () => {
     const startedAt = new Date();
     const db = getFirestore();
@@ -94,7 +150,7 @@ export const scheduledFeedCurator = onSchedule(
       return;
     }
     try {
-      const result = await buildFeed();
+      const result = await buildFeed(geminiApiKey.value());
       await writeAgentRunSummary({
         agentId: "feed-curator",
         startedAt,
@@ -133,9 +189,9 @@ export const scheduledFeedCurator = onSchedule(
 
 // Manual trigger / async call from approval functions
 export const triggerFeedCurator = onCall(
-  { memory: "256MiB", timeoutSeconds: 60 },
+  { memory: "256MiB", timeoutSeconds: 60, secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
-    return await buildFeed();
+    return await buildFeed(geminiApiKey.value());
   }
 );

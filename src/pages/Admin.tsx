@@ -18,21 +18,23 @@ import type { ReviewItem } from "../components/admin/ReviewItemCard";
 import { AgentsSection } from "../components/admin/AgentsSection";
 import UsersTab from "../components/admin/UsersTab";
 import AcknowledgmentModal from "../components/admin/AcknowledgmentModal";
+import EditorialReviewTab from "../components/admin/EditorialReviewTab";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-type AdminSection = "review" | "agents" | "users";
+type AdminSection = "review" | "agents" | "users" | "editorial";
 
 const SECTION_CONFIG: Record<AdminSection, { label: string; accent: string }> =
   {
     review: { label: "Review", accent: "border-cyan-400" },
     agents: { label: "Agents", accent: "border-purple-400" },
     users: { label: "Users", accent: "border-emerald-400" },
+    editorial: { label: "Editorial", accent: "border-amber-400" },
   };
 
-const ALL_SECTIONS: AdminSection[] = ["review", "agents", "users"];
+const ALL_SECTIONS: AdminSection[] = ["review", "agents", "users", "editorial"];
 
 const RISK_LABELS: Record<string, string> = {
   R01: "Algorithmic Discrimination",
@@ -720,6 +722,8 @@ export default function Admin() {
       )}
 
       {section === "users" && <UsersTab />}
+
+      {section === "editorial" && <EditorialReviewTab />}
     </div>
   );
 }

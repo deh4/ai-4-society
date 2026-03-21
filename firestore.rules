@@ -222,6 +222,12 @@ service cloud.firestore {
       allow write: if false; // server-only (Feed Curator)
     }
 
+    match /editorial_hooks/{hookId} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['editor', 'lead']);
+    }
+
     // Votes subcollection on nodes
     match /nodes/{nodeId}/votes/{voteId} {
       allow read: if request.auth != null && request.auth.uid == voteId;

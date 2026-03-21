@@ -38,6 +38,7 @@ export const ROLE_TAB_ACCESS: Record<string, UserRole[]> = {
     'discovery': ['discovery-reviewer', 'lead'],
     'validation': ['scoring-reviewer', 'lead'],
     'milestones': ['editor', 'lead'],
+    'editorial': ['editor', 'lead'],
 };
 
 /** Check if a user with given roles can see a specific tab */
