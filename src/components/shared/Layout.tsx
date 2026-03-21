@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import LoginModal from "../auth/LoginModal";
+import DisclaimerBanner from "./DisclaimerBanner";
 
 interface LayoutProps {
   children: ReactNode;
@@ -153,6 +154,8 @@ export default function Layout({ children, bare }: LayoutProps) {
           )}
         </AnimatePresence>
       </nav>
+
+      <DisclaimerBanner />
 
       <motion.main
         key={location.pathname}
