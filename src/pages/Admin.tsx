@@ -447,18 +447,26 @@ export default function Admin() {
           <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">
             Proposed Fields
           </h3>
-          {Object.entries(item.skeleton).map(([key, value]) => (
-            <div key={key} className="flex gap-2">
-              <span className="text-xs text-gray-500 min-w-[120px]">
-                {key}
-              </span>
-              <span className="text-xs text-white/80">
-                {typeof value === "object"
-                  ? JSON.stringify(value, null, 2)
-                  : String(value)}
-              </span>
-            </div>
-          ))}
+          {Object.entries(item.skeleton).map(([key, value]) => {
+            const isNodeField = key === "from_node" || key === "to_node";
+            const nodeMatch = isNodeField && typeof value === "string"
+              ? snapshot?.nodes.find((n) => n.id === value)
+              : null;
+            return (
+              <div key={key} className="flex gap-2">
+                <span className="text-xs text-gray-500 min-w-[120px]">
+                  {key}
+                </span>
+                <span className="text-xs text-white/80">
+                  {nodeMatch
+                    ? `${nodeMatch.name} (${value})`
+                    : typeof value === "object"
+                      ? JSON.stringify(value, null, 2)
+                      : String(value)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -468,15 +476,19 @@ export default function Admin() {
           <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">
             Supporting Signals ({item.supportingSignalIds.length})
           </h3>
-          <div className="flex flex-wrap gap-1">
-            {item.supportingSignalIds.map((sid) => (
-              <span
-                key={sid}
-                className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-gray-400"
-              >
-                {sid}
-              </span>
-            ))}
+          <div className="flex flex-wrap gap-1.5">
+            {item.supportingSignalIds.map((sid) => {
+              const signal = filteredItems.find((i) => i.id === sid && i.type === "signal");
+              return (
+                <span
+                  key={sid}
+                  className="text-[10px] px-2 py-1 rounded bg-white/5 text-gray-300 border border-white/10"
+                  title={sid}
+                >
+                  {signal?.title ?? sid}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
