@@ -15,11 +15,14 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import type { GraphSnapshot, NodeSummary, FeedItem } from "../types/graph";
+import { subscribeEditorialHooks } from "../data/editorial";
+import type { EditorialHook } from "../types/editorial";
 
 interface GraphContextType {
   snapshot: GraphSnapshot | null;
   summaries: NodeSummary[];
   feedItems: FeedItem[];
+  editorialHooks: EditorialHook[];
   loading: boolean;
   error: string | null;
 }
@@ -30,6 +33,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
   const [summaries, setSummaries] = useState<NodeSummary[]>([]);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [editorialHooks, setEditorialHooks] = useState<EditorialHook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,9 +114,14 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    const unsub = subscribeEditorialHooks("approved", setEditorialHooks);
+    return unsub;
+  }, []);
+
   return (
     <GraphContext.Provider
-      value={{ snapshot, summaries, feedItems, loading, error }}
+      value={{ snapshot, summaries, feedItems, editorialHooks, loading, error }}
     >
       {children}
     </GraphContext.Provider>
