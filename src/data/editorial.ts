@@ -1,6 +1,6 @@
 import {
   collection, query, where, orderBy, onSnapshot,
-  doc, updateDoc, serverTimestamp,
+  doc, updateDoc, serverTimestamp, type QueryConstraint,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import type { EditorialHook } from "../types/editorial";
@@ -9,7 +9,7 @@ export function subscribeEditorialHooks(
   status: "pending" | "approved" | "rejected" | "all",
   callback: (hooks: EditorialHook[]) => void,
 ) {
-  const constraints = [orderBy("impact_score", "desc")];
+  const constraints: QueryConstraint[] = [orderBy("impact_score", "desc")];
   if (status !== "all") {
     constraints.unshift(where("status", "==", status));
   }
