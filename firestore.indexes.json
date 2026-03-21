@@ -114,6 +114,14 @@
         { "fieldPath": "node_type", "order": "ASCENDING" },
         { "fieldPath": "signal_count_7d", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "editorial_hooks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "impact_score", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

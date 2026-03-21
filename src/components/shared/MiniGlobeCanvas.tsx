@@ -144,10 +144,10 @@ function MiniGlobeScene() {
 
             <Sphere ref={meshRef} args={[SPHERE_RADIUS, 32, 32]}>
                 <meshStandardMaterial
-                    color="#1a1a1a"
+                    color="#2A9DFF"
                     wireframe
                     transparent
-                    opacity={0.05}
+                    opacity={0.15}
                 />
             </Sphere>
 
@@ -155,10 +155,10 @@ function MiniGlobeScene() {
                 <PointMaterial
                     transparent
                     color="#FF4444"
-                    size={0.006}
+                    size={0.02}
                     sizeAttenuation={true}
                     depthWrite={false}
-                    opacity={0.6}
+                    opacity={0.8}
                 />
             </Points>
 
