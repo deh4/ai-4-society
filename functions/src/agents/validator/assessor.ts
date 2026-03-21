@@ -9,6 +9,7 @@ export interface SignalInfo {
   severity_hint: string;
   source_name: string;
   published_date: string;
+  signal_type: string; // "risk" | "solution" | "both"
 }
 
 export interface ProposedChange {
@@ -43,7 +44,7 @@ function buildNodePrompt(
 ): string {
   const signalText = signals.length > 0
     ? signals.map(
-        (s) => `- [${s.id}] "${s.title}" (${s.source_name}, ${s.published_date}, ${s.severity_hint})\n  ${s.summary}`
+        (s) => `- [${s.id}] [${s.signal_type}] "${s.title}" (${s.source_name}, ${s.published_date}, ${s.severity_hint})\n  ${s.summary}`
       ).join("\n")
     : "No recent signals for this node.";
 
@@ -97,6 +98,10 @@ async function runAssessment(
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
   const systemPrompt = `You are a validator for the AI 4 Society Observatory. Your job is to assess whether a ${nodeType} node's attributes still accurately reflect reality given recent evidence.
+
+Each signal is tagged with a type: [risk] = describes a harm or threat, [solution] = describes a countermeasure or mitigation, [both] = covers both a risk and a response. Use this context when weighing evidence:
+- For RISK nodes: [risk] signals are direct evidence for severity/velocity changes. [solution] signals about this risk suggest mitigation is progressing — consider updating mitigation_strategies or moderating score increases. [both] signals inform both dimensions.
+- For SOLUTION nodes: [solution] signals are direct evidence for adoption/stage changes. [risk] signals referencing this solution's domain suggest growing urgency — consider raising adoption projections. [both] signals inform both dimensions.
 
 Proposable fields: ${allowedFields.join(", ")}
 

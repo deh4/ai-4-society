@@ -44,6 +44,7 @@ async function runValidatorAgent(apiKey: string): Promise<{
       severity_hint: (d.data().severity_hint as string) ?? "Emerging",
       source_name: (d.data().source_name as string) ?? "",
       published_date: (d.data().published_date as string) ?? "",
+      signal_type: (d.data().signal_type as string) ?? "risk",
       related_node_ids: (d.data().related_node_ids as string[]) ?? [],
     }));
 
