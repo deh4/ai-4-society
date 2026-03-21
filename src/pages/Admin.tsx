@@ -19,6 +19,7 @@ import { AgentsSection } from "../components/admin/AgentsSection";
 import UsersTab from "../components/admin/UsersTab";
 import AcknowledgmentModal from "../components/admin/AcknowledgmentModal";
 import EditorialReviewTab from "../components/admin/EditorialReviewTab";
+import { useGraph } from "../store/GraphContext";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -49,6 +50,19 @@ const RISK_LABELS: Record<string, string> = {
   R10: "Model Collapse",
 };
 
+const SOLUTION_LABELS: Record<string, string> = {
+  S01: "AI Safety & Alignment Research",
+  S02: "Privacy-Preserving AI",
+  S03: "Regulatory Frameworks",
+  S04: "Workforce Transition",
+  S05: "AI Arms Control",
+  S06: "Open Source & Decentralization",
+  S07: "Green AI",
+  S08: "Human-AI Collaboration",
+  S09: "Transparency & Accountability",
+  S10: "Data Quality & Curation",
+};
+
 const STATUS_COLORS: Record<string, string> = {
   pending: "text-yellow-400 bg-yellow-400/10",
   approved: "text-green-400 bg-green-400/10",
@@ -62,6 +76,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Admin() {
   const { user, userDoc, logOut } = useAuth();
+  const { snapshot } = useGraph();
   const navigate = useNavigate();
 
   // Section navigation
@@ -294,14 +309,14 @@ export default function Admin() {
 
         {item.solutionIds && item.solutionIds.length > 0 && (
           <div>
-            <span className="text-[10px] text-gray-500">Solution IDs</span>
+            <span className="text-[10px] text-gray-500">Solution Categories</span>
             <div className="flex gap-1 mt-1 flex-wrap">
               {item.solutionIds.map((sid) => (
                 <span
                   key={sid}
                   className="text-xs px-2 py-0.5 rounded bg-purple-400/10 text-purple-400"
                 >
-                  {sid}
+                  {sid}: {SOLUTION_LABELS[sid] ?? sid}
                 </span>
               ))}
             </div>
@@ -329,6 +344,36 @@ export default function Admin() {
           )}
         </div>
       </div>
+
+      {/* Linked Nodes */}
+      {item.relatedNodeIds && item.relatedNodeIds.length > 0 && (
+        <div className="bg-white/5 rounded p-4 mb-6 space-y-2">
+          <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">
+            Linked to
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {item.relatedNodeIds.map((nodeId) => {
+              const node = snapshot?.nodes.find((n) => n.id === nodeId);
+              const isRisk = node?.type === "risk";
+              const isSolution = node?.type === "solution";
+              return (
+                <span
+                  key={nodeId}
+                  className={`text-xs px-2.5 py-1 rounded-lg ${
+                    isRisk
+                      ? "bg-red-400/10 text-red-400 border border-red-400/20"
+                      : isSolution
+                        ? "bg-green-400/10 text-green-400 border border-green-400/20"
+                        : "bg-white/5 text-gray-400 border border-white/10"
+                  }`}
+                >
+                  {node ? `${node.id} · ${node.name}` : nodeId}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Admin Notes */}
       {renderAdminNotes()}

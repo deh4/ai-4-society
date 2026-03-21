@@ -74,6 +74,7 @@ export function UnifiedReviewList({
           confidenceScore: data.confidence_score as number,
           sourceName: data.source_name as string,
           sourceUrl: data.source_url as string,
+          relatedNodeIds: (data.related_node_ids as string[]) ?? [],
         };
       });
       setItems((prev) => {

@@ -15,6 +15,7 @@ export interface ReviewItem {
   confidenceScore?: number;
   sourceName?: string;
   sourceUrl?: string;
+  relatedNodeIds?: string[];
   /** Discovery-specific */
   proposedName?: string;
   proposalType?: string;
