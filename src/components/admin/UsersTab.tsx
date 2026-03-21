@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
 import { VALID_ROLES } from '../../lib/roles';
@@ -19,9 +19,11 @@ export default function UsersTab() {
     const [statusFilter, setStatusFilter] = useState<UserStatus | 'all'>('all');
 
     useEffect(() => {
-        const q = query(collection(db, 'users'), orderBy('appliedAt', 'desc'));
-        const unsub = onSnapshot(q, (snap) => {
-            setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() } as UserEntry)));
+        const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+            const docs = snap.docs
+                .map(d => ({ id: d.id, ...d.data() } as UserEntry))
+                .sort((a, b) => (b.appliedAt?.seconds ?? 0) - (a.appliedAt?.seconds ?? 0));
+            setUsers(docs);
         });
         return unsub;
     }, []);
