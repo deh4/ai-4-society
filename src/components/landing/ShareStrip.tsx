@@ -1,4 +1,3 @@
-// src/components/landing/ShareStrip.tsx
 import { useState } from "react";
 
 interface Props {
@@ -9,11 +8,12 @@ interface Props {
 export default function ShareStrip({ headline, url }: Props) {
   const [copied, setCopied] = useState(false);
 
-  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(headline)}&url=${encodeURIComponent(url)}`;
+  const shareText = `${headline} — See the full picture on AI 4 Society Observatory`;
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
 
   const copyLink = async () => {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(`${headline}\n${url}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -12,7 +12,7 @@ export default function HeroPage() {
         <title>AI 4 Society — Humanity's Window Into AI's Trajectory</title>
         <meta
           name="description"
-          content="Real-time AI risk intelligence. 47 sources, human-reviewed signals, tracking 40+ risks and solutions as AI reshapes society."
+          content="See and explore how AI is reshaping society. Live signals, risks, and solutions — curated by AI, reviewed by humans."
         />
       </Helmet>
 
