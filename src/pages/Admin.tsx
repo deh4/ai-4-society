@@ -101,6 +101,18 @@ export default function Admin() {
     new Set()
   );
   const [filteredItems, setFilteredItems] = useState<ReviewItem[]>([]);
+  // Accumulate signal titles across filter changes for resolving supporting signal IDs
+  const [signalTitleMap, setSignalTitleMap] = useState<Map<string, string>>(new Map());
+  const handleFilteredItemsChange = (items: ReviewItem[]) => {
+    setFilteredItems(items);
+    setSignalTitleMap((prev) => {
+      const next = new Map(prev);
+      for (const item of items) {
+        if (item.type === "signal" && item.title) next.set(item.id, item.title);
+      }
+      return next;
+    });
+  };
 
   // -------------------------------------------------------------------------
   // Handlers
@@ -478,14 +490,14 @@ export default function Admin() {
           </h3>
           <div className="flex flex-wrap gap-1.5">
             {item.supportingSignalIds.map((sid) => {
-              const signal = filteredItems.find((i) => i.id === sid && i.type === "signal");
+              const title = signalTitleMap.get(sid);
               return (
                 <span
                   key={sid}
                   className="text-[10px] px-2 py-1 rounded bg-white/5 text-gray-300 border border-white/10"
                   title={sid}
                 >
-                  {signal?.title ?? sid}
+                  {title ?? sid}
                 </span>
               );
             })}
@@ -735,7 +747,7 @@ export default function Admin() {
               onBulkToggle={onBulkToggle}
               onBulkSelectAll={onBulkSelectAll}
               onBulkClear={onBulkClear}
-              onFilteredItemsChange={setFilteredItems}
+              onFilteredItemsChange={handleFilteredItemsChange}
             />
 
             {/* Bulk reject bar */}

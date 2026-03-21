@@ -7,6 +7,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { useGraph } from "../../store/GraphContext";
 import { ReviewItemCard, type ReviewItem, type ReviewItemType } from "./ReviewItemCard";
 
 interface Props {
@@ -38,6 +39,7 @@ export function UnifiedReviewList({
   onBulkClear,
   onFilteredItemsChange,
 }: Props) {
+  const { snapshot } = useGraph();
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [activeTypes, setActiveTypes] = useState<Set<ReviewItemType>>(
     new Set(["signal", "discovery", "validation"])
@@ -117,11 +119,13 @@ export function UnifiedReviewList({
             supportingSignalIds: (data.supporting_signal_ids as string[]) ?? [],
           };
         } else {
-          // new_edge
+          // new_edge — store raw IDs; names resolved at render time via resolveNodeName
+          const fromId = (data.edge_data?.from_node as string) ?? "?";
+          const toId = (data.edge_data?.to_node as string) ?? "?";
           return {
             id: d.id,
             type: "discovery" as const,
-            title: `${(data.edge_data?.from_node as string) ?? "?"} → ${(data.edge_data?.to_node as string) ?? "?"}`,
+            title: `${fromId} → ${toId}`,
             summary: (data.edge_data?.reasoning as string) ?? "",
             status: (data.status as string) ?? "pending",
             createdAt: data.created_at ?? null,
@@ -182,16 +186,30 @@ export function UnifiedReviewList({
     return unsub;
   }, [statusFilter]);
 
+  // Resolve node IDs to names for edge titles in the sidebar
+  const resolveNodeName = (id: string) => {
+    const node = snapshot?.nodes.find((n) => n.id === id);
+    return node?.name ?? id;
+  };
+
   // Filter and sort
   const filtered = useMemo(() => {
     return items
       .filter((item) => activeTypes.has(item.type))
+      .map((item) => {
+        // Resolve edge titles: "R04 → jKZNC5..." becomes "Labor Displacement → Societal Backlash"
+        if (item.type === "discovery" && item.proposalType === "new_edge" && item.title.includes(" → ")) {
+          const [fromId, toId] = item.title.split(" → ");
+          return { ...item, title: `${resolveNodeName(fromId)} → ${resolveNodeName(toId)}` };
+        }
+        return item;
+      })
       .sort((a, b) => {
         const aTime = a.createdAt?.seconds ?? 0;
         const bTime = b.createdAt?.seconds ?? 0;
         return bTime - aTime;
       });
-  }, [items, activeTypes]);
+  }, [items, activeTypes, snapshot]);
 
   // Notify parent of filtered items for auto-selection
   useEffect(() => {
