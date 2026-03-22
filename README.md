@@ -8,22 +8,23 @@ A real-time AI risk intelligence platform with a **Human-in-the-Loop (HITL)** ag
 
 ## What it does
 
-The Observatory tracks the societal risks and solutions emerging from AI acceleration. It ingests articles from 17 curated sources across 5 credibility tiers, uses Gemini to classify them against a structured taxonomy of risks (R01–R10) and solutions (S01–S10), and presents the resulting intelligence as:
+The Observatory tracks the societal risks and solutions emerging from AI acceleration. It ingests articles from 17 curated sources across 5 credibility tiers, uses Gemini to classify them against a structured taxonomy of risks and solutions, and presents the resulting intelligence as:
 
 - **Risk Reels** — Instagram-style horizontally scrollable circles on the landing page, color-coded by velocity (Critical/High/Medium/Low), each opening a detail drawer
 - **News Feed** — ranked approved signals with recency decay, personalised by interest
-- **Observatory** — an interactive force graph of nodes (risks, solutions, stakeholders, milestones) and their relationships; tap any node for a detail sheet (bottom sheet on mobile, side panel on desktop)
-- **Admin Panel** — signal review, graph proposal review, agent dashboard with live cost tracking, and user management
+- **Observatory** — an interactive force graph of nodes (risks, solutions, milestones) and their relationships; tap any node for a detail sheet with principle tags and harm status indicators
+- **Admin Panel** — signal review (with harm status and principle tagging), graph proposal review, agent dashboard with live cost tracking, and user management
 
 ---
 
 ## Agent Pipeline
 
-Six agents run automatically. No agent output reaches the public without passing through a human review gate.
+Seven agents run automatically. No agent output reaches the public without passing through a human review gate.
 
 ```
 Signal Scout (every 6h)
-    │  fetches 17 sources, classifies with Gemini
+    │  fetches 17 sources, classifies with Gemini 2.5 Flash
+    │  maps: signal_type, harm_status (incident/hazard), principles (P01-P10)
     ▼
 signals/{id}  status: "pending"
     │
@@ -31,21 +32,25 @@ signals/{id}  status: "pending"
     │  approve / reject / edit
     ▼
 Approved signals
-    ├──▶ Discovery Agent (weekly, Sun 10:00 UTC)
-    │        clusters unmatched signals into proposals for new nodes
+    ├──▶ Discovery Agent (biweekly, 1st & 15th 10:00 UTC)
+    │        6-month sliding window, 5-signal minimum
+    │        proposes new nodes with full data skeleton
     │        ▼  ── HUMAN GATE 2: Graph Proposal Review ──
-    │        approve → new node/edge written to graph
+    │        approve → Graph Builder creates node with sequential ID
+    │        → triggers reclassification of pending signals
     │
-    ├──▶ Validator Agent (weekly, Mon 09:00 UTC)
+    ├──▶ Scoring Agent (monthly, 1st 09:00 UTC)
+    │        batched via Cloud Tasks (5 nodes per batch)
     │        proposes score/field updates for existing nodes
     │        ▼  ── HUMAN GATE 2: Scoring Review ──
     │        approve → changelog written, node updated
     │
     ├──▶ Feed Curator (every 6h)
     │        rebuilds feed_items with recency decay, top 100 ranked
+    │        generates editorial hooks via Gemini 2.5 Flash
     │
-    └──▶ Graph Builder (on demand)
-             rebuilds graph_snapshot + node_summaries + filter terms
+    └──▶ Graph Builder (on demand, triggered by approval)
+             rebuilds graph_snapshot + node_summaries + principle edges
 
 Data Lifecycle (daily, 03:00 UTC)
     archives old signals, purges stale proposals, cleans feed items
@@ -53,14 +58,14 @@ Data Lifecycle (daily, 03:00 UTC)
 
 ### Agent details
 
-| Agent | Schedule | What it does |
-|---|---|---|
-| **Signal Scout** | Every 6h | Fetches all 17 RSS/API sources → Gemini 2.5 Flash classifies each article against R/S taxonomy → stores as `pending` signals |
-| **Discovery Agent** | Sun 10:00 UTC | Clusters unmatched + approved signals → proposes new risk/solution/stakeholder nodes and edges |
-| **Validator Agent** | Mon 09:00 UTC | Reviews existing nodes → proposes score, velocity, and narrative updates; creates changelogs on approval |
-| **Feed Curator** | Every 6h | Rebuilds `feed_items` from last 30 days of approved signals with recency decay applied to impact score |
-| **Graph Builder** | On demand | Rebuilds `graph_snapshot`, `node_summaries`, vote tallies, and Signal Scout filter terms |
-| **Data Lifecycle** | Daily 03:00 UTC | Archives approved signals >90d, hard-deletes rejected >30d, auto-expires stale proposals, purges old feed items |
+| Agent | Schedule | Model | What it does |
+|---|---|---|---|
+| **Signal Scout** | Every 6h | Gemini 2.5 Flash | Fetches 17 RSS/API sources → classifies against taxonomy with harm_status + principle tags → stores as `pending` |
+| **Discovery Agent** | Biweekly | Gemini 2.5 Pro | 6-month window of signals → proposes new nodes/edges with full data skeleton (scores, deep_dive, principles) |
+| **Scoring Agent** | Monthly 1st | Gemini 2.5 Pro | Batched assessment of all nodes → proposes score/velocity/narrative updates; evaluates no-signal relevance decay |
+| **Feed Curator** | Every 6h | Gemini 2.5 Flash | Rebuilds feed from approved signals with recency decay; generates editorial hooks for landing page |
+| **Graph Builder** | On demand | None | Rebuilds `graph_snapshot`, `node_summaries`, infers principle edges (10+ signal threshold), updates filter terms |
+| **Data Lifecycle** | Daily 03:00 UTC | None | Archives signals >90d, hard-deletes rejected >30d, auto-expires proposals, purges old feed items |
 
 ---
 
@@ -85,7 +90,7 @@ Credibility scores factor into signal `impact_score` and feed ranking.
 Every piece of public data passes through at least one human gate:
 
 - **Gate 1 — Signal Review**: reviewers approve/reject/edit each pending signal before it enters the pipeline
-- **Gate 2 — Proposal Review**: admins approve graph proposals (new nodes/edges from Discovery) and scoring changes (from Validator) before they're written
+- **Gate 2 — Proposal Review**: admins approve graph proposals (new nodes/edges from Discovery) and scoring changes (from Scoring Agent) before they're written
 
 | Role | Access |
 |---|---|
@@ -104,10 +109,10 @@ Every piece of public data passes through at least one human gate:
 | Frontend | React 19, Vite 7, TypeScript 5.9, Tailwind 3.4, Framer Motion, Three.js |
 | Graph | react-force-graph-2d (canvas, force-directed) |
 | Backend | Firebase Cloud Functions v2, Node.js 20, TypeScript |
-| AI | Gemini 2.5 Flash (classification + analysis) |
+| AI | Gemini 2.5 Flash (classification, hooks) + Gemini 2.5 Pro (discovery, scoring) |
 | Database | Firestore (nodes, edges, signals, graph_snapshot, feed_items, changelogs) |
 | Auth | Firebase Auth — Google OAuth + role-based access control |
-| Deployment | Firebase Hosting (CI via GitHub Actions on push to `main`) |
+| Deployment | Firebase Hosting — CI deploys `dev` → dev project, `main` → production |
 
 ---
 
@@ -133,7 +138,11 @@ firebase deploy --only firestore:rules
 firebase deploy --only firestore:indexes
 ```
 
-CI (`deploy.yml`) handles hosting automatically on every push to `main`. Never run `firebase deploy --only hosting` manually unless it's an emergency.
+CI (`deploy.yml`) handles hosting automatically:
+- Push to `dev` → deploys to `ai-4-society-dev` (preview)
+- Push to `main` → deploys to `ai-4-society` (production)
+
+Never run `firebase deploy --only hosting` manually unless it's an emergency.
 
 ---
 
@@ -156,7 +165,7 @@ functions/src/
   agents/
     signal-scout/   # RSS fetcher + Gemini classifier
     discovery/      # Clustering → new node proposals
-    validator/      # Score/field update proposals
+    scoring/        # Monthly batched node scoring via Cloud Tasks
     feed-curator/   # Feed rebuild with recency decay
     graph-builder/  # Snapshot + summary rebuild
     data-lifecycle/ # Archive + cleanup

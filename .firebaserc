@@ -1,6 +1,8 @@
 {
   "projects": {
-    "default": "ai-4-society"
+    "default": "ai-4-society",
+    "dev": "ai-4-society-dev",
+    "prod": "ai-4-society"
   },
   "targets": {},
   "etags": {}
