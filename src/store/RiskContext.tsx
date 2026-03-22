@@ -3,6 +3,8 @@ import { collection, getDocs, query, where, onSnapshot, type QuerySnapshot, type
 import { db } from '../lib/firebase';
 import { AI_MILESTONES } from '../lib/milestones';
 
+// NOTE: This store reads from the unified `nodes` collection, filtering by type.
+
 export interface SignalEvidence {
     date: string;
     isNew: boolean;
@@ -20,7 +22,7 @@ export interface TimelineNarrative {
 
 export interface Risk {
     id: string;
-    risk_name: string;
+    name: string;
     category: string;
     score_2026: number;
     score_2035: number;
@@ -38,14 +40,13 @@ export interface Risk {
 
 export interface Solution {
     id: string;
-    parent_risk_id: string;
-    solution_title: string;
+    name: string;
     solution_type: string;
     summary: string;
     deep_dive: string;
     implementation_stage: string;
-    adoption_score_2026: number;
-    adoption_score_2035: number;
+    score_2026: number;
+    score_2035: number;
     key_players: string[];
     barriers: string[];
     timeline_narrative: TimelineNarrative;
@@ -90,21 +91,29 @@ export function RiskProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         async function fetchData() {
             try {
-                const risksSnapshot: QuerySnapshot<DocumentData> = await getDocs(collection(db, 'risks'));
+                const nodesCollection = collection(db, 'nodes');
+
+                const risksSnapshot: QuerySnapshot<DocumentData> = await getDocs(
+                    query(nodesCollection, where('type', '==', 'risk'))
+                );
                 const fetchedRisks: Risk[] = [];
                 risksSnapshot.forEach((doc) => {
                     fetchedRisks.push({ id: doc.id, ...doc.data() } as Risk);
                 });
                 setBaseRisks(fetchedRisks);
 
-                const solutionsSnapshot: QuerySnapshot<DocumentData> = await getDocs(collection(db, 'solutions'));
+                const solutionsSnapshot: QuerySnapshot<DocumentData> = await getDocs(
+                    query(nodesCollection, where('type', '==', 'solution'))
+                );
                 const fetchedSolutions: Solution[] = [];
                 solutionsSnapshot.forEach((doc) => {
                     fetchedSolutions.push({ id: doc.id, ...doc.data() } as Solution);
                 });
                 setSolutions(fetchedSolutions);
 
-                const milestonesSnapshot: QuerySnapshot<DocumentData> = await getDocs(collection(db, 'milestones'));
+                const milestonesSnapshot: QuerySnapshot<DocumentData> = await getDocs(
+                    query(nodesCollection, where('type', '==', 'milestone'))
+                );
                 const fetchedMilestones: Milestone[] = [];
                 milestonesSnapshot.forEach((doc) => {
                     fetchedMilestones.push({ id: doc.id, ...doc.data() } as Milestone);
