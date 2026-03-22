@@ -9,7 +9,7 @@ export default function SolutionDetailPanel({ solution }: SolutionDetailPanelPro
         <>
             {/* Solution Header */}
             <div className="mb-4">
-                <h2 className="text-2xl font-bold text-green-300 mb-1">{solution.solution_title}</h2>
+                <h2 className="text-2xl font-bold text-green-300 mb-1">{solution.name}</h2>
                 <div className="flex items-center gap-3">
                     <span className="text-[10px] uppercase tracking-widest text-green-400">
                         {solution.solution_type}
@@ -54,7 +54,7 @@ export default function SolutionDetailPanel({ solution }: SolutionDetailPanelPro
                     <div className="grid grid-cols-3 gap-3">
                         <div className="bg-[#0a1a10] border border-green-900/50 rounded p-3">
                             <div className="text-[9px] text-gray-500 uppercase mb-1">2026-2030</div>
-                            <div className="text-lg font-bold text-green-400 mb-1">{solution.adoption_score_2026}</div>
+                            <div className="text-lg font-bold text-green-400 mb-1">{solution.score_2026}</div>
                             <p className="text-[10px] text-gray-400">{solution.timeline_narrative.near_term}</p>
                         </div>
                         <div className="bg-[#0a1a10] border border-green-900/50 rounded p-3">
@@ -64,7 +64,7 @@ export default function SolutionDetailPanel({ solution }: SolutionDetailPanelPro
                         </div>
                         <div className="bg-[#0a1a10] border border-green-900/50 rounded p-3">
                             <div className="text-[9px] text-gray-500 uppercase mb-1">2040-2050</div>
-                            <div className="text-lg font-bold text-green-400 mb-1">{solution.adoption_score_2035}</div>
+                            <div className="text-lg font-bold text-green-400 mb-1">{solution.score_2035}</div>
                             <p className="text-[10px] text-gray-400">{solution.timeline_narrative.long_term}</p>
                         </div>
                     </div>

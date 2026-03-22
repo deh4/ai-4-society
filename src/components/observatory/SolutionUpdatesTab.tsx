@@ -9,11 +9,11 @@ interface SolutionUpdate {
     parentRiskId: string;
     status: 'pending' | 'approved' | 'rejected';
     proposedChanges: {
-        adoption_score_2026: number;
+        score_2026: number;
         implementation_stage: string;
     };
     currentValues: {
-        adoption_score_2026: number;
+        score_2026: number;
         implementation_stage: string;
     };
     newKeyPlayers: string[];
@@ -113,7 +113,7 @@ export default function ObservatorySolutionUpdatesTab() {
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] text-gray-500">
                                     <span>
-                                        adoption: {update.currentValues.adoption_score_2026} → {update.proposedChanges.adoption_score_2026}
+                                        adoption: {update.currentValues.score_2026} → {update.proposedChanges.score_2026}
                                         ({update.signedDelta >= 0 ? '+' : ''}{update.signedDelta.toFixed(1)})
                                     </span>
                                     <span>·</span>

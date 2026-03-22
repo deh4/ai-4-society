@@ -44,19 +44,19 @@ export default function PerceptionGap({ isMonitorMode, selectedRisk, selectedSol
                 <div>
                     <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Current</span>
-                        <span className="text-green-400 font-bold">{selectedSolution.adoption_score_2026}</span>
+                        <span className="text-green-400 font-bold">{selectedSolution.score_2026}</span>
                     </div>
                     <div className="h-2 bg-gray-800 rounded overflow-hidden">
-                        <div className="h-full bg-green-500" style={{ width: `${(selectedSolution.adoption_score_2026 || 0) * 10}%` }} />
+                        <div className="h-full bg-green-500" style={{ width: `${(selectedSolution.score_2026 || 0) * 10}%` }} />
                     </div>
                 </div>
                 <div>
                     <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">2035 Projected</span>
-                        <span className="text-green-400 font-bold">{selectedSolution.adoption_score_2035}</span>
+                        <span className="text-green-400 font-bold">{selectedSolution.score_2035}</span>
                     </div>
                     <div className="h-2 bg-gray-800 rounded overflow-hidden">
-                        <div className="h-full bg-green-400" style={{ width: `${(selectedSolution.adoption_score_2035 || 0) * 10}%` }} />
+                        <div className="h-full bg-green-400" style={{ width: `${(selectedSolution.score_2035 || 0) * 10}%` }} />
                     </div>
                 </div>
             </div>

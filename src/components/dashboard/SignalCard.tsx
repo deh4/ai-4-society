@@ -35,7 +35,7 @@ export default function SignalCard({ item, risk, solution, onTuneIn }: SignalCar
     const category = isRisk ? risk?.category : solution?.solution_type;
     const velocity = item.velocity;
     const score2026 = item.score;
-    const score2035 = isRisk ? risk?.score_2035 : solution?.adoption_score_2035;
+    const score2035 = isRisk ? risk?.score_2035 : solution?.score_2035;
     const delta = score2035 != null ? score2035 - score2026 : 0;
     const isWorsening = isRisk ? delta > 0 : delta < 0;
     const accentColor = isRisk ? 'text-red-400' : 'text-emerald-400';

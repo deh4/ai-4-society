@@ -67,7 +67,7 @@ function sortRisks(risks: Risk[], sortBy: SortBy): Risk[] {
                 || b.score_2026 - a.score_2026
             );
         case 'name':
-            return sorted.sort((a, b) => a.risk_name.localeCompare(b.risk_name));
+            return sorted.sort((a, b) => a.name.localeCompare(b.name));
         default:
             return sorted;
     }

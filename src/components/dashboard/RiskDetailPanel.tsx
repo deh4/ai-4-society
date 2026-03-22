@@ -23,7 +23,7 @@ export default function RiskDetailPanel({ risk, relatedSolution, onBack }: RiskD
 
             {/* Risk Header */}
             <div className="mb-6">
-                <h1 className="text-2xl sm:text-3xl font-bold mb-2 leading-tight">{risk.risk_name}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2 leading-tight">{risk.name}</h1>
                 <div className="flex items-center gap-3">
                     <span className="text-xs uppercase tracking-widest text-cyan-400">
                         {risk.category}
@@ -114,12 +114,12 @@ export default function RiskDetailPanel({ risk, relatedSolution, onBack }: RiskD
                 </div>
             )}
 
-            {/* Connected Risks */}
-            {risk.connected_to && risk.connected_to.length > 0 && (
+            {/* Principles */}
+            {risk.principles && risk.principles.length > 0 && (
                 <div className="mb-8">
-                    <h2 className="text-sm font-medium text-gray-400 mb-3">Connected Risks</h2>
+                    <h2 className="text-sm font-medium text-gray-400 mb-3">Related Principles</h2>
                     <div className="flex flex-wrap gap-2">
-                        {risk.connected_to.map((id) => (
+                        {risk.principles.map((id) => (
                             <span key={id} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-400">
                                 {id}
                             </span>

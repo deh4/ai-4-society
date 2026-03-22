@@ -50,7 +50,7 @@ export default function RiskCard({ risk, index, onClick }: RiskCardProps) {
                     {/* Title + Score */}
                     <div className="flex items-start justify-between gap-4 mb-2">
                         <h3 className="text-base font-semibold leading-snug group-hover:text-white transition-colors">
-                            {risk.risk_name}
+                            {risk.name}
                         </h3>
                         <span className={`text-2xl font-bold shrink-0 ${colors.text}`}>
                             {risk.score_2026}
