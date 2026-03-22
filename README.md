@@ -8,7 +8,7 @@ A real-time AI risk intelligence platform with a **Human-in-the-Loop (HITL)** ag
 
 ## What it does
 
-The Observatory tracks the societal risks and solutions emerging from AI acceleration. It ingests articles from 17 curated sources across 5 credibility tiers, uses Gemini to classify them against a structured taxonomy of risks and solutions, and presents the resulting intelligence as:
+The Observatory tracks the societal risks and solutions emerging from AI acceleration. It ingests articles from 41 curated sources across 7 credibility tiers, uses Gemini to classify them against a structured taxonomy of risks and solutions, and presents the resulting intelligence as:
 
 - **FeaturedStory Carousel** — featured editorial stories on the landing page with article images as full-bleed backgrounds, rendered through an SVG halftone dot mask effect
 - **News Feed** — ranked approved signals with recency decay, personalised by interest

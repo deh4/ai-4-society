@@ -28,29 +28,49 @@ Significant events, policy decisions, technical breakthroughs, or societal infle
 
 ## Agent pipeline
 
-1. **Signal Scout** (every 6 hours): Fetches articles from 16 data sources, filters by relevance and credibility, classifies against the risk/solution taxonomy using Gemini AI. Produces pending signals awaiting human review.
+1. **Signal Scout** (every 6 hours): Fetches articles from 41 data sources across 7 tiers, filters by relevance and credibility, classifies against the risk/solution taxonomy using Gemini AI. Tags OECD AI Principles (P01–P10) and harm status. Produces pending signals awaiting human review.
 
-2. **Discovery Agent** (weekly, Sundays): Clusters unmatched signals into proposals for new risk or solution nodes. Triggers when 5+ classified or 3+ unmatched signals accumulate.
+2. **Discovery Agent** (biweekly): Clusters unmatched signals from a 6-month window into proposals for new risk or solution nodes (5+ signal minimum) and edge proposals (3+ signals). Each proposal includes a full node skeleton.
 
-3. **Validator Agent** (weekly, Mondays): Proposes score and field updates for existing nodes based on recent signal evidence.
+3. **Scoring Agent** (monthly, 1st): Batched assessment of all existing nodes. Proposes score updates, narrative changes, and velocity adjustments based on recent signal evidence.
 
-4. **Human review**: Expert reviewers approve or reject every proposal before it affects the published knowledge graph.
+4. **Feed Curator** (every 6 hours): Builds ranked feed with recency-decay scoring. Generates editorial hooks for the landing page carousel. Extracts OG images from article sources; Imagen 3 Fast generates fallback images for approved hooks without images.
 
-5. **Graph Builder** (on demand): Rebuilds the knowledge graph snapshot after each approved change.
+5. **Human review gates**: Three mandatory review gates — Signal Review (Gate 1), Discovery Review (Gate 2), Scoring Review (Gate 3). Every proposal requires human approval before publication.
 
-6. **Feed Curator** (every 6 hours): Maintains a ranked feed of the most impactful recent signals.
+6. **Graph Builder** (on demand): Rebuilds the knowledge graph snapshot and per-node trending summaries after each approved change.
 
-## Data sources (16 total)
+7. **Data Lifecycle** (daily, 03:00 UTC): Archives approved signals after 90 days, deletes rejected signals after 30 days, purges archived data after 1 year.
 
-**Research & Safety (Tier 1):** arXiv CS.AI, Alignment Forum, CAIS AI Safety Newsletter, Nature Machine Intelligence, AI Now Institute
+## Data sources (41 across 7 tiers)
 
-**Journalism (Tier 2):** MIT Technology Review, Wired AI, Ars Technica AI, IEEE Spectrum AI, The Guardian AI
+**T1 — Institutional:** OECD AI Observatory, EU AI Office, Nature, Science, arXiv CS.AI
 
-**Tech / Community (Tier 3):** The Verge AI, TechCrunch AI
+**T2 — Quality Journalism:** MIT Technology Review, Wired, Ars Technica, Reuters, The Guardian AI
 
-**Active Search (Tier 4):** GDELT DOC API
+**T3 — Tech / Community:** TechCrunch, The Verge, Hacker News
 
-**Newsletters (Tier 5):** TLDR AI, Import AI (Jack Clark), Last Week in AI, Ben's Bites
+**T4 — Active Search:** Google Custom Search, GDELT DOC API
+
+**T5 — Newsletters:** TLDR AI, Import AI (Jack Clark), Last Week in AI, Ben's Bites
+
+**T6 — Safety Research:** Alignment Forum, CAIS, AI Now Institute
+
+**T7 — Domain-Specific:** IEEE Spectrum, Nature Machine Intelligence
+
+## OECD AI Principles (classification taxonomy)
+
+Every signal is tagged with one or more OECD AI Principles:
+- P01: Inclusive Growth — AI should benefit people and the planet
+- P02: Human-Centred Values — Respect rule of law, human rights, democratic values
+- P03: Transparency & Explainability — AI systems should be transparent
+- P04: Robustness & Safety — Function robustly and securely throughout lifecycle
+- P05: Accountability — Organizations should be accountable for AI systems
+- P06: Investing in R&D — Governments should invest in AI research
+- P07: Digital Ecosystem — Foster a digital ecosystem for trustworthy AI
+- P08: Skills & Labour — Enable skills development and fair transitions
+- P09: International Cooperation — Cross-border information sharing
+- P10: Domestic Policy — Adopt national AI policies and regulatory frameworks
 
 ## Access model
 

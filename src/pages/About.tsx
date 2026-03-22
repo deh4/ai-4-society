@@ -175,8 +175,14 @@ export default function About() {
         <meta name="description" content="How the AI 4 Society Observatory works: our methodology, data sources, human review pipeline, and mission to track AI's impact on society." />
         <link rel="canonical" href="https://ai4society.io/about" />
         <meta property="og:url" content="https://ai4society.io/about" />
+        <meta property="og:type" content="website" />
         <meta property="og:title" content="About — AI 4 Society Observatory" />
         <meta property="og:description" content="How the AI 4 Society Observatory works: our methodology, data sources, human review pipeline, and mission to track AI's impact on society." />
+        <meta property="og:image" content="https://ai4society.io/og-image.png" />
+        <meta property="og:site_name" content="AI 4 Society Observatory" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="About — AI 4 Society Observatory" />
+        <meta name="twitter:description" content="How the AI 4 Society Observatory works: our methodology, data sources, human review pipeline, and mission to track AI's impact on society." />
       </Helmet>
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Page header */}
@@ -244,7 +250,7 @@ export default function About() {
               {
                 name: "Signal Scout",
                 schedule: "Every 6 hours",
-                desc: "Scans 47+ RSS feeds and news APIs. Each article passes through a cheap filter (source credibility, recency, deduplication, keyword relevance) before AI classification. Gemini 2.5 Flash classifies surviving articles against our risk/solution taxonomy, assigns confidence and impact scores, and tags OECD principles and harm status.",
+                desc: "Scans 41 RSS feeds and news APIs. Each article passes through a cheap filter (source credibility, recency, deduplication, keyword relevance) before AI classification. Gemini 2.5 Flash classifies surviving articles against our risk/solution taxonomy, assigns confidence and impact scores, and tags OECD principles and harm status.",
               },
               {
                 name: "Feed Curator",
@@ -366,7 +372,7 @@ export default function About() {
         {/* === Our Sources === */}
         <Section title="Source Tiers" id="sources">
           <p>
-            We scan 47+ sources across seven tiers. Each tier is assigned a
+            We scan 41 sources across seven tiers. Each tier is assigned a
             credibility range that directly affects how signals are ranked.
             Diverse sourcing helps counter individual source biases.
           </p>

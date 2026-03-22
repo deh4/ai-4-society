@@ -4,7 +4,7 @@
 
 ## About
 
-AI 4 Society Observatory is a human-in-the-loop platform that continuously monitors the societal impact of AI. A pipeline of AI agents curates signals from 16 data sources — academic papers, journalism, newsletters, and live event feeds — then routes them through human expert review before publication.
+AI 4 Society Observatory is a human-in-the-loop platform that continuously monitors the societal impact of AI. A pipeline of AI agents curates signals from 41 data sources — academic papers, journalism, newsletters, and live event feeds — then routes them through human expert review before publication.
 
 The platform maintains a live knowledge graph of interconnected nodes:
 
@@ -21,7 +21,7 @@ The platform maintains a live knowledge graph of interconnected nodes:
 
 ## Methodology
 
-Signals are collected every 6 hours from 16 curated sources. Each signal is classified by AI against the observatory's risk/solution taxonomy, then reviewed by human experts before publication. The knowledge graph is rebuilt after each approved change.
+Signals are collected every 6 hours from 41 curated sources across 7 tiers. Each signal is classified by AI against the observatory's risk/solution taxonomy, then reviewed by human experts before publication. The knowledge graph is rebuilt after each approved change.
 
 Sources include: arXiv CS.AI, Alignment Forum, MIT Technology Review, Nature Machine Intelligence, AI Now Institute, CAIS Newsletter, Wired, The Guardian, IEEE Spectrum, Ars Technica, The Verge, TechCrunch, GDELT DOC API, TLDR AI, Import AI, and Ben's Bites.
 

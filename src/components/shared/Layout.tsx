@@ -176,7 +176,7 @@ export default function Layout({ children, bare }: LayoutProps) {
       <footer className="border-t border-white/5 py-8 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-[10px] text-gray-500 leading-relaxed">
-            47 sources across 7 tiers · Human-reviewed signals
+            41 sources across 7 tiers · Human-reviewed signals
             <br />
             Updated every 6 hours · Open methodology
           </p>
