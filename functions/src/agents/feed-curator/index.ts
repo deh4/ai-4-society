@@ -54,6 +54,7 @@ Respond with ONLY the one-sentence hook. No quotes, no prefix.`;
         source_name: item.source_name ?? "",
         source_credibility: item.source_credibility ?? 0.5,
         published_date: item.published_date ?? "",
+        image_url: item.image_url ?? null,
         generated_at: FieldValue.serverTimestamp(),
         reviewed_by: null,
         reviewed_at: null,
@@ -157,6 +158,7 @@ async function buildFeed(apiKey: string) {
       impact_score: rankedScore,
       related_node_ids: data.related_node_ids ?? [],
       published_date: data.published_date,
+      image_url: data.image_url ?? null,
       createdAt: FieldValue.serverTimestamp(),
     });
   });
