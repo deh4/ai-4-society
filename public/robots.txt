@@ -26,6 +26,6 @@ Allow: /
 # Sitemaps
 Sitemap: https://ai4society.io/sitemap.xml
 
-# LLM context files
-# https://ai4society.io/llms.txt
-# https://ai4society.io/llms-full.txt
+# LLM context files (llms.txt standard)
+# See: https://ai4society.io/llms.txt
+# Full: https://ai4society.io/llms-full.txt

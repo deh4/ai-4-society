@@ -94,6 +94,87 @@ export default function Observatory() {
     ? `https://ai4society.io/observatory/${toSlug(selectedNode.name)}`
     : "https://ai4society.io/observatory";
 
+  // JSON-LD structured data for individual nodes
+  const nodeJsonLd = selectedNode
+    ? JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": selectedNode.name,
+        "description": pageDescription,
+        "url": canonicalUrl,
+        "mainEntityOfPage": canonicalUrl,
+        "author": {
+          "@type": "Organization",
+          "name": "AI 4 Society",
+          "url": "https://ai4society.io/",
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "AI 4 Society",
+          "url": "https://ai4society.io/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://ai4society.io/og-image.png",
+          },
+        },
+        "about": {
+          "@type": "Thing",
+          "name": selectedNode.name,
+          "additionalType":
+            selectedNode.type === "risk"
+              ? "Risk"
+              : selectedNode.type === "solution"
+                ? "Solution"
+                : selectedNode.type === "stakeholder"
+                  ? "Organization"
+                  : "Event",
+        },
+        "keywords": [
+          selectedNode.type,
+          "AI",
+          "artificial intelligence",
+          selectedNode.name,
+          ...(selectedNode.type === "risk" ? ["AI risk", "AI safety"] : []),
+          ...(selectedNode.type === "solution" ? ["AI governance", "AI regulation"] : []),
+        ].join(", "),
+        "isPartOf": {
+          "@type": "Dataset",
+          "name": "AI Society Risk & Solution Knowledge Graph",
+          "url": "https://ai4society.io/observatory",
+        },
+      })
+    : null;
+
+  // Breadcrumb JSON-LD for better search result display
+  const breadcrumbJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://ai4society.io/",
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Observatory",
+        "item": "https://ai4society.io/observatory",
+      },
+      ...(selectedNode
+        ? [
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": selectedNode.name,
+              "item": canonicalUrl,
+            },
+          ]
+        : []),
+    ],
+  });
+
   return (
     <Layout>
       <Helmet>
@@ -103,6 +184,16 @@ export default function Observatory() {
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content={selectedNode ? "article" : "website"} />
+        <meta property="og:image" content="https://ai4society.io/og-image.png" />
+        <meta property="og:site_name" content="AI 4 Society Observatory" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <script type="application/ld+json">{breadcrumbJsonLd}</script>
+        {nodeJsonLd && (
+          <script type="application/ld+json">{nodeJsonLd}</script>
+        )}
       </Helmet>
       <div className="max-w-7xl mx-auto px-4 py-4 overflow-x-hidden">
         {/* Header */}
