@@ -33,7 +33,7 @@ const RISK_FIELDS = [
 ];
 
 const SOLUTION_FIELDS = [
-  "adoption_score_2026", "adoption_score_2035", "implementation_stage",
+  "score_2026", "score_2035", "implementation_stage",
   "key_players", "barriers", "summary", "deep_dive", "timeline_narrative",
 ];
 
@@ -67,7 +67,7 @@ ${signalText}`;
     return `CURRENT SOLUTION NODE:
 Name: ${nodeData.name as string}
 Type: ${nodeData.solution_type ?? "N/A"}
-Adoption Score 2026: ${nodeData.adoption_score_2026 ?? "N/A"} | 2035: ${nodeData.adoption_score_2035 ?? "N/A"}
+Score 2026: ${nodeData.score_2026 ?? "N/A"} | Score 2035: ${nodeData.score_2035 ?? "N/A"}
 Implementation Stage: ${nodeData.implementation_stage ?? "N/A"}
 Key Players: ${JSON.stringify(nodeData.key_players ?? [])}
 Barriers: ${JSON.stringify(nodeData.barriers ?? [])}
