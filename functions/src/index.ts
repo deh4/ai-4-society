@@ -135,6 +135,8 @@ export { onVoteWritten } from "./triggers/vote-aggregation.js";
 export { scheduledSignalScout, triggerSignalScout } from "./agents/signal-scout/index.js";
 export { scheduledDiscovery, triggerDiscovery } from "./agents/discovery/index.js";
 export { scheduledValidator, triggerValidator } from "./agents/validator/index.js";
+export { scheduledScoring, triggerScoring } from "./agents/scoring/index.js";
+export { scoringBatchWorker } from "./agents/scoring/batch-worker.js";
 export { approveGraphProposal, rejectGraphProposal } from "./agents/approval/index.js";
 export { scheduledPodcast, triggerPodcast } from "./agents/podcast/index.js";
 export { sitemap } from "./sitemap.js";
