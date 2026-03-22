@@ -34,7 +34,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "eu-ai-office",
     name: "EU AI Office / EUR-Lex",
     type: "rss",
-    url: "https://ec.europa.eu/presscorner/api/rss/en",
+    url: "https://ec.europa.eu/newsroom/dae/rss.cfm",
     domain: "Regulatory",
     credibility: 0.93,
     tier: 0,
@@ -48,7 +48,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "nist-ai",
     name: "NIST AI / Federal Register",
     type: "rss",
-    url: "https://www.nist.gov/artificial-intelligence/rss.xml",
+    url: "https://www.nist.gov/news-events/artificial-intelligence/rss.xml",
     domain: "Regulatory",
     credibility: 0.91,
     tier: 0,
@@ -59,20 +59,10 @@ export const DATA_SOURCES: DataSource[] = [
       "ai standard", "nist ai",
     ],
   },
-  {
-    id: "oecd-ai",
-    name: "OECD AI Observatory",
-    type: "api",
-    url: "https://oecd.ai/en/data",
-    domain: "Regulatory",
-    credibility: 0.90,
-    tier: 0,
-    keywordFilter: "allowlist",
-    allowlistTerms: [
-      "ai policy", "artificial intelligence", "ai governance",
-      "ai principles", "oecd ai", "algorithmic", "ai regulation",
-    ],
-  },
+  // NOTE: OECD has no public RSS feed or API for AI content.
+  // oecd.ai offers only an email newsletter; iLibrary was retired end-2024.
+  // Source removed — regulatory/policy coverage provided by EU AI Office,
+  // Brookings, RAND, and other T1 sources.
 
   // ── T1 — Institutional / Research ─────────────────────────────
   {
@@ -122,7 +112,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "ai-now-institute",
     name: "AI Now Institute",
     type: "rss",
-    url: "https://ainowinstitute.org/category/news/feed",
+    url: "https://ainowinstitute.org/feed/",
     domain: "AI policy",
     credibility: 0.85,
     tier: 1,
@@ -138,16 +128,8 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 1,
     keywordFilter: "shared-keyword-list",
   },
-  {
-    id: "anthropic-blog",
-    name: "Anthropic Research Blog",
-    type: "rss",
-    url: "https://www.anthropic.com/research.rss",
-    domain: "AI safety",
-    credibility: 0.88,
-    tier: 1,
-    keywordFilter: "shared-keyword-list",
-  },
+  // Anthropic Research Blog removed — no native RSS feed exists.
+  // Confirmed by multiple sources; site is custom-built, not WordPress.
   {
     id: "deepmind-blog",
     name: "DeepMind Blog",
@@ -158,16 +140,8 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 1,
     keywordFilter: "shared-keyword-list",
   },
-  {
-    id: "aiid",
-    name: "AI Incident Database (AIID)",
-    type: "rss",
-    url: "https://incidentdatabase.ai/blog/rss.xml",
-    domain: "AI harms",
-    credibility: 0.85,
-    tier: 1,
-    keywordFilter: "pass-all",
-  },
+  // AI Incident Database removed — Gatsby site with no confirmed RSS plugin.
+  // No aggregator indexes a feed from this site.
   {
     id: "miri-blog",
     name: "MIRI Blog",
@@ -178,16 +152,8 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 1,
     keywordFilter: "shared-keyword-list",
   },
-  {
-    id: "promedmail",
-    name: "ProMED (ISID)",
-    type: "rss",
-    url: "https://promedmail.org/feed/",
-    domain: "Biosecurity",
-    credibility: 0.90,
-    tier: 1,
-    keywordFilter: "pass-all",
-  },
+  // ProMED removed — RSS permanently shut down June 2023; now behind
+  // paywall. Biosecurity coverage via WHO DON, STAT News, and CDC MMWR.
   {
     id: "who-don",
     name: "WHO Disease Outbreak News",
@@ -202,7 +168,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "crisis-group",
     name: "International Crisis Group",
     type: "rss",
-    url: "https://www.crisisgroup.org/crisiswatch/rss.xml",
+    url: "https://www.crisisgroup.org/feed",
     domain: "Geopolitical",
     credibility: 0.88,
     tier: 1,
@@ -212,7 +178,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "wef-agenda",
     name: "WEF Global Risks / Agenda",
     type: "rss",
-    url: "https://www.weforum.org/agenda/rss.xml",
+    url: "https://www.weforum.org/stories/feed/",
     domain: "Geopolitical",
     credibility: 0.85,
     tier: 1,
@@ -242,7 +208,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "brookings",
     name: "Brookings Institution",
     type: "rss",
-    url: "https://www.brookings.edu/topic/artificial-intelligence/feed/",
+    url: "https://www.brookings.edu/topics/artificial-intelligence/feed/",
     domain: "Policy / AI",
     credibility: 0.87,
     tier: 1,
@@ -274,7 +240,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "wired-ai",
     name: "Wired AI",
     type: "rss",
-    url: "https://www.wired.com/feed/tag/artificial-intelligence/rss",
+    url: "https://www.wired.com/feed/tag/ai/latest/rss",
     domain: "AI journalism",
     credibility: 0.75,
     tier: 2,
@@ -310,16 +276,8 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 2,
     keywordFilter: "shared-keyword-list",
   },
-  {
-    id: "healthmap",
-    name: "HealthMap (Harvard)",
-    type: "rss",
-    url: "https://healthmap.org/en/",
-    domain: "Biosecurity",
-    credibility: 0.78,
-    tier: 2,
-    keywordFilter: "pass-all",
-  },
+  // HealthMap removed — URL was an HTML dashboard page, not an RSS feed.
+  // Biosecurity coverage provided by WHO DON, ProMED, STAT News, and CDC.
   {
     id: "stat-news",
     name: "STAT News",
@@ -416,7 +374,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "ea-forum",
     name: "EA Forum / 80,000 Hours",
     type: "rss",
-    url: "https://forum.effectivealtruism.org/feed.xml?view=tagRss&tag=ai-safety",
+    url: "https://forum.effectivealtruism.org/feed.xml?view=frontpage-rss&karmaThreshold=25",
     domain: "AI safety community",
     credibility: 0.72,
     tier: 3,
@@ -434,16 +392,8 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 4,
     keywordFilter: "api-query",
   },
-  {
-    id: "newsapi",
-    name: "NewsAPI / MediaStack",
-    type: "api",
-    url: "https://newsapi.org/v2/everything?q=(AI+safety+OR+AI+risk)&sortBy=publishedAt&pageSize=20",
-    domain: "News search",
-    credibility: 0.60,
-    tier: 4,
-    keywordFilter: "api-query",
-  },
+  // NewsAPI removed — requires API key (401 without it), free tier is
+  // dev-only with 24h delay. Media coverage already handled by GDELT.
 
   // ── T5 — Newsletter ──────────────────────────────────────────
   {
@@ -461,7 +411,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "import-ai",
     name: "Import AI",
     type: "rss",
-    url: "https://jack-clark.net/feed.xml",
+    url: "https://importai.substack.com/feed",
     domain: "AI newsletter",
     credibility: 0.70,
     tier: 5,
@@ -481,7 +431,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "bens-bites",
     name: "Ben's Bites",
     type: "rss",
-    url: "https://bensbites.beehiiv.com/feed",
+    url: "https://www.bensbites.com/feed",
     domain: "AI newsletter",
     credibility: 0.65,
     tier: 5,
@@ -501,22 +451,15 @@ export const DATA_SOURCES: DataSource[] = [
     id: "cdc-mmwr",
     name: "CDC / MMWR",
     type: "rss",
-    url: "https://tools.cdc.gov/podcasts/feed.asp?feedid=183",
+    url: "https://www.cdc.gov/mmwr/rss/mmwrall.xml",
     domain: "Biosecurity",
     credibility: 0.90,
     tier: 5,
     keywordFilter: "pass-all",
   },
-  {
-    id: "the-batch",
-    name: "The Batch (deeplearning.ai)",
-    type: "rss",
-    url: "https://www.deeplearning.ai/the-batch/rss/",
-    domain: "AI newsletter",
-    credibility: 0.68,
-    tier: 5,
-    keywordFilter: "shared-keyword-list",
-  },
+  // The Batch (deeplearning.ai) removed — no native RSS feed; email-only.
+  // Known gap since 2019. AI newsletter coverage via TLDR AI, Import AI,
+  // Last Week in AI, and Ben's Bites.
 
   // ── T6 — Data Infrastructure ─────────────────────────────────
   {
