@@ -137,6 +137,15 @@ export default function GraphView({
     return () => observer.disconnect();
   }, []);
 
+  // Center graph on selected node when selection changes externally
+  useEffect(() => {
+    if (!selectedNodeId || !fgRef.current || !hasInitialLayoutRef.current) return;
+    const node = graphData.nodes.find((n) => n.id === selectedNodeId) as unknown as { x?: number; y?: number } | undefined;
+    if (node?.x !== undefined && node?.y !== undefined) {
+      fgRef.current.centerAt(node.x, node.y, 300);
+    }
+  }, [selectedNodeId, graphData.nodes]);
+
   const handleNodeClick = useCallback(
     (node: NodeObject<ForceNode>) => {
       if (node.id) onSelectNode(String(node.id));
@@ -147,12 +156,25 @@ export default function GraphView({
   const handleEngineStop = useCallback(() => {
     if (!hasInitialLayoutRef.current && fgRef.current) {
       hasInitialLayoutRef.current = true;
+      // Center on selected node if one exists
+      const selId = selectedNodeRef.current;
+      if (selId) {
+        const node = graphData.nodes.find((n) => n.id === selId);
+        if (node) {
+          fgRef.current.centerAt((node as unknown as { x: number }).x, (node as unknown as { y: number }).y, 400);
+          fgRef.current.zoom(3, 400);
+          fgRef.current.d3Force("charge", null);
+          fgRef.current.d3Force("link", null);
+          fgRef.current.d3Force("center", null);
+          return;
+        }
+      }
       fgRef.current.zoom(2.5, 400);
       fgRef.current.d3Force("charge", null);
       fgRef.current.d3Force("link", null);
       fgRef.current.d3Force("center", null);
     }
-  }, []);
+  }, [graphData.nodes]);
 
   const handlePointerAreaPaint = useCallback(
     (node: NodeObject<ForceNode>, color: string, ctx: CanvasRenderingContext2D) => {
@@ -173,6 +195,7 @@ export default function GraphView({
     []
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const paintNode = useCallback(
     (node: NodeObject<ForceNode>, ctx: CanvasRenderingContext2D) => {
       const x = node.x ?? 0;
@@ -243,7 +266,8 @@ export default function GraphView({
         ctx.fillText(label, x, y + radius + 4);
       }
     },
-    []
+    // Re-create callback when selectedNodeId changes so canvas repaints highlights
+    [selectedNodeId]
   );
 
   if (loading) {
@@ -270,8 +294,8 @@ export default function GraphView({
     <div className="flex flex-col gap-3">
       <div
         ref={containerRef}
-        className="relative rounded-lg border border-white/10 bg-black/50 overflow-hidden"
-        style={{ height: "calc(100vh - 220px)", minHeight: 400 }}
+        className="relative rounded-lg border border-white/10 bg-black/50 overflow-hidden h-[25vh] lg:h-[calc(100vh-220px)]"
+        style={{ minHeight: 180 }}
       >
         <ForceGraph2D
           ref={fgRef}
