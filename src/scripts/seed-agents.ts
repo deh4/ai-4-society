@@ -44,14 +44,14 @@ const agents: Record<string, AgentRegistryDoc> = {
         schedule: '0 10 * * 0',
         overseerRole: 'Discovery Reviewer',
     },
-    'validator-agent': {
-        name: 'Validator Agent',
-        description: 'Weekly full sweep of all risks and solutions. Assesses whether current attributes still reflect reality and proposes specific updated values based on recent signal evidence.',
+    'scoring-agent': {
+        name: 'Scoring Agent',
+        description: 'Monthly assessment of all risks and solutions. Evaluates whether current scores and attributes still reflect reality based on accumulated signal evidence. Uses batched Cloud Tasks for scalability.',
         tier: '2B',
         status: 'active',
         deployedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
-        functionName: 'validatorAgent',
-        schedule: '0 9 * * 1',
+        functionName: 'scheduledScoring',
+        schedule: '0 9 1 * *',
         overseerRole: 'Scoring Reviewer',
     },
     'orchestrator': {

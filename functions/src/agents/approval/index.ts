@@ -238,7 +238,7 @@ export const approveGraphProposal = onCall(
           overall_reasoning: updateData.overall_reasoning ?? "",
           confidence: proposal.confidence ?? 0,
           created_at: FieldValue.serverTimestamp(),
-          created_by: proposal.created_by ?? "validator-agent",
+          created_by: proposal.created_by ?? "scoring-agent",
         });
 
         tx.update(proposalRef, {

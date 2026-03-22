@@ -26,7 +26,7 @@ interface Props {
 const TRIGGER_MAP: Partial<Record<AgentId, string>> = {
   "signal-scout": "triggerSignalScout",
   "discovery-agent": "triggerDiscovery",
-  "validator-agent": "triggerValidator",
+  "scoring-agent": "triggerScoring",
   "data-lifecycle": "dataLifecycleV2",
   "graph-builder": "buildGraph",
   "feed-curator": "triggerFeedCurator",

@@ -1,7 +1,5 @@
 // src/components/admin/EditorialReviewTab.tsx
 import { useState, useEffect } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../lib/firebase";
 import { subscribeEditorialHooks, updateEditorialStatus } from "../../data/editorial";
 import { useAuth } from "../../store/AuthContext";
 import { useGraph } from "../../store/GraphContext";
@@ -15,9 +13,6 @@ export default function EditorialReviewTab() {
   const [hooks, setHooks] = useState<EditorialHook[]>([]);
   const [selected, setSelected] = useState<EditorialHook | null>(null);
   const [editText, setEditText] = useState("");
-  const [headline, setHeadline] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [imageAlt, setImageAlt] = useState("");
   const [updating, setUpdating] = useState(false);
   const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
 
@@ -28,9 +23,6 @@ export default function EditorialReviewTab() {
   const handleSelect = (h: EditorialHook) => {
     setSelected(h);
     setEditText(h.hook_text);
-    setHeadline(h.narrative_headline ?? "");
-    setImageUrl(h.featured_image_url ?? "");
-    setImageAlt(h.featured_image_alt ?? "");
   };
 
   const handleAction = async (status: "approved" | "rejected") => {
@@ -43,14 +35,6 @@ export default function EditorialReviewTab() {
         user.uid,
         status === "approved" ? editText : undefined,
       );
-      // Save image and headline fields on approval
-      if (status === "approved") {
-        await updateDoc(doc(db, "editorial_hooks", selected.id), {
-          narrative_headline: headline || null,
-          featured_image_url: imageUrl || null,
-          featured_image_alt: imageAlt || null,
-        });
-      }
       setSelected(null);
     } finally {
       setUpdating(false);
@@ -132,17 +116,6 @@ export default function EditorialReviewTab() {
                   allowedRoles={["editor", "lead"]} onAssign={handleAssign} />
               </div>
 
-              {/* Narrative Headline */}
-              <div>
-                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Narrative Headline</div>
-                <input
-                  value={headline}
-                  onChange={(e) => setHeadline(e.target.value)}
-                  placeholder="Short headline for the narrative..."
-                  className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/50"
-                />
-              </div>
-
               {/* Editorial Hook */}
               <div>
                 <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Editorial Hook</div>
@@ -152,31 +125,6 @@ export default function EditorialReviewTab() {
                   className="w-full bg-white/5 border border-white/10 rounded p-3 text-sm text-white resize-none focus:outline-none focus:border-cyan-400/50"
                   rows={4}
                 />
-              </div>
-
-              {/* Featured Image */}
-              <div>
-                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Featured Image</div>
-                <input
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Image URL (mobile-friendly, 16:9 recommended)..."
-                  className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/50 mb-2"
-                />
-                <input
-                  value={imageAlt}
-                  onChange={(e) => setImageAlt(e.target.value)}
-                  placeholder="Alt text for accessibility..."
-                  className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/50 mb-2"
-                />
-                {imageUrl && (
-                  <div className="mt-2 rounded-lg overflow-hidden border border-white/10">
-                    <img src={imageUrl} alt={imageAlt || "Preview"}
-                      className="w-full h-48 object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Linked Nodes */}

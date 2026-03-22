@@ -1,6 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 
 export type NodeType = "risk" | "solution" | "stakeholder" | "milestone" | "principle";
+export type EdgeRelationship = "correlates_with" | "addressed_by" | "impacts" | "amplifies" | "depends_on" | "governs";
 
 export interface RiskNode {
   id: string;
@@ -93,12 +94,12 @@ export interface Edge {
   from_type: NodeType;
   to_node: string;
   to_type: NodeType;
-  relationship: string;
+  relationship: EdgeRelationship;
   properties?: {
     strength?: number;
     severity?: "high" | "medium" | "low";
   };
-  created_by: "migration" | "discovery-agent" | string;
+  created_by: "seed" | "discovery-agent" | string;
   approved_by?: string;
   createdAt: Timestamp;
 }
@@ -117,7 +118,7 @@ export interface GraphSnapshot {
   edges: Array<{
     from: string;
     to: string;
-    relationship: string;
+    relationship: EdgeRelationship;
     properties?: object;
   }>;
   updatedAt: Timestamp;

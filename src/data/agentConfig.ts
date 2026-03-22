@@ -84,7 +84,7 @@ export interface AgentRunSummary {
 export const AGENT_IDS = [
   "signal-scout",
   "discovery-agent",
-  "validator-agent",
+  "scoring-agent",
   "data-lifecycle",
   "graph-builder",
   "feed-curator",
@@ -96,7 +96,7 @@ export type AgentId = (typeof AGENT_IDS)[number];
 export const AGENT_LABELS: Record<AgentId, string> = {
   "signal-scout": "Signal Scout",
   "discovery-agent": "Discovery Agent",
-  "validator-agent": "Validator Agent",
+  "scoring-agent": "Scoring Agent",
   "data-lifecycle": "Data Lifecycle",
   "graph-builder": "Graph Builder",
   "feed-curator": "Feed Curator",
@@ -105,8 +105,8 @@ export const AGENT_LABELS: Record<AgentId, string> = {
 
 export const AGENT_SCHEDULES: Record<AgentId, string> = {
   "signal-scout": "Every 6 hours",
-  "discovery-agent": "Weekly (Sun 10:00 UTC)",
-  "validator-agent": "Weekly (Mon 09:00 UTC)",
+  "discovery-agent": "Biweekly (1st & 15th, 10:00 UTC)",
+  "scoring-agent": "Monthly (1st, 09:00 UTC)",
   "data-lifecycle": "Daily (03:00 UTC)",
   "graph-builder": "On demand",
   "feed-curator": "Every 6 hours",

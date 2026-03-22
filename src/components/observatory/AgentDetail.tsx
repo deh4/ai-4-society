@@ -2,10 +2,6 @@ import { useState, useEffect } from 'react';
 import { collection, doc, onSnapshot, orderBy, query, limit, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../store/AuthContext';
-import TopicsTab from './TopicsTab';
-import ObservatoryRiskUpdatesTab from './RiskUpdatesTab';
-import ObservatorySolutionUpdatesTab from './SolutionUpdatesTab';
-import ValidationReportsTab from './ValidationReportsTab';
 import ChangelogsTab from './ChangelogsTab';
 
 // --- Types ---
@@ -119,7 +115,7 @@ const OUTCOME_COLOR: Record<string, string> = {
 
 export default function AgentDetail({ agent, health, onBack }: Props) {
     const { user } = useAuth();
-    const [tab, setTab] = useState<'health' | 'config' | 'runs' | 'topics' | 'risk-updates' | 'solution-updates' | 'validation-reports' | 'changelogs' | 'discovery-proposals' | 'validation-proposals'>('health');
+    const [tab, setTab] = useState<'health' | 'config' | 'runs' | 'changelogs'>('health');
 
     // Not deployed: show info card only
     if (agent.status === 'not_deployed') {
@@ -156,20 +152,8 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
         );
     }
 
-    const tabs = agent.id === 'topic-tracker'
-        ? (['health', 'topics', 'runs'] as const)
-        : agent.id === 'risk-evaluation'
-        ? (['health', 'risk-updates', 'runs'] as const)
-        : agent.id === 'solution-evaluation'
-        ? (['health', 'solution-updates', 'runs'] as const)
-        : agent.id === 'validation'
-        ? (['health', 'validation-reports', 'runs'] as const)
-        : agent.id === 'consolidation'
+    const tabs = agent.id === 'scoring-agent'
         ? (['health', 'changelogs', 'runs'] as const)
-        : agent.id === 'discovery-agent'
-        ? (['health', 'discovery-proposals', 'runs'] as const)
-        : agent.id === 'validator-agent'
-        ? (['health', 'validation-proposals', 'runs'] as const)
         : (['health', 'config', 'runs'] as const);
 
     return (
@@ -197,7 +181,7 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
                                 : 'border-transparent text-gray-500 hover:text-gray-300'
                         }`}
                     >
-                        {t === 'runs' ? 'Run History' : t === 'discovery-proposals' ? 'Proposals' : t === 'validation-proposals' ? 'Proposals' : t}
+                        {t === 'runs' ? 'Run History' : t}
                     </button>
                 ))}
             </div>
@@ -205,13 +189,7 @@ export default function AgentDetail({ agent, health, onBack }: Props) {
             {/* Tab content */}
             <div className="p-6 max-w-4xl mx-auto">
                 {tab === 'health' && <HealthTab health={health} />}
-                {tab === 'topics' && <TopicsTab />}
-                {tab === 'risk-updates' && <ObservatoryRiskUpdatesTab />}
-                {tab === 'solution-updates' && <ObservatorySolutionUpdatesTab />}
-                {tab === 'validation-reports' && <ValidationReportsTab />}
                 {tab === 'changelogs' && <ChangelogsTab />}
-                {tab === 'discovery-proposals' && <DiscoveryProposalsTab />}
-                {tab === 'validation-proposals' && <ValidationProposalsTab />}
                 {tab === 'config' && <ConfigTab agentId={agent.id} schedule={agent.schedule} functionName={agent.functionName} userId={user?.uid ?? null} />}
                 {tab === 'runs' && <RunsTab agentId={agent.id} />}
             </div>
@@ -338,94 +316,6 @@ function HealthTab({ health }: { health: AgentHealth | null }) {
                     )}
                 </div>
             )}
-        </div>
-    );
-}
-
-// --- Discovery Proposals Tab (read-only summary for Observatory) ---
-
-function DiscoveryProposalsTab() {
-    const [proposals, setProposals] = useState<Array<{ id: string; type: string; proposed_name: string; status: string; signal_count: number; created_at: { seconds: number } | null }>>([]);
-
-    useEffect(() => {
-        const q = query(collection(db, 'discovery_proposals'), orderBy('created_at', 'desc'), limit(50));
-        return onSnapshot(q, (snap) => {
-            setProposals(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as typeof proposals);
-        });
-    }, []);
-
-    if (proposals.length === 0) {
-        return <div className="text-gray-500 text-sm py-8 text-center">No discovery proposals yet</div>;
-    }
-
-    return (
-        <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
-            <div className="grid grid-cols-4 gap-4 px-4 py-2 border-b border-white/10 text-[10px] text-gray-500 uppercase tracking-wider">
-                <div>Proposal</div>
-                <div>Type</div>
-                <div>Signals</div>
-                <div>Status</div>
-            </div>
-            {proposals.map((p) => (
-                <div key={p.id} className="grid grid-cols-4 gap-4 px-4 py-3 border-b border-white/10 text-sm">
-                    <div className="text-gray-300 truncate">{p.proposed_name}</div>
-                    <div>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${p.type === 'new_risk' ? 'bg-red-400/15 text-red-400' : 'bg-green-400/15 text-green-400'}`}>
-                            {p.type === 'new_risk' ? 'RISK' : 'SOLUTION'}
-                        </span>
-                    </div>
-                    <div className="text-gray-300">{p.signal_count}</div>
-                    <div>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.status === 'pending' ? 'bg-yellow-400/10 text-yellow-400' : p.status === 'approved' ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>
-                            {p.status}
-                        </span>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-// --- Validation Proposals Tab (read-only summary for Observatory) ---
-
-function ValidationProposalsTab() {
-    const [proposals, setProposals] = useState<Array<{ id: string; document_type: string; document_name: string; status: string; confidence: number; created_at: { seconds: number } | null }>>([]);
-
-    useEffect(() => {
-        const q = query(collection(db, 'validation_proposals'), orderBy('created_at', 'desc'), limit(50));
-        return onSnapshot(q, (snap) => {
-            setProposals(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as typeof proposals);
-        });
-    }, []);
-
-    if (proposals.length === 0) {
-        return <div className="text-gray-500 text-sm py-8 text-center">No validation proposals yet</div>;
-    }
-
-    return (
-        <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
-            <div className="grid grid-cols-4 gap-4 px-4 py-2 border-b border-white/10 text-[10px] text-gray-500 uppercase tracking-wider">
-                <div>Document</div>
-                <div>Type</div>
-                <div>Confidence</div>
-                <div>Status</div>
-            </div>
-            {proposals.map((p) => (
-                <div key={p.id} className="grid grid-cols-4 gap-4 px-4 py-3 border-b border-white/10 text-sm">
-                    <div className="text-gray-300 truncate">{p.document_name}</div>
-                    <div>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${p.document_type === 'risk' ? 'bg-red-400/15 text-red-400' : 'bg-green-400/15 text-green-400'}`}>
-                            {p.document_type.toUpperCase()}
-                        </span>
-                    </div>
-                    <div className="text-gray-300">{(p.confidence * 100).toFixed(0)}%</div>
-                    <div>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.status === 'pending' ? 'bg-yellow-400/10 text-yellow-400' : p.status === 'approved' ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>
-                            {p.status}
-                        </span>
-                    </div>
-                </div>
-            ))}
         </div>
     );
 }

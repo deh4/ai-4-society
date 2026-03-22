@@ -1,5 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
-import type { NodeType } from "./graph";
+import type { NodeType, EdgeRelationship } from "./graph";
 
 export type ProposalType = "new_node" | "new_edge" | "update_node";
 export type ProposalStatus = "pending" | "approved" | "rejected";
@@ -15,12 +15,19 @@ export interface GraphProposal {
     why_novel?: string;
     key_themes?: string[];
     suggested_parent_risk_id?: string;
+    summary: string;
+    deep_dive: string;
+    score_2026: number;
+    score_2035: number;
+    velocity?: "Critical" | "High" | "Medium" | "Low";
+    implementation_stage?: "Research" | "Policy Debate" | "Pilot" | "Early Adoption" | "Scaling" | "Mainstream";
+    principles: string[];
   };
 
   edge_data?: {
     from_node: string;
     to_node: string;
-    relationship: string;
+    relationship: EdgeRelationship;
     properties?: object;
     reasoning: string;
   };
@@ -42,7 +49,7 @@ export interface GraphProposal {
 
   supporting_signal_ids: string[];
   confidence: number;
-  created_by: "discovery-agent" | "validator-agent";
+  created_by: "discovery-agent" | "scoring-agent";
   status: ProposalStatus;
   admin_notes?: string;
   created_at: Timestamp;

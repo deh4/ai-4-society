@@ -50,7 +50,7 @@
  *   - All nodes use `name` (not risk_name, solution_title, etc.)
  *   - All reviewable entities use `status: "pending" | "approved" | "rejected"`
  *   - Timestamps: camelCase (createdAt, lastUpdated) — NOT snake_case
- *   - Agent IDs: kebab-case ("signal-scout", "discovery-agent", "validator-agent",
+ *   - Agent IDs: kebab-case ("signal-scout", "discovery-agent", "scoring-agent",
  *     "feed-curator", "data-lifecycle", "graph-builder")
  */
 
@@ -108,7 +108,7 @@ export type MilestoneSignificance =
 export type AgentId =
   | "signal-scout"
   | "discovery-agent"
-  | "validator-agent"
+  | "scoring-agent"
   | "feed-curator"
   | "data-lifecycle"
   | "graph-builder";
@@ -332,7 +332,7 @@ export interface Edge {
  * Three shapes, discriminated by `proposal_type`:
  *   - new_node:    Discovery Agent proposes a new risk/solution/stakeholder
  *   - new_edge:    Discovery Agent proposes a relationship between existing nodes
- *   - update_node: Validator Agent proposes field changes to an existing node
+ *   - update_node: Scoring Agent proposes field changes to an existing node
  */
 export interface GraphProposal {
   id: string;
@@ -346,6 +346,13 @@ export interface GraphProposal {
     why_novel?: string;
     key_themes?: string[];
     suggested_parent_risk_id?: string;
+    summary: string;
+    deep_dive: string;
+    score_2026: number;
+    score_2035: number;
+    velocity?: Velocity;
+    implementation_stage?: ImplementationStage;
+    principles: string[];
   };
 
   /** Present when proposal_type === "new_edge". */
@@ -486,10 +493,10 @@ export interface Vote {
  * | Agent ID          | Schedule       | Creates / Modifies                  |
  * |-------------------|----------------|-------------------------------------|
  * | signal-scout      | Every 6 hours  | Signal (pending)                    |
- * | discovery-agent   | Weekly Sun 10Z | GraphProposal (new_node, new_edge)  |
- * | validator-agent   | Weekly Mon 09Z | GraphProposal (update_node)         |
- * | feed-curator      | On demand      | FeedItem, EditorialHook             |
- * | data-lifecycle    | Daily          | Cleans old / orphaned documents     |
+ * | discovery-agent   | Biweekly       | GraphProposal (new_node, new_edge)  |
+ * | scoring-agent     | Monthly 1st    | GraphProposal (update_node)         |
+ * | feed-curator      | Every 6 hours  | FeedItem, EditorialHook             |
+ * | data-lifecycle    | Daily 03:00Z   | Cleans old / orphaned documents     |
  * | graph-builder     | On demand      | GraphSnapshot, NodeSummary          |
  */
 
