@@ -65,6 +65,14 @@ export async function storeSignals(
         fetched_at: FieldValue.serverTimestamp(),
       };
 
+      // V3 fields: harm_status, principles, anti-recursion
+      doc.harm_status = signal.harm_status ?? null;
+      doc.principles = signal.principles ?? [];
+      doc.classification_version = 1;
+      doc.last_classified_by = "signal-classifier";
+      doc.last_classified_at = FieldValue.serverTimestamp();
+      doc.discovery_locked = false;
+
       if (signal.proposed_topic) {
         doc.proposed_topic = signal.proposed_topic;
       }
