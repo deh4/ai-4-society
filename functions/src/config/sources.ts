@@ -34,7 +34,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "eu-ai-office",
     name: "EU AI Office / EUR-Lex",
     type: "rss",
-    url: "https://ec.europa.eu/commission/presscorner/api/rss?language=en&keywords=artificial+intelligence",
+    url: "https://ec.europa.eu/newsroom/dae/rss.cfm",
     domain: "Regulatory",
     credibility: 0.93,
     tier: 0,
@@ -59,24 +59,10 @@ export const DATA_SOURCES: DataSource[] = [
       "ai standard", "nist ai",
     ],
   },
-  // NOTE: OECD has no dedicated AI RSS feed. Using their Ecoscope blog
-  // (WordPress RSS) as the best available proxy; allowlist filters for
-  // AI-relevant content. If this stops working, disable via admin UI.
-  {
-    id: "oecd-ai",
-    name: "OECD AI Observatory",
-    type: "rss",
-    url: "https://oecdecoscope.blog/feed/",
-    domain: "Regulatory",
-    credibility: 0.90,
-    tier: 0,
-    keywordFilter: "allowlist",
-    allowlistTerms: [
-      "ai policy", "artificial intelligence", "ai governance",
-      "ai principles", "oecd ai", "algorithmic", "ai regulation",
-      "machine learning", "generative ai",
-    ],
-  },
+  // NOTE: OECD has no public RSS feed or API for AI content.
+  // oecd.ai offers only an email newsletter; iLibrary was retired end-2024.
+  // Source removed — regulatory/policy coverage provided by EU AI Office,
+  // Brookings, RAND, and other T1 sources.
 
   // ── T1 — Institutional / Research ─────────────────────────────
   {
@@ -154,9 +140,9 @@ export const DATA_SOURCES: DataSource[] = [
   },
   {
     id: "deepmind-blog",
-    name: "DeepMind Blog",
+    name: "Google AI Blog",
     type: "rss",
-    url: "https://deepmind.google/blog/rss.xml",
+    url: "https://blog.google/technology/ai/rss/",
     domain: "AI safety",
     credibility: 0.85,
     tier: 1,
@@ -298,7 +284,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "ieee-spectrum-ai",
     name: "IEEE Spectrum AI",
     type: "rss",
-    url: "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss",
+    url: "https://spectrum.ieee.org/feeds/feed.rss",
     domain: "AI journalism",
     credibility: 0.80,
     tier: 2,
@@ -314,16 +300,8 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 2,
     keywordFilter: "shared-keyword-list",
   },
-  {
-    id: "healthmap",
-    name: "HealthMap (Harvard)",
-    type: "rss",
-    url: "https://healthmap.org/en/",
-    domain: "Biosecurity",
-    credibility: 0.78,
-    tier: 2,
-    keywordFilter: "pass-all",
-  },
+  // HealthMap removed — URL was an HTML dashboard page, not an RSS feed.
+  // Biosecurity coverage provided by WHO DON, ProMED, STAT News, and CDC.
   {
     id: "stat-news",
     name: "STAT News",
@@ -438,16 +416,8 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 4,
     keywordFilter: "api-query",
   },
-  {
-    id: "newsapi",
-    name: "NewsAPI / MediaStack",
-    type: "api",
-    url: "https://newsapi.org/v2/everything?q=(AI+safety+OR+AI+risk)&sortBy=publishedAt&pageSize=20",
-    domain: "News search",
-    credibility: 0.60,
-    tier: 4,
-    keywordFilter: "api-query",
-  },
+  // NewsAPI removed — requires API key (401 without it), free tier is
+  // dev-only with 24h delay. Media coverage already handled by GDELT.
 
   // ── T5 — Newsletter ──────────────────────────────────────────
   {
@@ -465,7 +435,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "import-ai",
     name: "Import AI",
     type: "rss",
-    url: "https://jack-clark.net/feed.xml",
+    url: "https://importai.substack.com/feed",
     domain: "AI newsletter",
     credibility: 0.70,
     tier: 5,
@@ -505,7 +475,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "cdc-mmwr",
     name: "CDC / MMWR",
     type: "rss",
-    url: "https://tools.cdc.gov/podcasts/feed.asp?feedid=183",
+    url: "https://www.cdc.gov/mmwr/rss/mmwrall.xml",
     domain: "Biosecurity",
     credibility: 0.90,
     tier: 5,

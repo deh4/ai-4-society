@@ -10,7 +10,6 @@ const SOURCE_META: Record<
   // T0 — Regulatory
   "eu-ai-office":      { name: "EU AI Office / EUR-Lex",        tier: 0, defaultCredibility: 0.93, category: "Regulatory",          domain: "Regulatory" },
   "nist-ai":           { name: "NIST AI / Federal Register",    tier: 0, defaultCredibility: 0.91, category: "Regulatory",          domain: "Regulatory" },
-  "oecd-ai":           { name: "OECD AI Observatory",           tier: 0, defaultCredibility: 0.90, category: "Regulatory",          domain: "Regulatory" },
   // T1 — Institutional
   "arxiv-ai":          { name: "arXiv CS.AI",                   tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI research" },
   "alignment-forum":   { name: "Alignment Forum",               tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI safety" },
@@ -19,7 +18,7 @@ const SOURCE_META: Record<
   "ai-now-institute":  { name: "AI Now Institute",              tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI policy" },
   "future-of-life":    { name: "Future of Life Institute",      tier: 1, defaultCredibility: 0.88, category: "Institutional",       domain: "AI safety" },
   "anthropic-blog":    { name: "Anthropic Research Blog",       tier: 1, defaultCredibility: 0.88, category: "Institutional",       domain: "AI safety" },
-  "deepmind-blog":     { name: "DeepMind Blog",                 tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI safety" },
+  "deepmind-blog":     { name: "Google AI Blog",                 tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI safety" },
   "aiid":              { name: "AI Incident Database (AIID)",   tier: 1, defaultCredibility: 0.85, category: "Institutional",       domain: "AI harms" },
   "miri-blog":         { name: "MIRI Blog",                     tier: 1, defaultCredibility: 0.82, category: "Institutional",       domain: "AI alignment" },
   "promedmail":        { name: "ProMED (ISID)",                 tier: 1, defaultCredibility: 0.90, category: "Institutional",       domain: "Biosecurity" },
@@ -36,7 +35,6 @@ const SOURCE_META: Record<
   "ars-ai":            { name: "Ars Technica AI",               tier: 2, defaultCredibility: 0.75, category: "Journalism",          domain: "AI journalism" },
   "ieee-spectrum-ai":  { name: "IEEE Spectrum AI",              tier: 2, defaultCredibility: 0.80, category: "Journalism",          domain: "AI journalism" },
   "guardian-ai":       { name: "The Guardian AI",               tier: 2, defaultCredibility: 0.75, category: "Journalism",          domain: "AI journalism" },
-  "healthmap":         { name: "HealthMap (Harvard)",            tier: 2, defaultCredibility: 0.78, category: "Journalism",          domain: "Biosecurity" },
   "stat-news":         { name: "STAT News",                     tier: 2, defaultCredibility: 0.80, category: "Journalism",          domain: "Biosecurity" },
   "carbon-brief":      { name: "Carbon Brief",                  tier: 2, defaultCredibility: 0.82, category: "Journalism",          domain: "Climate" },
   "climate-central":   { name: "Climate Central",               tier: 2, defaultCredibility: 0.78, category: "Journalism",          domain: "Climate" },
@@ -50,7 +48,6 @@ const SOURCE_META: Record<
   "ea-forum":          { name: "EA Forum / 80,000 Hours",       tier: 3, defaultCredibility: 0.72, category: "Community",           domain: "AI safety community" },
   // T4 — Search
   "gdelt-ai":          { name: "GDELT DOC API",                 tier: 4, defaultCredibility: 0.50, category: "Search",              domain: "Media monitoring" },
-  "newsapi":           { name: "NewsAPI / MediaStack",           tier: 4, defaultCredibility: 0.60, category: "Search",              domain: "News search" },
   // T5 — Newsletter
   "tldr-ai":           { name: "TLDR AI",                       tier: 5, defaultCredibility: 0.65, category: "Newsletter",          domain: "AI newsletter" },
   "import-ai":         { name: "Import AI",                     tier: 5, defaultCredibility: 0.70, category: "Newsletter",          domain: "AI newsletter" },
