@@ -59,11 +59,14 @@ export const DATA_SOURCES: DataSource[] = [
       "ai standard", "nist ai",
     ],
   },
+  // NOTE: OECD has no dedicated AI RSS feed. Using their Ecoscope blog
+  // (WordPress RSS) as the best available proxy; allowlist filters for
+  // AI-relevant content. If this stops working, disable via admin UI.
   {
     id: "oecd-ai",
     name: "OECD AI Observatory",
     type: "rss",
-    url: "https://www.oecd.org/en/rss/new-on-site.xml",
+    url: "https://oecdecoscope.blog/feed/",
     domain: "Regulatory",
     credibility: 0.90,
     tier: 0,
@@ -71,6 +74,7 @@ export const DATA_SOURCES: DataSource[] = [
     allowlistTerms: [
       "ai policy", "artificial intelligence", "ai governance",
       "ai principles", "oecd ai", "algorithmic", "ai regulation",
+      "machine learning", "generative ai",
     ],
   },
 
