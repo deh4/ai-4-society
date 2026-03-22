@@ -914,3 +914,4 @@ export { scheduledDiscovery, triggerDiscovery } from "./agents/discovery/index.j
 export { scheduledValidator, triggerValidator } from "./agents/validator/index.js";
 export { approveGraphProposal, rejectGraphProposal } from "./agents/approval/index.js";
 export { scheduledPodcast, triggerPodcast } from "./agents/podcast/index.js";
+export { sitemap } from "./sitemap.js";

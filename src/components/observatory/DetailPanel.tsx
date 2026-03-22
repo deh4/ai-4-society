@@ -5,6 +5,7 @@ import { useGraph } from "../../store/GraphContext";
 import EvidenceList from "./EvidenceList";
 import PerceptionGap from "./PerceptionGap";
 import VoteButton from "./VoteButton";
+import { toSlug } from "../../lib/slugs";
 import type { GraphNode, Edge, NodeType } from "../../types/graph";
 
 function useIsMobile() {
@@ -269,9 +270,13 @@ export default function DetailPanel({
               };
               const nameColor = typeColors[nodeType] ?? "text-[var(--accent-structural)]";
               return (
-                <button
+                <a
                   key={`${cn.id}-${cn.relationship}`}
-                  onClick={() => onNavigate(cn.id)}
+                  href={`/observatory/${toSlug(cn.name)}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate(cn.id);
+                  }}
                   className="w-full text-left flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-white/5 hover:bg-white/[0.08] transition-colors"
                 >
                   <span className="text-gray-500 text-[10px] italic shrink-0">
@@ -280,7 +285,7 @@ export default function DetailPanel({
                   <span className={`${nameColor} truncate`}>
                     {cn.name}
                   </span>
-                </button>
+                </a>
               );
             })}
           </div>
