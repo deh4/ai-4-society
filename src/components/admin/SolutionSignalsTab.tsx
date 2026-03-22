@@ -15,6 +15,8 @@ import { AdminNotesInput } from "./AdminNotesInput";
 import { BulkActionBar } from "./BulkActionBar";
 import { SignalDateGroup } from "./SignalDateGroup";
 import { AssigneeDropdown } from "./AssigneeDropdown";
+import HarmStatusBadge from "../shared/HarmStatusBadge";
+import PrincipleTag from "../shared/PrincipleTag";
 import type { SolutionSignalItem } from "../../types/review";
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,8 @@ export default function SolutionSignalsTab() {
           relatedNodeIds: (data.related_node_ids as string[]) ?? [],
           assigned_to: data.assigned_to as string | undefined,
           assigned_by: data.assigned_by as string | undefined,
+          harm_status: (data.harm_status as "incident" | "hazard" | null) ?? null,
+          principles: (data.principles as string[]) ?? [],
         };
       });
       setItems(signals);
@@ -255,9 +259,24 @@ export default function SolutionSignalsTab() {
                 {selectedItem.signalType && (
                   <div>
                     <span className="text-[10px] text-gray-500">Signal Type</span>
-                    <div className="text-sm text-white/80 mt-0.5">{selectedItem.signalType}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm text-white/80">{selectedItem.signalType}</span>
+                      <HarmStatusBadge status={selectedItem.harm_status} />
+                    </div>
                   </div>
                 )}
+
+                {selectedItem.principles && selectedItem.principles.length > 0 && (
+                  <div>
+                    <span className="text-[10px] text-gray-500">Principles</span>
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {selectedItem.principles.map((p) => (
+                        <PrincipleTag key={p} id={p} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {selectedItem.solutionIds.length > 0 && (
                   <div>
                     <span className="text-[10px] text-gray-500">Solution Categories</span>
