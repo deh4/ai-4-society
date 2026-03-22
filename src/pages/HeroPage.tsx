@@ -2,7 +2,6 @@
 import { Helmet } from "react-helmet-async";
 import Layout from "../components/shared/Layout";
 import FeaturedStory from "../components/landing/FeaturedStory";
-import TheRadar from "../components/landing/TheRadar";
 import TrustFooter from "../components/landing/TrustFooter";
 
 export default function HeroPage() {
@@ -28,7 +27,6 @@ export default function HeroPage() {
 
       <div className="max-w-2xl mx-auto px-4">
         <FeaturedStory />
-        <TheRadar />
         <TrustFooter />
       </div>
     </Layout>
