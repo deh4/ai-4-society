@@ -24,6 +24,7 @@ export interface ClassifiedSignal {
   proposed_topic?: string;
   harm_status: "incident" | "hazard" | null;
   principles: string[];
+  image_url?: string;
 }
 
 export interface ClassificationResult {
@@ -241,6 +242,7 @@ export async function classifyArticles(
             proposed_topic: topic,
             harm_status: harmStatus,
             principles,
+            image_url: article.image_url,
           });
           continue;
         }
@@ -268,6 +270,7 @@ export async function classifyArticles(
           confidence_score: confidence,
           harm_status: harmStatus,
           principles,
+          image_url: article.image_url,
         });
       }
 
