@@ -158,11 +158,21 @@ export const approveGraphProposal = onCall(
         const edgeId = `${fromNode}-${toNode}-${relationship}`;
         const edgeRef = db.doc(`edges/${edgeId}`);
 
-        // Look up node types for from_type and to_type (required by Edge schema)
+        // Look up node types for from_type and to_type
         const fromSnap = await tx.get(db.doc(`nodes/${fromNode}`));
         const toSnap = await tx.get(db.doc(`nodes/${toNode}`));
         if (!fromSnap.exists || !toSnap.exists) {
-          throw new HttpsError("failed-precondition", "Referenced nodes no longer exist");
+          const missing = [];
+          if (!fromSnap.exists) missing.push(`from_node "${fromNode}"`);
+          if (!toSnap.exists) missing.push(`to_node "${toNode}"`);
+          logger.warn(`Edge approval: missing nodes: ${missing.join(", ")} — auto-rejecting`);
+          tx.update(proposalRef, {
+            status: "rejected",
+            reviewed_at: FieldValue.serverTimestamp(),
+            reviewed_by: uid,
+            rejection_reason: `Auto-rejected: referenced nodes do not exist (${missing.join(", ")})`,
+          });
+          return { success: true, action: "auto_rejected", reason: `Missing nodes: ${missing.join(", ")}` };
         }
 
         tx.set(edgeRef, {

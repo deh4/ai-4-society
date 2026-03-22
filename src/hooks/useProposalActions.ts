@@ -10,8 +10,16 @@ export function useProposalActions() {
     setUpdating(true);
     try {
       const approve = httpsCallable(functions, "approveGraphProposal");
-      await approve({ proposalId });
+      const result = await approve({ proposalId });
+      const data = result.data as Record<string, unknown>;
+      if (data.action === "auto_rejected") {
+        alert(`Proposal auto-rejected: ${data.reason as string}`);
+      }
       return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Approve failed: ${msg}`);
+      return false;
     } finally {
       setUpdating(false);
     }
@@ -28,6 +36,10 @@ export function useProposalActions() {
       const reject = httpsCallable(functions, "rejectGraphProposal");
       await reject({ proposalId, reason });
       return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Reject failed: ${msg}`);
+      return false;
     } finally {
       setUpdating(false);
     }
