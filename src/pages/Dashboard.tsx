@@ -11,9 +11,8 @@ export default function Dashboard() {
     const navigate = useNavigate();
 
     const selectedRisk = riskId ? risks.find(r => r.id === riskId) : undefined;
-    const relatedSolution = selectedRisk
-        ? solutions.find(s => s.parent_risk_id === selectedRisk.id)
-        : undefined;
+    // parent_risk_id removed in V3; edge-based lookups not yet available in this view
+    const relatedSolution = undefined as typeof solutions[number] | undefined;
 
     const handleSelectRisk = (id: string) => {
         navigate(`/dashboard/${id}`);

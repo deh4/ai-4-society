@@ -26,7 +26,6 @@ export interface Risk {
     category: string;
     score_2026: number;
     score_2035: number;
-    connected_to: string[];
     velocity: 'High' | 'Medium' | 'Low' | 'Critical';
     summary: string;
     deep_dive: string;
