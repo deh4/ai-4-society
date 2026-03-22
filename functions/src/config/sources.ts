@@ -106,7 +106,7 @@ export const DATA_SOURCES: DataSource[] = [
     maxItems: 10,
     credibility: 0.90,
     tier: 1,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "ai-now-institute",
@@ -116,7 +116,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI policy",
     credibility: 0.85,
     tier: 1,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "future-of-life",
@@ -126,7 +126,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI safety",
     credibility: 0.88,
     tier: 1,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   // Anthropic Research Blog removed — no native RSS feed exists.
   // Confirmed by multiple sources; site is custom-built, not WordPress.
@@ -138,7 +138,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI safety",
     credibility: 0.85,
     tier: 1,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   // AI Incident Database removed — Gatsby site with no confirmed RSS plugin.
   // No aggregator indexes a feed from this site.
@@ -150,7 +150,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI alignment",
     credibility: 0.82,
     tier: 1,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   // ProMED removed — RSS permanently shut down June 2023; now behind
   // paywall. Biosecurity coverage via WHO DON, STAT News, and CDC MMWR.
@@ -212,7 +212,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "Policy / AI",
     credibility: 0.87,
     tier: 1,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "digichina",
@@ -222,7 +222,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "China / AI policy",
     credibility: 0.87,
     tier: 1,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
 
   // ── T2 — Journalism ──────────────────────────────────────────
@@ -244,7 +244,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI journalism",
     credibility: 0.75,
     tier: 2,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "ars-ai",
@@ -264,7 +264,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI journalism",
     credibility: 0.80,
     tier: 2,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "guardian-ai",
@@ -274,7 +274,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI journalism",
     credibility: 0.75,
     tier: 2,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   // HealthMap removed — URL was an HTML dashboard page, not an RSS feed.
   // Biosecurity coverage provided by WHO DON, ProMED, STAT News, and CDC.
@@ -336,7 +336,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI accountability",
     credibility: 0.78,
     tier: 2,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
 
   // ── T3 — Community ───────────────────────────────────────────
@@ -358,7 +358,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI tech",
     credibility: 0.60,
     tier: 3,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "lesswrong",
@@ -405,7 +405,7 @@ export const DATA_SOURCES: DataSource[] = [
     maxItems: 20,
     credibility: 0.65,
     tier: 5,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "import-ai",
@@ -415,7 +415,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI newsletter",
     credibility: 0.70,
     tier: 5,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "last-week-in-ai",
@@ -425,7 +425,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI newsletter",
     credibility: 0.65,
     tier: 5,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "bens-bites",
@@ -435,7 +435,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "AI newsletter",
     credibility: 0.65,
     tier: 5,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "chinai-newsletter",
@@ -445,7 +445,7 @@ export const DATA_SOURCES: DataSource[] = [
     domain: "China / AI",
     credibility: 0.72,
     tier: 5,
-    keywordFilter: "shared-keyword-list",
+    keywordFilter: "pass-all",
   },
   {
     id: "cdc-mmwr",

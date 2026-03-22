@@ -40,7 +40,7 @@ interface GraphNodeInfo {
 }
 
 const BATCH_SIZE = 25;
-const RELEVANCE_THRESHOLD = 0.8;
+const RELEVANCE_THRESHOLD = 0.6;
 
 function buildSystemPrompt(nodes: GraphNodeInfo[]): string {
   const riskNodes = nodes.filter((n) => n.type === "risk");
@@ -201,6 +201,12 @@ export async function classifyArticles(
         harm_status?: "incident" | "hazard" | null;
         principles?: string[];
       }> = JSON.parse(result.response.text());
+
+      const relevantCount = parsed.filter((i) => i.relevant).length;
+      const irrelevantCount = parsed.length - relevantCount;
+      if (irrelevantCount > 0) {
+        logger.info(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${irrelevantCount}/${parsed.length} marked irrelevant by Gemini`);
+      }
 
       for (const item of parsed) {
         if (!item.relevant) continue;
