@@ -13,7 +13,6 @@ interface LifecycleStats {
   graphProposalsExpired: number;
   feedItemsDeleted: number;
   archivedSignalsDeleted: number;
-  v1ProposalsDeleted: number;
 }
 
 function daysAgo(days: number): Date {
@@ -45,7 +44,7 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
   const stats: LifecycleStats = {
     signalsArchived: 0, signalsDeleted: 0, evidenceMarkedStale: 0,
     agentRunsDeleted: 0, graphProposalsDeleted: 0, graphProposalsExpired: 0,
-    feedItemsDeleted: 0, archivedSignalsDeleted: 0, v1ProposalsDeleted: 0,
+    feedItemsDeleted: 0, archivedSignalsDeleted: 0,
   };
 
   // 1. Archive approved/edited signals older than 90 days
@@ -147,15 +146,6 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
       .where("archivedAt", "<", daysAgo(365)),
     BATCH_SIZE,
   );
-
-  // 9. v1 cleanup: delete remaining discovery_proposals and validation_proposals
-  const v1DiscoveryCount = await deleteBatched(
-    db, db.collection("discovery_proposals"), BATCH_SIZE,
-  );
-  const v1ValidationCount = await deleteBatched(
-    db, db.collection("validation_proposals"), BATCH_SIZE,
-  );
-  stats.v1ProposalsDeleted = v1DiscoveryCount + v1ValidationCount;
 
   // Note: changelogs are kept indefinitely (audit trail, low volume)
 
