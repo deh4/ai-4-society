@@ -148,15 +148,6 @@ export async function runDataLifecycle(): Promise<LifecycleStats> {
     BATCH_SIZE,
   );
 
-  // 9. v1 cleanup: delete remaining discovery_proposals and validation_proposals
-  const v1DiscoveryCount = await deleteBatched(
-    db, db.collection("discovery_proposals"), BATCH_SIZE,
-  );
-  const v1ValidationCount = await deleteBatched(
-    db, db.collection("validation_proposals"), BATCH_SIZE,
-  );
-  stats.v1ProposalsDeleted = v1DiscoveryCount + v1ValidationCount;
-
   // Note: changelogs are kept indefinitely (audit trail, low volume)
 
   logger.info("Data lifecycle v2 complete:", stats);
