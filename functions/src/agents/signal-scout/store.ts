@@ -73,6 +73,10 @@ export async function storeSignals(
       doc.last_classified_at = FieldValue.serverTimestamp();
       doc.discovery_locked = false;
 
+      if (signal.image_url) {
+        doc.image_url = signal.image_url;
+      }
+
       if (signal.proposed_topic) {
         doc.proposed_topic = signal.proposed_topic;
       }

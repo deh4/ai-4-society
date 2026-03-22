@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { useParams } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Layout from "../components/shared/Layout";
 import GraphView from "../components/observatory/GraphView";
 import DetailPanel from "../components/observatory/DetailPanel";
+import RisksSidebar from "../components/observatory/RisksSidebar";
 import ObservatoryTimeline from "../components/observatory/ObservatoryTimeline";
 import NodeTypeFilter from "../components/observatory/NodeTypeFilter";
 import { useGraph } from "../store/GraphContext";
@@ -30,6 +31,7 @@ export default function Observatory() {
   const [activePrinciples, setActivePrinciples] = useState<Set<string>>(
     () => new Set<string>()
   );
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Resolve URL param (slug or legacy Firestore ID) → Firestore node ID.
   // Runs whenever the URL param or snapshot changes.
@@ -70,6 +72,11 @@ export default function Observatory() {
       window.history.replaceState(null, "", "/observatory");
     }
   }, []);
+
+  const handleSidebarSelect = useCallback((id: string) => {
+    handleSelectNode(id);
+    setDrawerOpen(false);
+  }, [handleSelectNode]);
 
   const handleNavigateNode = useCallback((id: string) => {
     setSelectedNodeId(id);
@@ -200,13 +207,25 @@ export default function Observatory() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div>
-              <h1 className="text-xl font-bold">Observatory</h1>
-              {snapshot && (
-                <p className="text-xs text-gray-500">
-                  {snapshot.nodeCount} nodes · {snapshot.edgeCount} edges
-                </p>
-              )}
+            <div className="flex items-center gap-2">
+              {/* Mobile drawer toggle */}
+              <button
+                onClick={() => setDrawerOpen((o) => !o)}
+                className="lg:hidden p-1.5 rounded hover:bg-white/10 transition-colors"
+                aria-label="Toggle risk list"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-xl font-bold">Observatory</h1>
+                {snapshot && (
+                  <p className="text-xs text-gray-500">
+                    {snapshot.nodeCount} nodes · {snapshot.edgeCount} edges
+                  </p>
+                )}
+              </div>
             </div>
             {activeTab === "graph" && (
               <NodeTypeFilter
@@ -247,7 +266,17 @@ export default function Observatory() {
 
         {/* Tab content */}
         {!loading && activeTab === "graph" && (
-          <div className="lg:grid lg:grid-cols-[3fr_2fr] gap-4">
+          <div className="lg:grid lg:grid-cols-[240px_1fr_2fr] gap-4">
+            {/* Desktop sidebar — hidden on mobile (uses drawer instead) */}
+            <div className="hidden lg:block border-r border-white/10 -mr-4 pr-0">
+              <div className="h-[calc(100vh-180px)] sticky top-4">
+                <RisksSidebar
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={handleSidebarSelect}
+                />
+              </div>
+            </div>
+
             <div className="min-w-0">
               <GraphView
                 selectedNodeId={selectedNodeId}
@@ -266,7 +295,7 @@ export default function Observatory() {
                     nodeId={selectedNodeId}
                     onClose={() => handleSelectNode(null)}
                     onNavigate={handleNavigateNode}
-                    inline
+                    mode="inline"
                   />
                 )}
               </AnimatePresence>
@@ -279,15 +308,45 @@ export default function Observatory() {
         )}
       </div>
 
-      {/* Mobile/tablet overlay panel — hidden on lg */}
+      {/* Mobile left drawer — risks sidebar */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDrawerOpen(false)}
+              className="lg:hidden fixed inset-0 bg-black/50 z-30"
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[var(--bg-primary)] border-r border-white/10 z-40"
+            >
+              <RisksSidebar
+                selectedNodeId={selectedNodeId}
+                onSelectNode={handleSidebarSelect}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile bottom sheet — detail panel */}
       <AnimatePresence>
         {selectedNodeId && (
           <div className="lg:hidden">
             <DetailPanel
-              key={`overlay-${selectedNodeId}`}
+              key={`bottomSheet-${selectedNodeId}`}
               nodeId={selectedNodeId}
               onClose={() => handleSelectNode(null)}
               onNavigate={handleNavigateNode}
+              mode="bottomSheet"
             />
           </div>
         )}

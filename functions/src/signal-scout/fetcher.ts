@@ -9,6 +9,7 @@ export interface RawArticle {
   source_id: string;
   published_date: string; // ISO string
   snippet?: string;
+  image_url?: string;
 }
 
 const rssParser = new Parser({
@@ -18,16 +19,80 @@ const rssParser = new Parser({
   },
 });
 
+async function extractOgImage(articleUrl: string): Promise<string | undefined> {
+  if (!articleUrl) return undefined;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5_000);
+    const res = await fetch(articleUrl, {
+      headers: { "User-Agent": "AI4Society-SignalScout/2.0" },
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return undefined;
+
+    // Only read first 50KB to find OG tags in <head>
+    const reader = res.body?.getReader();
+    if (!reader) return undefined;
+    let html = "";
+    const decoder = new TextDecoder();
+    while (html.length < 50_000) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      html += decoder.decode(value, { stream: true });
+    }
+    reader.cancel();
+
+    // Match og:image or og:image:secure_url
+    const match = html.match(
+      /<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i
+    ) ?? html.match(
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i
+    );
+
+    if (!match?.[1]) return undefined;
+
+    // Resolve relative URLs
+    let imageUrl = match[1];
+    if (imageUrl.startsWith("//")) {
+      imageUrl = `https:${imageUrl}`;
+    } else if (imageUrl.startsWith("/")) {
+      const base = new URL(articleUrl);
+      imageUrl = `${base.origin}${imageUrl}`;
+    }
+
+    return imageUrl;
+  } catch {
+    return undefined;
+  }
+}
+
 async function fetchRSS(source: DataSource): Promise<RawArticle[]> {
   const feed = await rssParser.parseURL(source.url);
-  return (feed.items ?? []).map((item) => ({
-    title: item.title ?? "Untitled",
-    url: item.link ?? "",
-    source_name: source.name,
-    source_id: source.id,
-    published_date: item.isoDate ?? new Date().toISOString(),
-    snippet: item.contentSnippet?.slice(0, 500),
-  }));
+  const articles: RawArticle[] = [];
+
+  for (const item of feed.items ?? []) {
+    // Try RSS enclosure first (common for media-rich feeds)
+    let image_url = (item.enclosure as { url?: string } | undefined)?.url;
+
+    // Fall back to OG meta tag extraction
+    if (!image_url && item.link) {
+      image_url = await extractOgImage(item.link);
+    }
+
+    articles.push({
+      title: item.title ?? "Untitled",
+      url: item.link ?? "",
+      source_name: source.name,
+      source_id: source.id,
+      published_date: item.isoDate ?? new Date().toISOString(),
+      snippet: item.contentSnippet?.slice(0, 500),
+      image_url,
+    });
+  }
+
+  return articles;
 }
 
 function parseApiDate(raw: string | undefined): string {

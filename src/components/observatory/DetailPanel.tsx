@@ -24,7 +24,7 @@ interface DetailPanelProps {
   nodeId: string;
   onClose: () => void;
   onNavigate: (nodeId: string) => void;
-  inline?: boolean;
+  mode?: "overlay" | "inline" | "bottomSheet";
 }
 
 const TYPE_BADGES: Record<NodeType, { label: string; color: string }> = {
@@ -39,7 +39,7 @@ export default function DetailPanel({
   nodeId,
   onClose,
   onNavigate,
-  inline = false,
+  mode = "overlay",
 }: DetailPanelProps) {
   // Used only in the overlay (non-inline) path
   const isMobile = useIsMobile();
@@ -49,13 +49,19 @@ export default function DetailPanel({
   const [loading, setLoading] = useState(true);
   const [showDeepDive, setShowDeepDive] = useState(false);
 
-  const panelClass = isMobile
-    ? "fixed bottom-0 left-0 right-0 h-[58vh] bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl"
-    : "fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto";
+  const panelClass =
+    mode === "inline"
+      ? "" // inline has its own wrapper
+      : mode === "bottomSheet"
+        ? "fixed bottom-0 left-0 right-0 h-[58vh] bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl"
+        : isMobile
+          ? "fixed bottom-0 left-0 right-0 h-[58vh] bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl"
+          : "fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto";
 
-  const panelAnim = isMobile
-    ? { initial: { y: "100%" }, animate: { y: 0 }, exit: { y: "100%" } }
-    : { initial: { x: "100%" }, animate: { x: 0 }, exit: { x: "100%" } };
+  const panelAnim =
+    mode === "bottomSheet" || isMobile
+      ? { initial: { y: "100%" }, animate: { y: 0 }, exit: { y: "100%" } }
+      : { initial: { x: "100%" }, animate: { x: 0 }, exit: { x: "100%" } };
 
   const summary = summaries.find((s) => s.node_id === nodeId);
 
@@ -84,7 +90,7 @@ export default function DetailPanel({
     const loadingInner = (
       <div className="text-gray-500 text-xs animate-pulse">Loading...</div>
     );
-    if (inline) {
+    if (mode === "inline") {
       return (
         <div className="overflow-y-auto rounded-lg border border-white/10 bg-[var(--bg-primary)] h-[calc(100vh-220px)] p-4">
           {loadingInner}
@@ -97,7 +103,7 @@ export default function DetailPanel({
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className={`${panelClass} p-4`}
       >
-        {isMobile && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
+        {(mode === "bottomSheet" || isMobile) && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
         {loadingInner}
       </motion.div>
     );
@@ -112,7 +118,7 @@ export default function DetailPanel({
         <div className="text-gray-500 text-xs">Node not found.</div>
       </>
     );
-    if (inline) {
+    if (mode === "inline") {
       return (
         <div className="overflow-y-auto rounded-lg border border-white/10 bg-[var(--bg-primary)] h-[calc(100vh-220px)] p-4">
           {notFoundInner}
@@ -125,7 +131,7 @@ export default function DetailPanel({
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className={`${panelClass} p-4`}
       >
-        {isMobile && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
+        {(mode === "bottomSheet" || isMobile) && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
         {notFoundInner}
       </motion.div>
     );
@@ -329,7 +335,7 @@ export default function DetailPanel({
     </div>
   );
 
-  if (inline) {
+  if (mode === "inline") {
     return (
       <div className="overflow-y-auto rounded-lg border border-white/10 bg-[var(--bg-primary)] h-[calc(100vh-220px)]">
         {mainContent}
@@ -344,7 +350,7 @@ export default function DetailPanel({
       className={panelClass}
     >
       {/* Drag handle (mobile only) */}
-      {isMobile && (
+      {(mode === "bottomSheet" || isMobile) && (
         <div className="w-10 h-1 bg-white/20 rounded-full mx-auto -mt-1 mb-1" />
       )}
       {mainContent}

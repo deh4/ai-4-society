@@ -11,6 +11,7 @@ export interface EditorialHook {
   source_name: string;
   source_credibility: number;
   published_date: string;
+  image_url?: string;
   generated_at: Timestamp | null;
   reviewed_by: string | null;
   reviewed_at: Timestamp | null;
