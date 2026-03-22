@@ -55,7 +55,6 @@ const SOURCE_META: Record<
   "bens-bites":        { name: "Ben's Bites",                   tier: 5, defaultCredibility: 0.65, category: "Newsletter",          domain: "AI newsletter" },
   "chinai-newsletter": { name: "ChinAI Newsletter",             tier: 5, defaultCredibility: 0.72, category: "Newsletter",          domain: "China / AI" },
   "cdc-mmwr":          { name: "CDC / MMWR",                    tier: 5, defaultCredibility: 0.90, category: "Newsletter",          domain: "Biosecurity" },
-  "the-batch":         { name: "The Batch (deeplearning.ai)",   tier: 5, defaultCredibility: 0.68, category: "Newsletter",          domain: "AI newsletter" },
   // T6 — Data Infrastructure
   "semantic-scholar":  { name: "Semantic Scholar API",           tier: 6, defaultCredibility: 0.65, category: "Data Infrastructure", domain: "Academic search" },
 };

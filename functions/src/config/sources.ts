@@ -398,7 +398,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "ea-forum",
     name: "EA Forum / 80,000 Hours",
     type: "rss",
-    url: "https://forum.effectivealtruism.org/feed.xml?view=tagRss&tag=ai-safety",
+    url: "https://forum.effectivealtruism.org/feed.xml?view=frontpage-rss&karmaThreshold=25",
     domain: "AI safety community",
     credibility: 0.72,
     tier: 3,
@@ -455,7 +455,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "bens-bites",
     name: "Ben's Bites",
     type: "rss",
-    url: "https://bensbites.beehiiv.com/feed",
+    url: "https://www.bensbites.com/feed",
     domain: "AI newsletter",
     credibility: 0.65,
     tier: 5,
@@ -481,16 +481,9 @@ export const DATA_SOURCES: DataSource[] = [
     tier: 5,
     keywordFilter: "pass-all",
   },
-  {
-    id: "the-batch",
-    name: "The Batch (deeplearning.ai)",
-    type: "rss",
-    url: "https://www.deeplearning.ai/the-batch/rss/",
-    domain: "AI newsletter",
-    credibility: 0.68,
-    tier: 5,
-    keywordFilter: "shared-keyword-list",
-  },
+  // The Batch (deeplearning.ai) removed — no native RSS feed; email-only.
+  // Known gap since 2019. AI newsletter coverage via TLDR AI, Import AI,
+  // Last Week in AI, and Ben's Bites.
 
   // ── T6 — Data Infrastructure ─────────────────────────────────
   {
