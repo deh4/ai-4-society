@@ -30,4 +30,14 @@ export interface Signal {
     relevance: number;
   }>;
   related_node_ids: string[];
+
+  // Classification dimensions (V3)
+  harm_status?: "incident" | "hazard" | null;
+  principles?: string[];  // P01-P10 IDs
+
+  // Anti-recursion (V3)
+  classification_version?: number;
+  last_classified_by?: string;
+  last_classified_at?: Timestamp;
+  discovery_locked?: boolean;
 }
