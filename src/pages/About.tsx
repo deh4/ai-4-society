@@ -9,27 +9,57 @@ const SOURCE_TIERS = [
     tier: "T1 — Institutional",
     examples: "OECD AI Observatory, EU AI Office, Nature, Science",
     credibility: "0.85–0.95",
+    desc: "Peer-reviewed research, official policy documents, international organizations",
   },
   {
     tier: "T2 — Quality Journalism",
     examples: "MIT Tech Review, Ars Technica, Wired, Reuters",
     credibility: "0.70–0.85",
+    desc: "Established tech and science journalism with editorial standards",
   },
   {
     tier: "T3 — Tech / Community",
     examples: "TechCrunch, The Verge, Hacker News",
     credibility: "0.50–0.70",
+    desc: "Industry news and community discussion platforms",
   },
   {
     tier: "T4 — Active Search",
     examples: "Google Custom Search, GDELT",
     credibility: "0.40–0.70",
+    desc: "Programmatic search across the broader web for emerging topics",
   },
   {
     tier: "T5 — Newsletters",
     examples: "TLDR AI, Import AI, Last Week in AI",
     credibility: "0.60–0.75",
+    desc: "Curated AI newsletters by domain experts",
   },
+  {
+    tier: "T6 — Safety Research",
+    examples: "Alignment Forum, CAIS, AI Now Institute",
+    credibility: "0.75–0.90",
+    desc: "Dedicated AI safety and governance research organizations",
+  },
+  {
+    tier: "T7 — Domain-Specific",
+    examples: "IEEE Spectrum, Nature Machine Intelligence, The Guardian AI",
+    credibility: "0.70–0.85",
+    desc: "Specialized publications covering AI from specific domain perspectives",
+  },
+];
+
+const OECD_PRINCIPLES = [
+  { id: "P01", name: "Inclusive Growth", desc: "AI should benefit people and the planet, driving inclusive growth, sustainable development, and well-being." },
+  { id: "P02", name: "Human-Centred Values", desc: "AI systems should respect the rule of law, human rights, democratic values, and diversity." },
+  { id: "P03", name: "Transparency & Explainability", desc: "AI systems should be transparent and responsible disclosure should be ensured." },
+  { id: "P04", name: "Robustness & Safety", desc: "AI systems should function robustly, safely, and securely throughout their lifecycle." },
+  { id: "P05", name: "Accountability", desc: "Organizations developing AI should be accountable for their proper functioning." },
+  { id: "P06", name: "Investing in R&D", desc: "Governments should invest in AI research and development to spur innovation." },
+  { id: "P07", name: "Digital Ecosystem", desc: "Governments should foster a digital ecosystem for trustworthy AI." },
+  { id: "P08", name: "Skills & Labour", desc: "Governments should enable people to develop skills for AI and support fair transitions." },
+  { id: "P09", name: "International Cooperation", desc: "Governments should cooperate across borders to share information and foster interoperability." },
+  { id: "P10", name: "Domestic Policy", desc: "Governments should adopt national AI policies and regulatory frameworks." },
 ];
 
 const RELEASE_NOTES = [
@@ -180,41 +210,110 @@ export default function About() {
           </p>
         </Section>
 
-        {/* === How It Works === */}
-        <Section title="How It Works" id="how-it-works">
+        {/* === Methodology === */}
+        <Section title="Methodology" id="methodology">
           <p>
-            Every 12 hours, our Signal Scout agent scans news sources, research
-            papers, and policy documents for AI-related developments. Each
-            article passes through a two-stage filter:
+            The Observatory uses a multi-agent AI pipeline with mandatory human
+            review gates. Every piece of information visible to the public has
+            been approved by a human reviewer. Here is how the pipeline works
+            end-to-end.
           </p>
-          <ol className="list-decimal list-inside space-y-2 pl-2">
-            <li>
-              <strong>Cheap filter</strong> — checks source credibility,
-              recency, deduplication, and keyword relevance. Cuts irrelevant
-              articles before any AI processing.
-            </li>
-            <li>
-              <strong>AI classification</strong> — Gemini analyzes surviving
-              articles, classifies them against our risk/solution taxonomy, and
-              assigns confidence and impact scores.
-            </li>
-          </ol>
-          <p>
-            Every classified signal then enters human review. Our volunteer
-            reviewers approve, reject, or edit each signal before it appears in
-            the public observatory. Nothing reaches the public without a human
-            check.
-          </p>
-          <div className="flex items-center gap-3 text-xs text-gray-500 bg-white/5 rounded-lg p-3 mt-4">
+
+          <h3 className="text-base font-semibold text-white mt-6 mb-2">Pipeline Overview</h3>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 bg-white/5 rounded-lg p-3">
             <span className="shrink-0">Sources</span>
             <span>→</span>
             <span className="shrink-0">Signal Scout</span>
             <span>→</span>
-            <span className="shrink-0">Human Review</span>
+            <span className="shrink-0 text-yellow-400">Gate 1</span>
             <span>→</span>
-            <span className="shrink-0 text-[var(--accent-structural)]">
-              Observatory
-            </span>
+            <span className="shrink-0">Discovery Agent</span>
+            <span>→</span>
+            <span className="shrink-0 text-yellow-400">Gate 2</span>
+            <span>→</span>
+            <span className="shrink-0">Scoring Agent</span>
+            <span>→</span>
+            <span className="shrink-0 text-yellow-400">Gate 3</span>
+            <span>→</span>
+            <span className="shrink-0 text-[var(--accent-structural)]">Observatory</span>
+          </div>
+
+          <h3 className="text-base font-semibold text-white mt-6 mb-2">Agent Pipeline</h3>
+          <div className="space-y-3 mt-3">
+            {[
+              {
+                name: "Signal Scout",
+                schedule: "Every 6 hours",
+                desc: "Scans 47+ RSS feeds and news APIs. Each article passes through a cheap filter (source credibility, recency, deduplication, keyword relevance) before AI classification. Gemini 2.5 Flash classifies surviving articles against our risk/solution taxonomy, assigns confidence and impact scores, and tags OECD principles and harm status.",
+              },
+              {
+                name: "Feed Curator",
+                schedule: "Every 6 hours",
+                desc: "Builds the public feed from approved signals using recency-decay scoring. Generates editorial hooks — one-sentence, jargon-free summaries for the landing page carousel. Manages a circular buffer of 15 editorial hooks maximum.",
+              },
+              {
+                name: "Discovery Agent",
+                schedule: "Biweekly",
+                desc: "Analyzes unmatched signals from the past 6 months. Clusters them into new node proposals (requiring 5+ supporting signals) and edge proposals (3+ signals). Each proposal includes a full node skeleton: name, description, key themes, scores, and principles.",
+              },
+              {
+                name: "Scoring Agent",
+                schedule: "Monthly (1st)",
+                desc: "Batched assessment of all existing nodes. Proposes score updates, narrative changes, and velocity adjustments based on recent signal evidence. Evaluates no-signal relevance decay for nodes that haven't received new evidence.",
+              },
+              {
+                name: "Graph Builder",
+                schedule: "On demand",
+                desc: "Rebuilds the denormalized graph snapshot and per-node trending summaries after any approval. The snapshot powers the Observatory visualization.",
+              },
+              {
+                name: "Data Lifecycle",
+                schedule: "Daily 03:00 UTC",
+                desc: "Archives approved signals after 90 days, deletes rejected signals after 30 days, purges archived data after 1 year. Cleans orphaned documents and maintains collection health.",
+              },
+            ].map((agent) => (
+              <div key={agent.name} className="bg-white/5 rounded-lg p-3">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-xs font-semibold text-white">{agent.name}</span>
+                  <span className="text-[10px] text-gray-500 font-mono">{agent.schedule}</span>
+                </div>
+                <p className="text-xs text-gray-400">{agent.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <h3 className="text-base font-semibold text-white mt-6 mb-2">Human Review Gates</h3>
+          <p>
+            Nothing reaches the public without passing through a human review
+            gate. Each gate has dedicated reviewer roles with appropriate
+            permissions:
+          </p>
+          <div className="space-y-3 mt-3">
+            {[
+              {
+                gate: "Gate 1 — Signal Review",
+                role: "Signal Reviewer",
+                desc: "Every classified signal is reviewed before it enters the public feed or becomes evidence for the knowledge graph. Reviewers verify relevance, correct classification, and appropriate categorization. Signals can be approved, rejected, or edited.",
+              },
+              {
+                gate: "Gate 2 — Discovery Review",
+                role: "Discovery Reviewer",
+                desc: "New node and edge proposals from the Discovery Agent are reviewed before being added to the knowledge graph. Reviewers assess whether proposed topics are genuinely novel, correctly scoped, and supported by sufficient signal evidence.",
+              },
+              {
+                gate: "Gate 3 — Scoring Review",
+                role: "Scoring Reviewer",
+                desc: "Proposed score changes, narrative updates, and field modifications from the Scoring Agent are reviewed before applying. Reviewers verify that changes are justified by the evidence and maintain consistency across the graph.",
+              },
+            ].map((gate) => (
+              <div key={gate.gate} className="bg-white/5 rounded-lg p-3">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-xs font-semibold text-yellow-400">{gate.gate}</span>
+                  <span className="text-[10px] text-gray-500">{gate.role}</span>
+                </div>
+                <p className="text-xs text-gray-400">{gate.desc}</p>
+              </div>
+            ))}
           </div>
         </Section>
 
@@ -265,28 +364,57 @@ export default function About() {
         </Section>
 
         {/* === Our Sources === */}
-        <Section title="Our Sources" id="sources">
+        <Section title="Source Tiers" id="sources">
           <p>
-            We scan sources across five tiers, each assigned a credibility score
-            that directly affects how signals are ranked:
+            We scan 47+ sources across seven tiers. Each tier is assigned a
+            credibility range that directly affects how signals are ranked.
+            Diverse sourcing helps counter individual source biases.
           </p>
           <div className="mt-3 space-y-2">
             {SOURCE_TIERS.map((tier) => (
               <div
                 key={tier.tier}
-                className="flex items-start gap-3 text-xs bg-white/5 rounded p-2"
+                className="bg-white/5 rounded-lg p-3"
               >
-                <span className="shrink-0 font-medium w-36">{tier.tier}</span>
-                <span className="text-gray-400 flex-1">{tier.examples}</span>
-                <span className="shrink-0 text-gray-500 font-mono">
-                  {tier.credibility}
-                </span>
+                <div className="flex items-baseline justify-between mb-1">
+                  <span className="text-xs font-semibold text-white">{tier.tier}</span>
+                  <span className="text-[10px] text-gray-500 font-mono">{tier.credibility}</span>
+                </div>
+                <p className="text-[10px] text-gray-500 mb-1">{tier.desc}</p>
+                <p className="text-[10px] text-gray-400">{tier.examples}</p>
               </div>
             ))}
           </div>
           <p className="mt-3 text-xs text-gray-500">
-            Source credibility scores are configurable and reviewed regularly.
-            Diverse sourcing helps counter individual source biases.
+            Credibility scores are configurable per source and reviewed regularly
+            by the admin team.
+          </p>
+        </Section>
+
+        {/* === OECD Principles === */}
+        <Section title="OECD AI Principles" id="principles">
+          <p>
+            Every signal classified by our pipeline is tagged with one or more
+            OECD AI Principles (P01–P10). These principles, adopted by 46
+            countries, provide a standardized framework for evaluating AI's
+            societal impact. We use them as the backbone of our classification
+            taxonomy.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+            {OECD_PRINCIPLES.map((p) => (
+              <div key={p.id} className="bg-white/5 rounded-lg p-3">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-[10px] font-mono text-cyan-400">{p.id}</span>
+                  <span className="text-xs font-semibold text-white">{p.name}</span>
+                </div>
+                <p className="text-[10px] text-gray-400">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-gray-500">
+            Signals may also carry a <strong>harm status</strong> tag — either
+            "incident" (harm has occurred) or "hazard" (potential for harm). This
+            distinguishes between realized and potential risks in our analysis.
           </p>
         </Section>
 

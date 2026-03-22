@@ -25,7 +25,7 @@ export default function HalftoneMask({
       const t = Math.min(1, progress / 0.6);
       const factor = t * t; // quadratic ease-in
 
-      const maxRadius = (100 / cols) * 0.45;
+      const maxRadius = (100 / cols) * 0.225;
       const r = maxRadius * factor;
       const opacity = factor;
 

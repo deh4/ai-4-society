@@ -173,15 +173,22 @@ export default function Layout({ children, bare }: LayoutProps) {
 
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
 
-      <footer className="border-t border-white/10 py-8 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <div className="flex items-center gap-4">
+      <footer className="border-t border-white/5 py-8 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-[10px] text-gray-500 leading-relaxed">
+            47 sources across 7 tiers · Human-reviewed signals
+            <br />
+            Updated every 6 hours · Open methodology
+          </p>
+          <div className="flex justify-center gap-4 mt-4 text-xs text-gray-500">
             <Link to="/about" className="hover:text-white transition-colors">About</Link>
+            <Link to="/about#methodology" className="hover:text-white transition-colors">Methodology</Link>
             <Link to="/observatory" className="hover:text-white transition-colors">Observatory</Link>
             <Link to="/about#release-notes" className="hover:text-white transition-colors">Release Notes</Link>
             <a href="https://github.com/deh4/ai-4-society" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
           </div>
-          <span>&copy; {new Date().getFullYear()} AI 4 Society</span>
+          <p className="text-[9px] text-gray-700 mt-4">Not financial or legal advice</p>
+          <p className="text-[10px] text-gray-600 mt-2">&copy; {new Date().getFullYear()} AI 4 Society</p>
         </div>
       </footer>
     </div>
