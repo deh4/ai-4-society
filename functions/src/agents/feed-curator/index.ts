@@ -256,40 +256,6 @@ export const scheduledFeedCurator = onSchedule(
   }
 );
 
-// One-off backfill: generate images for existing approved hooks without images
-export const backfillEditorialImages = onCall(
-  { memory: "512MiB", timeoutSeconds: 120 },
-  async (request) => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
-    const db = getDb();
-    const snap = await db
-      .collection("editorial_hooks")
-      .where("status", "==", "approved")
-      .get();
-
-    let generated = 0;
-    let skipped = 0;
-    let failed = 0;
-    for (const doc of snap.docs) {
-      const data = doc.data();
-      if (data.image_url) { skipped++; continue; }
-      try {
-        const url = await generateEditorialImage(
-          doc.id,
-          data.signal_title as string,
-          data.hook_text as string,
-        );
-        if (url) { generated++; } else { failed++; }
-      } catch (err) {
-        logger.warn(`Backfill failed for ${doc.id}:`, err);
-        failed++;
-      }
-    }
-    logger.info(`Backfill complete: ${generated} generated, ${skipped} skipped, ${failed} failed`);
-    return { generated, skipped, failed };
-  }
-);
-
 // Manual trigger / async call from approval functions
 export const triggerFeedCurator = onCall(
   { memory: "256MiB", timeoutSeconds: 60, secrets: [geminiApiKey] },

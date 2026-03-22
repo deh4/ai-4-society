@@ -33,7 +33,7 @@ export async function generateEditorialImage(
         parameters: {
           sampleCount: 1,
           aspectRatio: "16:9",
-          outputOptions: { mimeType: "image/webp" },
+          outputOptions: { mimeType: "image/png" },
         },
       }),
     });
@@ -56,12 +56,12 @@ export async function generateEditorialImage(
 
     // Upload to Firebase Storage
     const bucket = getStorage().bucket();
-    const filePath = `editorial-images/${hookId}.webp`;
+    const filePath = `editorial-images/${hookId}.png`;
     const file = bucket.file(filePath);
 
     const buffer = Buffer.from(imageBase64, "base64");
     await file.save(buffer, {
-      contentType: "image/webp",
+      contentType: "image/png",
       metadata: { cacheControl: "public, max-age=31536000" },
     });
 
