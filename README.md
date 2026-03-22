@@ -10,9 +10,9 @@ A real-time AI risk intelligence platform with a **Human-in-the-Loop (HITL)** ag
 
 The Observatory tracks the societal risks and solutions emerging from AI acceleration. It ingests articles from 17 curated sources across 5 credibility tiers, uses Gemini to classify them against a structured taxonomy of risks and solutions, and presents the resulting intelligence as:
 
-- **Risk Reels** — Instagram-style horizontally scrollable circles on the landing page, color-coded by velocity (Critical/High/Medium/Low), each opening a detail drawer
+- **FeaturedStory Carousel** — featured editorial stories on the landing page with article images as full-bleed backgrounds, rendered through an SVG halftone dot mask effect
 - **News Feed** — ranked approved signals with recency decay, personalised by interest
-- **Observatory** — an interactive force graph of nodes (risks, solutions, milestones) and their relationships; tap any node for a detail sheet with principle tags and harm status indicators
+- **Observatory** — a 3-column desktop layout: Risk Radar sidebar (240 px, scrollable signal list) | interactive force graph | Detail Panel. On mobile the risk list collapses into a left drawer and the detail panel uses a bottom sheet. Tap any node for a detail sheet with principle tags and harm status indicators
 - **Admin Panel** — signal review (with harm status and principle tagging), graph proposal review, agent dashboard with live cost tracking, and user management
 
 ---
@@ -48,6 +48,8 @@ Approved signals
     ├──▶ Feed Curator (every 6h)
     │        rebuilds feed_items with recency decay, top 100 ranked
     │        generates editorial hooks via Gemini 2.5 Flash
+    │        propagates image_url to hooks; onEditorialHookApproved trigger
+    │        generates images via Imagen 3 Fast when no image is present
     │
     └──▶ Graph Builder (on demand, triggered by approval)
              rebuilds graph_snapshot + node_summaries + principle edges
@@ -60,10 +62,10 @@ Data Lifecycle (daily, 03:00 UTC)
 
 | Agent | Schedule | Model | What it does |
 |---|---|---|---|
-| **Signal Scout** | Every 6h | Gemini 2.5 Flash | Fetches 17 RSS/API sources → classifies against taxonomy with harm_status + principle tags → stores as `pending` |
+| **Signal Scout** | Every 6h | Gemini 2.5 Flash | Fetches 17 RSS/API sources → classifies against taxonomy with harm_status + principle tags → stores as `pending`; extracts `image_url` from RSS enclosures and OG meta tags |
 | **Discovery Agent** | Biweekly | Gemini 2.5 Pro | 6-month window of signals → proposes new nodes/edges with full data skeleton (scores, deep_dive, principles) |
 | **Scoring Agent** | Monthly 1st | Gemini 2.5 Pro | Batched assessment of all nodes → proposes score/velocity/narrative updates; evaluates no-signal relevance decay |
-| **Feed Curator** | Every 6h | Gemini 2.5 Flash | Rebuilds feed from approved signals with recency decay; generates editorial hooks for landing page |
+| **Feed Curator** | Every 6h | Gemini 2.5 Flash | Rebuilds feed from approved signals with recency decay; generates editorial hooks for landing page; propagates `image_url` to hooks; Firestore trigger generates Imagen 3 Fast fallback images on approval |
 | **Graph Builder** | On demand | None | Rebuilds `graph_snapshot`, `node_summaries`, infers principle edges (10+ signal threshold), updates filter terms |
 | **Data Lifecycle** | Daily 03:00 UTC | None | Archives signals >90d, hard-deletes rejected >30d, auto-expires proposals, purges old feed items |
 
@@ -109,7 +111,7 @@ Every piece of public data passes through at least one human gate:
 | Frontend | React 19, Vite 7, TypeScript 5.9, Tailwind 3.4, Framer Motion, Three.js |
 | Graph | react-force-graph-2d (canvas, force-directed) |
 | Backend | Firebase Cloud Functions v2, Node.js 20, TypeScript |
-| AI | Gemini 2.5 Flash (classification, hooks) + Gemini 2.5 Pro (discovery, scoring) |
+| AI | Gemini 2.5 Flash (classification, hooks) + Gemini 2.5 Pro (discovery, scoring) + Imagen 3 Fast (editorial image generation) |
 | Database | Firestore (nodes, edges, signals, graph_snapshot, feed_items, changelogs) |
 | Auth | Firebase Auth — Google OAuth + role-based access control |
 | Deployment | Firebase Hosting — CI deploys `dev` → dev project, `main` → production |
@@ -152,8 +154,8 @@ Never run `firebase deploy --only hosting` manually unless it's an emergency.
 src/
   components/
     admin/          # Admin panel — signal review, agents, users
-    landing/        # Landing page — RiskReels, NewsFeed, FeedCard
-    observatory/    # GraphView, DetailPanel, EvidenceList, NodeTypeFilter
+    landing/        # Landing page — FeaturedStory carousel, NewsFeed, FeedCard, HalftoneMask
+    observatory/    # GraphView, RisksSidebar, DetailPanel, EvidenceList, NodeTypeFilter
     shared/         # Layout, nav
   pages/            # HeroPage, Observatory, About, Admin
   store/            # GraphContext (graph_snapshot, node_summaries, feed_items)
@@ -166,7 +168,7 @@ functions/src/
     signal-scout/   # RSS fetcher + Gemini classifier
     discovery/      # Clustering → new node proposals
     scoring/        # Monthly batched node scoring via Cloud Tasks
-    feed-curator/   # Feed rebuild with recency decay
+    feed-curator/   # Feed rebuild with recency decay; image propagation + Imagen 3 Fast trigger
     graph-builder/  # Snapshot + summary rebuild
     data-lifecycle/ # Archive + cleanup
     approval/       # Proposal approval handlers
