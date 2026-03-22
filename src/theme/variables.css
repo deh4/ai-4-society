@@ -42,4 +42,16 @@ body {
     transition: background-color var(--transition-speed), color var(--transition-speed);
     margin: 0;
     overflow-x: hidden;
+    /* Safe area insets for notched devices */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* Support dvh for mobile Safari address bar — fallback to vh */
+@supports (height: 100dvh) {
+    :root { --vh-full: 100dvh; }
+}
+@supports not (height: 100dvh) {
+    :root { --vh-full: 100vh; }
 }

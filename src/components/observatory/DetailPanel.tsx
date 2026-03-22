@@ -53,10 +53,17 @@ export default function DetailPanel({
     mode === "inline"
       ? "" // inline has its own wrapper
       : mode === "bottomSheet"
-        ? "fixed bottom-0 left-0 right-0 h-[58vh] bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl"
+        ? "fixed bottom-0 left-0 right-0 bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]"
         : isMobile
-          ? "fixed bottom-0 left-0 right-0 h-[58vh] bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl"
-          : "fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto";
+          ? "fixed bottom-0 left-0 right-0 bg-[var(--bg-primary)] border-t border-white/10 z-40 overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]"
+          : "fixed right-0 top-14 w-full sm:w-[420px] bg-[var(--bg-primary)] border-l border-white/10 z-40 overflow-y-auto";
+
+  const panelHeight =
+    mode === "inline"
+      ? undefined
+      : mode === "bottomSheet" || isMobile
+        ? { height: "calc(var(--vh-full, 100vh) * 0.58)" }
+        : { height: "calc(var(--vh-full, 100vh) - 3.5rem)" };
 
   const panelAnim =
     mode === "bottomSheet" || isMobile
@@ -102,6 +109,7 @@ export default function DetailPanel({
         {...panelAnim}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className={`${panelClass} p-4`}
+        style={panelHeight}
       >
         {(mode === "bottomSheet" || isMobile) && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
         {loadingInner}
@@ -130,6 +138,7 @@ export default function DetailPanel({
         {...panelAnim}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         className={`${panelClass} p-4`}
+        style={panelHeight}
       >
         {(mode === "bottomSheet" || isMobile) && <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />}
         {notFoundInner}
@@ -348,6 +357,7 @@ export default function DetailPanel({
       {...panelAnim}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
       className={panelClass}
+      style={panelHeight}
     >
       {/* Drag handle (mobile only) */}
       {(mode === "bottomSheet" || isMobile) && (

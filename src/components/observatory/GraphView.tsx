@@ -294,7 +294,7 @@ export default function GraphView({
     <div className="flex flex-col gap-3">
       <div
         ref={containerRef}
-        className="relative rounded-lg border border-white/10 bg-black/50 overflow-hidden h-[25vh] lg:h-[calc(100vh-220px)]"
+        className="relative rounded-lg border border-white/10 bg-black/50 overflow-hidden h-[25dvh] lg:h-[calc(var(--vh-full,100vh)-220px)]"
         style={{ minHeight: 180 }}
       >
         <ForceGraph2D

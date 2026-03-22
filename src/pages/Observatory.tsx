@@ -296,7 +296,7 @@ export default function Observatory() {
           <div className="lg:grid lg:grid-cols-[240px_2fr_1fr] gap-4">
             {/* Desktop sidebar — hidden on mobile (uses drawer instead) */}
             <div className="hidden lg:block border-r border-white/10 -mr-4 pr-0">
-              <div className="h-[calc(100vh-180px)] sticky top-4">
+              <div className="sticky top-4" style={{ height: "calc(var(--vh-full, 100vh) - 180px)" }}>
                 <RisksSidebar
                   selectedNodeId={selectedNodeId}
                   onSelectNode={handleSidebarSelect}

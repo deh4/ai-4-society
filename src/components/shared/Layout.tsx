@@ -27,8 +27,8 @@ export default function Layout({ children, bare }: LayoutProps) {
   if (bare) return <>{children}</>;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <nav className="sticky top-0 z-50 border-b border-white/10 bg-[var(--bg-primary)]/95 backdrop-blur-sm">
+    <div className="flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]" style={{ minHeight: "var(--vh-full, 100vh)" }}>
+      <nav className="sticky top-0 z-50 border-b border-white/10 bg-[var(--bg-primary)] bg-opacity-95 backdrop-blur-sm [-webkit-backdrop-filter:blur(4px)]">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-6">
