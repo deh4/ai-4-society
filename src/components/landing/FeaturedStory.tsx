@@ -91,7 +91,7 @@ export default function FeaturedStory() {
             {hook.hook_text}
           </div>
 
-          {/* Evidence cards */}
+          {/* Evidence cards — always show all 3 for consistent layout */}
           {parentNode && (
             <div className="flex gap-2 mb-6">
               <div className="flex-1 p-3 bg-red-500/5 rounded-lg border-l-2 border-red-500">
@@ -102,19 +102,19 @@ export default function FeaturedStory() {
                   {Math.round(score)}
                 </div>
               </div>
-              {velocity && (
-                <div className="flex-1 p-3 bg-blue-500/5 rounded-lg border-l-2 border-blue-500">
-                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Velocity</div>
-                  <div className="text-xl font-bold text-blue-400 mt-1">{velocity}</div>
+              <div className="flex-1 p-3 bg-blue-500/5 rounded-lg border-l-2 border-blue-500">
+                <div className="text-[8px] text-gray-600 uppercase tracking-wider">Velocity</div>
+                <div className="text-xl font-bold text-blue-400 mt-1">
+                  {velocity ?? "—"}
                 </div>
-              )}
-              {solutionCount > 0 && (
-                <div className="flex-1 p-3 bg-green-500/5 rounded-lg border-l-2 border-green-500">
-                  <div className="text-[8px] text-gray-600 uppercase tracking-wider">Solutions</div>
-                  <div className="text-xl font-bold text-green-400 mt-1">{solutionCount}</div>
-                  <div className="text-[8px] text-gray-600">Being tracked</div>
+              </div>
+              <div className="flex-1 p-3 bg-green-500/5 rounded-lg border-l-2 border-green-500">
+                <div className="text-[8px] text-gray-600 uppercase tracking-wider">Solutions</div>
+                <div className="text-xl font-bold text-green-400 mt-1">{solutionCount}</div>
+                <div className="text-[8px] text-gray-600">
+                  {solutionCount === 0 ? "None yet" : "Being tracked"}
                 </div>
-              )}
+              </div>
             </div>
           )}
 

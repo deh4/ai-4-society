@@ -42,6 +42,9 @@ export interface RiskSignalItem extends ReviewItemBase {
   sourceName?: string;
   sourceUrl?: string;
   relatedNodeIds: string[];
+  // V3 classification dimensions
+  harm_status?: "incident" | "hazard" | null;
+  principles?: string[];
 }
 
 /** A signal classified as solution or both */
@@ -57,6 +60,9 @@ export interface SolutionSignalItem extends ReviewItemBase {
   sourceName?: string;
   sourceUrl?: string;
   relatedNodeIds: string[];
+  // V3 classification dimensions
+  harm_status?: "incident" | "hazard" | null;
+  principles?: string[];
 }
 
 /** A discovery proposal (new_node or new_edge) */

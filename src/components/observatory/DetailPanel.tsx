@@ -5,6 +5,7 @@ import { useGraph } from "../../store/GraphContext";
 import EvidenceList from "./EvidenceList";
 import PerceptionGap from "./PerceptionGap";
 import VoteButton from "./VoteButton";
+import PrincipleTag from "../shared/PrincipleTag";
 import { toSlug } from "../../lib/slugs";
 import type { GraphNode, Edge, NodeType } from "../../types/graph";
 
@@ -203,6 +204,20 @@ export default function DetailPanel({
           )}
         </div>
       )}
+
+      {/* Related Principles */}
+      {(nodeData.principles as string[] | undefined)?.length ? (
+        <div>
+          <h4 className="text-[9px] text-gray-500 uppercase tracking-wider mb-2">
+            Related Principles
+          </h4>
+          <div className="flex flex-wrap gap-1.5">
+            {(nodeData.principles as string[]).map((p) => (
+              <PrincipleTag key={p} id={p} />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Voting (risks and solutions only) */}
       {(node.type === "risk" || node.type === "solution") && summary && (

@@ -11,10 +11,11 @@ import {
   onSnapshot,
   query,
   orderBy,
+  where,
   limit as firestoreLimit,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import type { GraphSnapshot, NodeSummary, FeedItem } from "../types/graph";
+import type { GraphSnapshot, NodeSummary, FeedItem, PrincipleNode } from "../types/graph";
 import { subscribeEditorialHooks } from "../data/editorial";
 import type { EditorialHook } from "../types/editorial";
 
@@ -23,6 +24,7 @@ interface GraphContextType {
   summaries: NodeSummary[];
   feedItems: FeedItem[];
   editorialHooks: EditorialHook[];
+  principleNodes: PrincipleNode[];
   loading: boolean;
   error: string | null;
 }
@@ -34,6 +36,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [summaries, setSummaries] = useState<NodeSummary[]>([]);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [editorialHooks, setEditorialHooks] = useState<EditorialHook[]>([]);
+  const [principleNodes, setPrincipleNodes] = useState<PrincipleNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,9 +122,28 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, []);
 
+  useEffect(() => {
+    const q = query(
+      collection(db, "nodes"),
+      where("type", "==", "principle")
+    );
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        setPrincipleNodes(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() } as PrincipleNode))
+        );
+      },
+      (err) => {
+        console.error("GraphContext: principleNodes error:", err);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
   return (
     <GraphContext.Provider
-      value={{ snapshot, summaries, feedItems, editorialHooks, loading, error }}
+      value={{ snapshot, summaries, feedItems, editorialHooks, principleNodes, loading, error }}
     >
       {children}
     </GraphContext.Provider>

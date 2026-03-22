@@ -27,6 +27,9 @@ export default function Observatory() {
   const [activeTypes, setActiveTypes] = useState<Set<NodeType>>(
     () => new Set<NodeType>(["risk", "solution", "stakeholder", "milestone"])
   );
+  const [activePrinciples, setActivePrinciples] = useState<Set<string>>(
+    () => new Set<string>()
+  );
 
   // Resolve URL param (slug or legacy Firestore ID) → Firestore node ID.
   // Runs whenever the URL param or snapshot changes.
@@ -206,7 +209,12 @@ export default function Observatory() {
               )}
             </div>
             {activeTab === "graph" && (
-              <NodeTypeFilter active={activeTypes} onChange={setActiveTypes} />
+              <NodeTypeFilter
+                active={activeTypes}
+                onChange={setActiveTypes}
+                activePrinciples={activePrinciples}
+                onPrinciplesChange={setActivePrinciples}
+              />
             )}
           </div>
 
@@ -245,6 +253,7 @@ export default function Observatory() {
                 selectedNodeId={selectedNodeId}
                 onSelectNode={handleSelectNode}
                 activeTypes={activeTypes}
+                activePrinciples={activePrinciples}
               />
             </div>
 
