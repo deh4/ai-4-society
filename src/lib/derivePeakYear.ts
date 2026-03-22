@@ -41,7 +41,7 @@ export function deriveRiskPeakYear(risk: Risk): number {
 
 export function deriveSolutionPeakYear(solution: Solution): number {
     const base = STAGE_OFFSET[solution.implementation_stage] ?? 5;
-    const trend = (solution.adoption_score_2035 - solution.adoption_score_2026) > 0 ? -1 : 2;
+    const trend = (solution.score_2035 - solution.score_2026) > 0 ? -1 : 2;
     return clamp(2026 + base + trend, 2026, 2038);
 }
 
@@ -49,9 +49,9 @@ function milestoneToTimelineItem(m: Milestone): TimelineItem {
     return {
         id: m.id,
         label: m.id,
-        name: m.title,
+        name: m.name,
         score: 0,
-        peakYear: m.year,
+        peakYear: parseInt(m.date, 10) || 2020,
         type: 'milestone',
         velocity: '',
         description: m.description,
@@ -71,7 +71,7 @@ export function buildTimelineItems(risks: Risk[], solutions: Solution[], milesto
         items.push({
             id: risk.id,
             label: risk.id,
-            name: risk.risk_name,
+            name: risk.name,
             score: risk.score_2026,
             peakYear: deriveRiskPeakYear(risk),
             type: 'risk',
@@ -84,12 +84,11 @@ export function buildTimelineItems(risks: Risk[], solutions: Solution[], milesto
         items.push({
             id: solution.id,
             label: solution.id,
-            name: solution.solution_title,
-            score: solution.adoption_score_2026,
+            name: solution.name,
+            score: solution.score_2026,
             peakYear: deriveSolutionPeakYear(solution),
             type: 'solution',
             velocity: solution.implementation_stage,
-            parentRiskId: solution.parent_risk_id,
         });
     }
 

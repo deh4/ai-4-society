@@ -147,7 +147,18 @@ export function RiskProvider({ children }: { children: ReactNode }) {
                     });
                 });
                 // Fall back to hardcoded milestones if Firestore collection is empty
-                setMilestones(fetchedMilestones.length > 0 ? fetchedMilestones : AI_MILESTONES);
+                if (fetchedMilestones.length > 0) {
+                    setMilestones(fetchedMilestones);
+                } else {
+                    // Convert legacy milestone format to V3 format
+                    setMilestones(AI_MILESTONES.map((m) => ({
+                        id: m.id,
+                        name: m.title,
+                        description: m.description,
+                        date: String(m.year),
+                        significance: '',
+                    })));
+                }
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : 'Failed to fetch data';
                 console.error("Error fetching data:", err);

@@ -32,6 +32,7 @@ const TYPE_COLORS: Record<NodeType, string> = {
   solution: "#22c55e",
   stakeholder: "#3b82f6",
   milestone: "#eab308",
+  principle: "#a855f7",
 };
 
 function buildGraphData(

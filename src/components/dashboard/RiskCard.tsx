@@ -19,7 +19,7 @@ export default function RiskCard({ risk, index, onClick }: RiskCardProps) {
     const isCritical = risk.velocity === 'Critical';
     const newSignalCount = risk.signal_evidence?.filter(s => s.isNew).length ?? 0;
     const totalSignals = risk.signal_evidence?.length ?? 0;
-    const affectedCount = risk.who_affected?.length ?? 0;
+    const affectedCount = risk.principles?.length ?? 0;
 
     // Score trajectory: positive = worsening (red), negative = improving (green)
     const delta = risk.score_2035 - risk.score_2026;
