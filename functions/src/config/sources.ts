@@ -48,7 +48,7 @@ export const DATA_SOURCES: DataSource[] = [
     id: "nist-ai",
     name: "NIST AI / Federal Register",
     type: "rss",
-    url: "https://www.nist.gov/news-events/news/rss.xml",
+    url: "https://www.nist.gov/news-events/artificial-intelligence/rss.xml",
     domain: "Regulatory",
     credibility: 0.91,
     tier: 0,
