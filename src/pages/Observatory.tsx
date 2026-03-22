@@ -208,16 +208,6 @@ export default function Observatory() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-center gap-2">
-              {/* Mobile drawer toggle */}
-              <button
-                onClick={() => setDrawerOpen((o) => !o)}
-                className="lg:hidden p-1.5 rounded hover:bg-white/10 transition-colors"
-                aria-label="Toggle risk list"
-              >
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-              </button>
               <div>
                 <h1 className="text-xl font-bold">Observatory</h1>
                 {snapshot && (
@@ -266,7 +256,7 @@ export default function Observatory() {
 
         {/* Tab content */}
         {!loading && activeTab === "graph" && (
-          <div className="lg:grid lg:grid-cols-[240px_1fr_2fr] gap-4">
+          <div className="lg:grid lg:grid-cols-[240px_2fr_1fr] gap-4">
             {/* Desktop sidebar — hidden on mobile (uses drawer instead) */}
             <div className="hidden lg:block border-r border-white/10 -mr-4 pr-0">
               <div className="h-[calc(100vh-180px)] sticky top-4">
@@ -275,15 +265,6 @@ export default function Observatory() {
                   onSelectNode={handleSidebarSelect}
                 />
               </div>
-            </div>
-
-            <div className="min-w-0">
-              <GraphView
-                selectedNodeId={selectedNodeId}
-                onSelectNode={handleSelectNode}
-                activeTypes={activeTypes}
-                activePrinciples={activePrinciples}
-              />
             </div>
 
             {/* Desktop inline panel — lg+ only */}
@@ -300,6 +281,15 @@ export default function Observatory() {
                 )}
               </AnimatePresence>
             </div>
+
+            <div className="min-w-0">
+              <GraphView
+                selectedNodeId={selectedNodeId}
+                onSelectNode={handleSelectNode}
+                activeTypes={activeTypes}
+                activePrinciples={activePrinciples}
+              />
+            </div>
           </div>
         )}
 
@@ -308,7 +298,20 @@ export default function Observatory() {
         )}
       </div>
 
-      {/* Mobile left drawer — risks sidebar */}
+      {/* Mobile vertical "Radar" tab — opens drawer */}
+      {!drawerOpen && (
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-[var(--bg-primary)] border border-l-0 border-white/10 rounded-r-lg px-1 py-3 shadow-lg"
+          aria-label="Open radar sidebar"
+        >
+          <span className="text-[10px] font-bold tracking-widest text-cyan-400 uppercase" style={{ writingMode: "vertical-rl" }}>
+            Radar
+          </span>
+        </button>
+      )}
+
+      {/* Mobile left drawer — risks sidebar (overlays everything) */}
       <AnimatePresence>
         {drawerOpen && (
           <>
@@ -318,7 +321,7 @@ export default function Observatory() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setDrawerOpen(false)}
-              className="lg:hidden fixed inset-0 bg-black/50 z-30"
+              className="lg:hidden fixed inset-0 bg-black/60 z-[60]"
             />
             {/* Drawer */}
             <motion.div
@@ -326,7 +329,7 @@ export default function Observatory() {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[var(--bg-primary)] border-r border-white/10 z-40"
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[var(--bg-primary)] border-r border-white/10 z-[70]"
             >
               <RisksSidebar
                 selectedNodeId={selectedNodeId}
