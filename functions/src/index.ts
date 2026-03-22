@@ -130,7 +130,7 @@ export const dataLifecycleV2 = onSchedule(
 // ─── V2 Agent Exports ────────────────────────────────────────────────────────
 
 export { buildGraph } from "./agents/graph-builder/index.js";
-export { scheduledFeedCurator, triggerFeedCurator } from "./agents/feed-curator/index.js";
+export { scheduledFeedCurator, triggerFeedCurator, onEditorialHookApproved } from "./agents/feed-curator/index.js";
 export { onVoteWritten } from "./triggers/vote-aggregation.js";
 export { scheduledSignalScout, triggerSignalScout } from "./agents/signal-scout/index.js";
 export { scheduledDiscovery, triggerDiscovery } from "./agents/discovery/index.js";

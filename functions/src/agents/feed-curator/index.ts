@@ -1,8 +1,10 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
+import { generateEditorialImage } from "./generateImage.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   getDb,
@@ -260,5 +262,29 @@ export const triggerFeedCurator = onCall(
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
     return await buildFeed(geminiApiKey.value());
+  }
+);
+
+// Triggered when an editorial hook is approved without an image
+export const onEditorialHookApproved = onDocumentUpdated(
+  {
+    document: "editorial_hooks/{hookId}",
+    memory: "512MiB",
+    timeoutSeconds: 60,
+  },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    if (!before || !after) return;
+
+    // Only trigger when status changes to "approved" and no image_url exists
+    if (before.status !== "approved" && after.status === "approved" && !after.image_url) {
+      logger.info(`Editorial hook ${event.params.hookId} approved without image, generating...`);
+      await generateEditorialImage(
+        event.params.hookId,
+        after.signal_title as string,
+        after.hook_text as string,
+      );
+    }
   }
 );
