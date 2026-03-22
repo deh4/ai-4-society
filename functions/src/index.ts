@@ -910,6 +910,7 @@ export { scheduledFeedCurator, triggerFeedCurator } from "./agents/feed-curator/
 export { onVoteWritten } from "./triggers/vote-aggregation.js";
 export { migrateV1toV2 } from "./migration/v1-to-v2.js";
 export { v3Cleanup } from "./migration/v3-cleanup.js";
+export { seedPrinciples } from "./migration/seed-principles.js";
 export { scheduledSignalScout, triggerSignalScout } from "./agents/signal-scout/index.js";
 export { scheduledDiscovery, triggerDiscovery } from "./agents/discovery/index.js";
 export { scheduledValidator, triggerValidator } from "./agents/validator/index.js";
