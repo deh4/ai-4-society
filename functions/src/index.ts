@@ -918,3 +918,4 @@ export { approveGraphProposal, rejectGraphProposal } from "./agents/approval/ind
 export { scheduledPodcast, triggerPodcast } from "./agents/podcast/index.js";
 export { sitemap } from "./sitemap.js";
 export { v3PopulateDiscoveryNodes } from "./migration/v3-populate-discovery-nodes.js";
+export { v3BackfillHarmStatus } from "./migration/v3-backfill-harm-status.js";
