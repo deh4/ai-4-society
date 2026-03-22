@@ -40,11 +40,26 @@ function parseApiDate(raw: string | undefined): string {
 }
 
 async function fetchAPI(source: DataSource): Promise<RawArticle[]> {
-  const res = await fetch(source.url, {
-    headers: { "User-Agent": "AI4Society-SignalScout/2.0" },
-  });
-  if (!res.ok) throw new Error(`API returned ${res.status}`);
-  const data = await res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+
+  let data: Record<string, unknown>;
+  try {
+    const res = await fetch(source.url, {
+      headers: { "User-Agent": "AI4Society-SignalScout/2.0" },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`API returned ${res.status}`);
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("text/html")) {
+      throw new Error(`API returned HTML instead of JSON (content-type: ${contentType})`);
+    }
+
+    data = await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
 
   // GDELT format: { articles: [{ title, url, seendate, domain }] }
   if (data.articles && Array.isArray(data.articles)) {
@@ -88,6 +103,28 @@ export interface FetchAllResult {
   sourceHealth: Record<string, SourceFetchHealth>;
 }
 
+async function fetchWithRetry(source: DataSource, maxRetries = 2): Promise<RawArticle[]> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return source.type === "rss"
+        ? await fetchRSS(source)
+        : await fetchAPI(source);
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      // Only retry on transient network errors, not on format/content errors
+      const isTransient = msg.includes("ECONNRESET") || msg.includes("ETIMEDOUT") ||
+        msg.includes("ENOTFOUND") || msg.includes("abort") || msg.includes("network");
+      if (!isTransient || attempt === maxRetries) break;
+      const delay = 2_000 * (attempt + 1);
+      logger.info(`Retrying ${source.name} in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<FetchAllResult> {
   const results: RawArticle[] = [];
   const sourceHealth: Record<string, SourceFetchHealth> = {};
@@ -98,10 +135,7 @@ export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<F
       continue;
     }
     try {
-      let articles =
-        source.type === "rss"
-          ? await fetchRSS(source)
-          : await fetchAPI(source);
+      let articles = await fetchWithRetry(source);
       if (source.maxItems && articles.length > source.maxItems) {
         articles = articles.slice(0, source.maxItems);
       }
