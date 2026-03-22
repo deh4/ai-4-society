@@ -266,7 +266,7 @@ export default function Observatory() {
                     nodeId={selectedNodeId}
                     onClose={() => handleSelectNode(null)}
                     onNavigate={handleNavigateNode}
-                    inline
+                    mode="inline"
                   />
                 )}
               </AnimatePresence>
