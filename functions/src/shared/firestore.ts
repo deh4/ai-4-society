@@ -92,6 +92,35 @@ export async function writeFeedItems(items: Array<{ id: string } & Record<string
   await batch.commit();
 }
 
+/**
+ * For each node, count how many approved signals tag each principle.
+ * Returns a map: nodeId → { principleId → count }
+ */
+export async function getPrincipleSignalCounts(): Promise<Map<string, Map<string, number>>> {
+  const db = getDb();
+  const signalsSnap = await db.collection("signals")
+    .where("status", "in", ["approved", "edited"])
+    .get();
+
+  const counts = new Map<string, Map<string, number>>();
+
+  for (const doc of signalsSnap.docs) {
+    const data = doc.data();
+    const principles = (data.principles as string[]) || [];
+    const nodeIds = (data.related_node_ids as string[]) || [];
+
+    for (const nodeId of nodeIds) {
+      if (!counts.has(nodeId)) counts.set(nodeId, new Map());
+      const nodeMap = counts.get(nodeId)!;
+      for (const p of principles) {
+        nodeMap.set(p, (nodeMap.get(p) ?? 0) + 1);
+      }
+    }
+  }
+
+  return counts;
+}
+
 export async function deleteCollection(collectionPath: string, batchSize = 500) {
   const snap = await getDb().collection(collectionPath).limit(batchSize).get();
   if (snap.empty) return;

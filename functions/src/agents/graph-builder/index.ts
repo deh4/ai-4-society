@@ -6,6 +6,7 @@ import {
   writeGraphSnapshot,
   writeNodeSummary,
   getSignalsForNode,
+  getPrincipleSignalCounts,
   getDb,
   FieldValue,
 } from "../../shared/firestore.js";
@@ -69,6 +70,48 @@ export const buildGraph = onCall(
       nodeCount: snapshotNodes.length,
       edgeCount: snapshotEdges.length,
     });
+
+    // Infer principle edges from signal tags
+    // These governs edges are stored in `edges` but NOT included in graph_snapshot
+    // (principles are excluded from the visualization per spec)
+    const PRINCIPLE_EDGE_THRESHOLD = 10;
+    const principleCounts = await getPrincipleSignalCounts();
+    const nodeTypeMap = new Map<string, string>();
+    for (const n of allNodes) {
+      nodeTypeMap.set(n.id as string, n.type as string);
+    }
+
+    const edgeBatch = getDb().batch();
+    let newEdges = 0;
+
+    for (const [nodeId, principleMap] of principleCounts) {
+      for (const [principleId, count] of principleMap) {
+        if (count >= PRINCIPLE_EDGE_THRESHOLD) {
+          const edgeId = `${principleId}-${nodeId}-governs`;
+          const existingEdge = await getDb().collection("edges").doc(edgeId).get();
+          if (!existingEdge.exists) {
+            const toType = nodeTypeMap.get(nodeId) ?? "risk";
+            edgeBatch.set(getDb().collection("edges").doc(edgeId), {
+              id: edgeId,
+              from_node: principleId,
+              from_type: "principle",
+              to_node: nodeId,
+              to_type: toType,
+              relationship: "governs",
+              properties: { strength: Math.min(count / 20, 1.0) },
+              created_by: "graph-builder",
+              createdAt: FieldValue.serverTimestamp(),
+            });
+            newEdges++;
+          }
+        }
+      }
+    }
+
+    if (newEdges > 0) {
+      await edgeBatch.commit();
+      console.log(`Graph builder: inferred ${newEdges} new principle edges`);
+    }
 
     // Auto-update filter terms for Signal Scout Stage 1 filter (use all nodes)
     const filterTerms: string[] = [];
