@@ -133,13 +133,10 @@ export const dataLifecycleV2 = onSchedule(
 export { buildGraph } from "./agents/graph-builder/index.js";
 export { scheduledFeedCurator, triggerFeedCurator } from "./agents/feed-curator/index.js";
 export { onVoteWritten } from "./triggers/vote-aggregation.js";
-export { v3Cleanup } from "./migration/v3-cleanup.js";
-export { seedPrinciples } from "./migration/seed-principles.js";
 export { scheduledSignalScout, triggerSignalScout } from "./agents/signal-scout/index.js";
 export { scheduledDiscovery, triggerDiscovery } from "./agents/discovery/index.js";
 export { scheduledValidator, triggerValidator } from "./agents/validator/index.js";
 export { approveGraphProposal, rejectGraphProposal } from "./agents/approval/index.js";
 export { scheduledPodcast, triggerPodcast } from "./agents/podcast/index.js";
 export { sitemap } from "./sitemap.js";
-export { v3PopulateDiscoveryNodes } from "./migration/v3-populate-discovery-nodes.js";
-export { v3BackfillHarmStatus } from "./migration/v3-backfill-harm-status.js";
+
