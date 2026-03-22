@@ -333,17 +333,19 @@ interface EditorialHook {
 
 ### 3.6 Graph Snapshot
 
+The graph snapshot only includes nodes that participate in the observatory visualization: **risks, solutions, and milestones**. Stakeholders and principles are excluded from the snapshot — they are metadata/tags shown on detail pages and as filter facets, not structural graph nodes.
+
 ```typescript
 interface GraphSnapshot {
   nodes: Array<{
     id: string;
-    type: "risk" | "solution" | "stakeholder" | "principle" | "milestone";
+    type: "risk" | "solution" | "milestone";
     name: string;
     score_2026?: number;         // risks + solutions
     velocity?: string;           // risks only
     implementation_stage?: string; // solutions only
     significance?: string;       // milestones only
-    principles?: string[];       // risks + solutions
+    principles?: string[];       // risks + solutions (for detail pages, not graph rendering)
   }>;
   edges: Array<{
     from: string;
@@ -356,6 +358,18 @@ interface GraphSnapshot {
   edgeCount: number;
 }
 ```
+
+**Graph visualization scope:**
+
+| Node type | On graph? | Where shown instead |
+|-----------|-----------|-------------------|
+| Risks | Yes | Core graph nodes |
+| Solutions | Yes | Core graph nodes |
+| Milestones | Yes | Timeline axis / detail pages |
+| Stakeholders | No | Tags on risk detail pages, filter facet |
+| Principles | No | Tags on signals + nodes, filter facet |
+
+This reduces the graph from ~94 nodes / ~82 edges to ~40 nodes / ~30 edges. Edges of type `"impacts"` (risk→stakeholder) and `"governs"` (principle→node) are stored in the `edges` collection but excluded from the snapshot since their target nodes are not visualized.
 
 ### 3.7 Collections to Delete (Legacy)
 
@@ -745,18 +759,18 @@ ROOT
 
 ---
 
-## 8. Open Questions
+## 8. Resolved Design Decisions
 
-1. **Reclassification scope**: When a new node is approved, should we reclassify only `pending` signals or also `approved` ones? Reclassifying approved signals could change their node mapping, which might confuse reviewers who already approved them. Current design: pending only.
+1. **Reclassification scope**: **Pending signals only.** Approved/edited signals are never reclassified — this preserves human review decisions. The scoring agent will pick up evidence patterns on new nodes through future signals.
 
-2. **Principle edge maintenance**: Should the discovery agent propose principle↔risk edges, or should these be inferred automatically from signal principle tags? (e.g., if 10+ signals for R03 tag P09, auto-create `P09 --[governs]--> R03`)
+2. **Principle edge maintenance**: **Inferred automatically from signal principle tags.** When the Graph Builder runs, it computes principle↔node edges from accumulated signal data: if 10+ signals for a node tag a given principle, auto-create a `governs` edge. No manual proposal needed. Edges are rebuilt on each snapshot update to stay current.
 
-3. **Scoring agent parallelism**: The current validator runs sequentially (1 Gemini call per node). At 30+ nodes, this could approach the 540s timeout. Should we parallelize with `Promise.all` (risk of rate limiting) or split across multiple function invocations?
+3. **Scoring agent parallelism**: **Split across multiple function invocations.** The scoring agent dispatches one Cloud Function invocation per node (or per batch of 5 nodes) rather than processing all nodes in a single 540s function. A coordinator function fans out the work and collects results. This avoids timeout issues and Gemini rate limiting.
 
-4. **Historical harm_status backfill**: Should we run a one-time classification pass on historical approved signals to assign `harm_status`? Cost: ~$0.05 for current volume. Benefit: enables immediate incident/hazard filtering in the UI.
+4. **Historical harm_status backfill**: **Yes.** Run a one-time Gemini 2.5 Flash pass on all historical approved signals to assign `harm_status` (incident/hazard/null). Estimated cost: ~$0.05. This enables immediate incident/hazard filtering in the UI from day one.
 
-5. **Editorial hooks and reclassified signals**: If a signal has an approved editorial hook and then gets reclassified (version 1→2) with new `related_node_ids`, the hook still references the old node mapping. Options: (a) leave hooks as-is (they're human-curated content), (b) flag them for re-review, (c) auto-update `related_node_ids` on the hook. Current design leans toward (a) since hooks are editorial content, not data.
+5. **Editorial hooks and reclassified signals**: **Non-issue.** Editorial hooks are only created from approved signals, and reclassification only targets pending signals. There is no scenario where a hook's underlying signal gets reclassified.
 
-6. **Principle nodes in graph visualization**: Adding P01–P10 to `graph_snapshot` means they appear in the observatory force-directed graph. 10 principle nodes with many `governs` edges could add visual noise. Options: (a) include them with a distinct visual treatment (different color/shape, smaller), (b) exclude them from the snapshot and show principle relationships only on node detail pages, (c) make them toggleable in the UI. This needs a frontend design decision.
+6. **Graph visualization scope**: **Risks, solutions, and milestones only.** Stakeholders (40 nodes) and principles (10 nodes) are excluded from `graph_snapshot` and the observatory graph. They are shown as tags on detail pages and as filter facets in the UI. This reduces the graph from ~94 nodes to ~40 nodes.
 
-7. **Migration cost for §6.3**: Populating missing fields on discovery-created nodes requires ~4–6 Gemini 2.5 Pro calls (one per incomplete node). Estimated cost: ~$0.05–0.10 one-time.
+7. **Migration cost for §6.3**: **Approved.** ~$0.05–0.10 one-time cost for populating missing fields on discovery-created nodes via Gemini 2.5 Pro.
