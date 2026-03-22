@@ -435,5 +435,6 @@ export const v3Cleanup = onRequest(
     // ─── Done ───────────────────────────────────────────────────────────────
     logger.info("v3Cleanup complete", report);
     res.status(200).json({ success: true, ...report });
+
   }
 );

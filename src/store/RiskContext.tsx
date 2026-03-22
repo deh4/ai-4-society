@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react';
-import { collection, getDocs, query, where, onSnapshot, type QuerySnapshot, type DocumentData } from 'firebase/firestore';
+import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { AI_MILESTONES } from '../lib/milestones';
 
@@ -29,9 +29,9 @@ export interface Risk {
     velocity: 'High' | 'Medium' | 'Low' | 'Critical';
     summary: string;
     deep_dive: string;
-    who_affected: string[];
     timeline_narrative: TimelineNarrative;
     mitigation_strategies: string[];
+    principles: string[];
     signal_evidence: SignalEvidence[];
     expert_severity: number;
     public_perception: number;
@@ -48,6 +48,7 @@ export interface Solution {
     score_2035: number;
     key_players: string[];
     barriers: string[];
+    principles: string[];
     timeline_narrative: TimelineNarrative;
 }
 
@@ -58,14 +59,15 @@ interface LiveSignal {
     source_url: string;
     source_name: string;
     published_date: string;
-    risk_categories: string[];
+    related_node_ids: string[];
 }
 
 export interface Milestone {
     id: string;
-    year: number;
-    title: string;
+    name: string;
     description: string;
+    date: string;
+    significance: string;
 }
 
 interface RiskContextType {
@@ -86,39 +88,79 @@ export function RiskProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch base risks and solutions (one-time)
+    // Fetch base risks, solutions, milestones from nodes collection (one-time)
     useEffect(() => {
         async function fetchData() {
             try {
-                const nodesCollection = collection(db, 'nodes');
-
-                const risksSnapshot: QuerySnapshot<DocumentData> = await getDocs(
-                    query(nodesCollection, where('type', '==', 'risk'))
-                );
+                const risksSnapshot = await getDocs(query(collection(db, 'nodes'), where('type', '==', 'risk')));
                 const fetchedRisks: Risk[] = [];
                 risksSnapshot.forEach((doc) => {
-                    fetchedRisks.push({ id: doc.id, ...doc.data() } as Risk);
+                    const data = doc.data();
+                    fetchedRisks.push({
+                        id: doc.id,
+                        name: data.name ?? '',
+                        category: data.category ?? '',
+                        score_2026: data.score_2026 ?? 0,
+                        score_2035: data.score_2035 ?? 0,
+                        velocity: data.velocity ?? 'Medium',
+                        summary: data.summary ?? '',
+                        deep_dive: data.deep_dive ?? '',
+                        timeline_narrative: data.timeline_narrative ?? { near_term: '', mid_term: '', long_term: '' },
+                        mitigation_strategies: data.mitigation_strategies ?? [],
+                        principles: data.principles ?? [],
+                        signal_evidence: data.signal_evidence ?? [],
+                        expert_severity: data.expert_severity ?? 0,
+                        public_perception: data.public_perception ?? 0,
+                    });
                 });
                 setBaseRisks(fetchedRisks);
 
-                const solutionsSnapshot: QuerySnapshot<DocumentData> = await getDocs(
-                    query(nodesCollection, where('type', '==', 'solution'))
-                );
+                const solutionsSnapshot = await getDocs(query(collection(db, 'nodes'), where('type', '==', 'solution')));
                 const fetchedSolutions: Solution[] = [];
                 solutionsSnapshot.forEach((doc) => {
-                    fetchedSolutions.push({ id: doc.id, ...doc.data() } as Solution);
+                    const data = doc.data();
+                    fetchedSolutions.push({
+                        id: doc.id,
+                        name: data.name ?? '',
+                        solution_type: data.solution_type ?? '',
+                        summary: data.summary ?? '',
+                        deep_dive: data.deep_dive ?? '',
+                        implementation_stage: data.implementation_stage ?? 'Research',
+                        score_2026: data.score_2026 ?? 0,
+                        score_2035: data.score_2035 ?? 0,
+                        key_players: data.key_players ?? [],
+                        barriers: data.barriers ?? [],
+                        principles: data.principles ?? [],
+                        timeline_narrative: data.timeline_narrative ?? { near_term: '', mid_term: '', long_term: '' },
+                    });
                 });
                 setSolutions(fetchedSolutions);
 
-                const milestonesSnapshot: QuerySnapshot<DocumentData> = await getDocs(
-                    query(nodesCollection, where('type', '==', 'milestone'))
-                );
+                const milestonesSnapshot = await getDocs(query(collection(db, 'nodes'), where('type', '==', 'milestone')));
                 const fetchedMilestones: Milestone[] = [];
                 milestonesSnapshot.forEach((doc) => {
-                    fetchedMilestones.push({ id: doc.id, ...doc.data() } as Milestone);
+                    const data = doc.data();
+                    fetchedMilestones.push({
+                        id: doc.id,
+                        name: data.name ?? '',
+                        description: data.description ?? '',
+                        date: data.date ?? '',
+                        significance: data.significance ?? '',
+                    });
                 });
                 // Fall back to hardcoded milestones if Firestore collection is empty
-                setMilestones(fetchedMilestones.length > 0 ? fetchedMilestones : AI_MILESTONES);
+                if (fetchedMilestones.length > 0) {
+                    setMilestones(fetchedMilestones);
+                } else {
+                    // Convert legacy milestone format to V3 format
+                    setMilestones(AI_MILESTONES.map((m) => ({
+                        id: m.id,
+                        name: m.title,
+                        description: m.description,
+                        date: String(m.year),
+                        significance: '',
+                    })));
+                }
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : 'Failed to fetch data';
                 console.error("Error fetching data:", err);
@@ -146,8 +188,8 @@ export function RiskProvider({ children }: { children: ReactNode }) {
                     source_url: data.source_url ?? '',
                     source_name: data.source_name ?? '',
                     published_date: data.published_date ?? '',
-                    // Ensure required fields exist with defaults
-                    risk_categories: data.risk_categories ?? [],
+                    // Use related_node_ids from V2 signals
+                    related_node_ids: data.related_node_ids ?? [],
                 } as LiveSignal;
             });
             setLiveSignals(signals);
@@ -163,7 +205,7 @@ export function RiskProvider({ children }: { children: ReactNode }) {
 
         return baseRisks.map((risk) => {
             const matching = liveSignals.filter((s) =>
-                s.risk_categories?.includes(risk.id) ?? false
+                s.related_node_ids?.includes(risk.id) ?? false
             );
             if (matching.length === 0) return risk;
 

@@ -61,14 +61,14 @@ export default function RiskDetailPanel({ risk, relatedSolution, onBack }: RiskD
                 </div>
             </div>
 
-            {/* Affected Groups */}
-            {risk.who_affected && risk.who_affected.length > 0 && (
+            {/* Mitigation Strategies */}
+            {risk.mitigation_strategies && risk.mitigation_strategies.length > 0 && (
                 <div className="mb-8">
-                    <h2 className="text-sm font-medium text-gray-400 mb-3">Who's Affected</h2>
+                    <h2 className="text-sm font-medium text-gray-400 mb-3">Mitigation Strategies</h2>
                     <div className="flex flex-wrap gap-2">
-                        {risk.who_affected.map((group, idx) => (
+                        {risk.mitigation_strategies.map((strategy: string, idx: number) => (
                             <span key={idx} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm">
-                                {group}
+                                {strategy}
                             </span>
                         ))}
                     </div>
@@ -114,6 +114,19 @@ export default function RiskDetailPanel({ risk, relatedSolution, onBack }: RiskD
                 </div>
             )}
 
+            {/* Principles */}
+            {risk.principles && risk.principles.length > 0 && (
+                <div className="mb-8">
+                    <h2 className="text-sm font-medium text-gray-400 mb-3">Related Principles</h2>
+                    <div className="flex flex-wrap gap-2">
+                        {risk.principles.map((id) => (
+                            <span key={id} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-400">
+                                {id}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Signal Evidence — full width */}
             {risk.signal_evidence && risk.signal_evidence.length > 0 && (

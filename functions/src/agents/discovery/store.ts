@@ -66,9 +66,12 @@ export async function storeDiscoveryProposals(
         continue;
       }
 
+      // Store full node skeleton (including summary, deep_dive, scores, etc.)
       await col.add({
         proposal_type: "new_node",
-        node_data: proposal.node_data,
+        node_data: {
+          ...proposal.node_data,
+        },
         supporting_signal_ids: proposal.supporting_signal_ids,
         confidence: proposal.confidence,
         signal_quality: proposal.signal_quality ?? null,

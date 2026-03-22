@@ -207,7 +207,7 @@ async function runSignalScout(apiKey: string): Promise<{
 
 export const scheduledSignalScout = onSchedule(
   {
-    schedule: "every 12 hours",
+    schedule: "every 6 hours",
     timeoutSeconds: 300,
     memory: "512MiB",
     secrets: [geminiApiKey],

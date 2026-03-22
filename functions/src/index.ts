@@ -7,7 +7,7 @@ import { runDataLifecycle as runDataLifecycleV2 } from "./agents/data-lifecycle/
 
 initializeApp();
 
-// ─── Usage Report HTTP endpoint ──────────────────────────────────────────────
+// ─── HTTP Endpoints ──────────────────────────────────────────────────────────
 
 /**
  * Simple HTTP endpoint to check current usage stats.
@@ -64,8 +64,6 @@ export const usageReport = onRequest(
     });
   }
 );
-
-// ─── Pipeline Health HTTP endpoint ───────────────────────────────────────────
 
 export const pipelineHealth = onRequest(
   { memory: "256MiB", timeoutSeconds: 30 },
@@ -129,7 +127,8 @@ export const dataLifecycleV2 = onSchedule(
   }
 );
 
-// --- v2 agents ---
+// ─── V2 Agent Exports ────────────────────────────────────────────────────────
+
 export { buildGraph } from "./agents/graph-builder/index.js";
 export { scheduledFeedCurator, triggerFeedCurator } from "./agents/feed-curator/index.js";
 export { onVoteWritten } from "./triggers/vote-aggregation.js";

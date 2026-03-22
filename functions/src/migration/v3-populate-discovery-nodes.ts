@@ -185,6 +185,5 @@ export const v3PopulateDiscoveryNodes = onRequest(
     }
 
     logger.info("v3PopulateDiscoveryNodes complete", report);
-    res.status(200).json({ success: true, ...report });
-  }
+    res.status(200).json({ success: true, ...report });  }
 );

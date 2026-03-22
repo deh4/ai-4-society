@@ -36,13 +36,10 @@ export const buildGraph = onCall(
     }
     await lockRef.set({ lastRunAt: FieldValue.serverTimestamp() });
 
-    const [nodes, visibleNodes, edges] = await Promise.all([
-      getAllNodes(),
-      getGraphVisibleNodes(),
-      getAllEdges(),
-    ]);
+    const [allNodes, visibleNodes, edges] = await Promise.all([getAllNodes(), getGraphVisibleNodes(), getAllEdges()]);
 
-    // Build minimal snapshot for visualization (risk/solution/milestone only)
+    // Build minimal snapshot for visualization (excludes stakeholder/principle nodes)
+    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id as string));
     const snapshotNodes: SnapshotNode[] = visibleNodes.map((n) => {
       const node: SnapshotNode = {
         id: n.id as string,
@@ -56,8 +53,7 @@ export const buildGraph = onCall(
       return node;
     });
 
-    // Only include edges where both endpoints are visible nodes
-    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+    // Only include edges where both nodes are visible
     const snapshotEdges = edges
       .filter((e) => visibleNodeIds.has(e.from_node as string) && visibleNodeIds.has(e.to_node as string))
       .map((e) => ({
@@ -74,9 +70,9 @@ export const buildGraph = onCall(
       edgeCount: snapshotEdges.length,
     });
 
-    // Auto-update filter terms for Signal Scout Stage 1 filter
+    // Auto-update filter terms for Signal Scout Stage 1 filter (use all nodes)
     const filterTerms: string[] = [];
-    for (const node of nodes) {
+    for (const node of allNodes) {
       const name = (node.name as string) ?? "";
       if (name) filterTerms.push(name.toLowerCase());
       const category = (node.category as string) ?? "";
@@ -90,12 +86,12 @@ export const buildGraph = onCall(
       .doc("current")
       .set({ filterTerms: uniqueTerms }, { merge: true });
 
-    // Compute node summaries
+    // Compute node summaries (for all nodes, not just visible)
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    for (const node of nodes) {
+    for (const node of allNodes) {
       const nodeId = node.id as string;
       const signals = await getSignalsForNode(nodeId, "approved");
 

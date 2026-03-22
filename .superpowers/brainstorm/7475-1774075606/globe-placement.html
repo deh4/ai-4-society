@@ -1,0 +1,168 @@
+<h2>Where does the 3D globe live?</h2>
+<p class="subtitle">Two options. Click the one you prefer — or tell me in terminal if you want a mix.</p>
+
+<div class="split">
+
+  <!-- OPTION A: Observatory Background -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="flex: 1;">
+    <div class="card-image" style="background: #0a0a0a; padding: 0; overflow: hidden;">
+      <div style="font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6; height: 100%; position: relative;">
+
+        <!-- Globe as background watermark behind the graph -->
+        <div style="position: absolute; top: 50%; left: 40%; transform: translate(-50%, -50%); width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, rgba(42,157,255,0.08) 0%, rgba(42,157,255,0.03) 40%, transparent 70%); border: 1px solid rgba(42,157,255,0.06);"></div>
+        <!-- Latitude lines suggestion -->
+        <div style="position: absolute; top: 50%; left: 40%; transform: translate(-50%, -50%); width: 280px; height: 280px; border-radius: 50%; border: 1px dashed rgba(42,157,255,0.04);"></div>
+        <div style="position: absolute; top: 50%; left: 40%; transform: translate(-50%, -50%); width: 220px; height: 220px; border-radius: 50%; border: 1px dashed rgba(42,157,255,0.03);"></div>
+
+        <!-- Observatory header -->
+        <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2;">
+          <div>
+            <div style="font-size: 13px; font-weight: 600; color: #fff;">Observatory</div>
+            <div style="font-size: 8px; color: #555;">42 nodes &middot; 68 edges</div>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <div style="font-size: 9px; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; color: #fff;">Graph</div>
+            <div style="font-size: 9px; padding: 4px 10px; color: #555; border-radius: 4px;">Timeline</div>
+          </div>
+        </div>
+
+        <!-- Simulated force graph nodes overlaid on globe -->
+        <div style="position: relative; height: 260px; z-index: 2;">
+          <!-- Risk nodes -->
+          <div style="position: absolute; top: 40px; left: 50px; width: 28px; height: 28px; border-radius: 50%; background: #FF4444; opacity: 0.8; box-shadow: 0 0 12px rgba(255,68,68,0.4); display: flex; align-items: center; justify-content: center; font-size: 7px; color: white; font-weight: 600;">R01</div>
+          <div style="position: absolute; top: 80px; left: 110px; width: 22px; height: 22px; border-radius: 50%; background: #FF8844; opacity: 0.7; box-shadow: 0 0 8px rgba(255,136,68,0.3); display: flex; align-items: center; justify-content: center; font-size: 6px; color: white;">R03</div>
+          <div style="position: absolute; top: 130px; left: 60px; width: 20px; height: 20px; border-radius: 50%; background: #FF6644; opacity: 0.7; box-shadow: 0 0 8px rgba(255,102,68,0.3); display: flex; align-items: center; justify-content: center; font-size: 6px; color: white;">R07</div>
+          <div style="position: absolute; top: 60px; left: 170px; width: 24px; height: 24px; border-radius: 50%; background: #FF4444; opacity: 0.8; box-shadow: 0 0 10px rgba(255,68,68,0.3); display: flex; align-items: center; justify-content: center; font-size: 6px; color: white;">R02</div>
+
+          <!-- Solution nodes -->
+          <div style="position: absolute; top: 100px; left: 160px; width: 20px; height: 20px; border-radius: 50%; background: #4ADE80; opacity: 0.7; box-shadow: 0 0 8px rgba(74,222,128,0.3); display: flex; align-items: center; justify-content: center; font-size: 6px; color: white;">S01</div>
+          <div style="position: absolute; top: 170px; left: 120px; width: 18px; height: 18px; border-radius: 50%; background: #4ADE80; opacity: 0.6; box-shadow: 0 0 6px rgba(74,222,128,0.2); display: flex; align-items: center; justify-content: center; font-size: 6px; color: white;">S04</div>
+
+          <!-- Stakeholder -->
+          <div style="position: absolute; top: 150px; left: 190px; width: 16px; height: 16px; border-radius: 50%; background: #2A9DFF; opacity: 0.5; display: flex; align-items: center; justify-content: center; font-size: 5px; color: white;">ST</div>
+
+          <!-- Edge lines (SVG) -->
+          <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+            <line x1="64" y1="54" x2="121" y2="91" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+            <line x1="182" y1="72" x2="170" y2="110" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+            <line x1="121" y1="91" x2="170" y2="110" stroke="rgba(74,222,128,0.15)" stroke-width="1"/>
+            <line x1="70" y1="140" x2="129" y2="179" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+            <line x1="170" y1="110" x2="198" y2="158" stroke="rgba(42,157,255,0.1)" stroke-width="1"/>
+          </svg>
+        </div>
+
+        <!-- Detail panel peek -->
+        <div style="position: absolute; right: 0; top: 50px; width: 140px; background: rgba(15,15,15,0.95); border-left: 1px solid rgba(255,255,255,0.06); padding: 12px; height: 220px; z-index: 3;">
+          <div style="font-size: 8px; color: #FF4444; text-transform: uppercase; letter-spacing: 1px;">Risk</div>
+          <div style="font-size: 11px; color: #fff; font-weight: 500; margin-top: 4px; line-height: 1.3;">Deepfake Manipulation</div>
+          <div style="font-size: 8px; color: #666; margin-top: 8px;">Score 2026</div>
+          <div style="font-size: 16px; color: #FF4444; font-weight: 600;">92</div>
+          <div style="font-size: 8px; color: #666; margin-top: 8px;">Velocity</div>
+          <div style="font-size: 10px; color: #FF4444;">Critical &uarr;</div>
+          <div style="font-size: 8px; color: #666; margin-top: 8px;">14 signals this week</div>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Observatory Background</h3>
+      <p>Globe becomes a subtle watermark behind the force graph in Observatory. Slowly rotates. Gives spatial context — "these are global risks" — without competing with the graph nodes. Removed from landing page entirely.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: Nav Logo Spinner -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="flex: 1;">
+    <div class="card-image" style="background: #0a0a0a; padding: 0; overflow: hidden;">
+      <div style="font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6; height: 100%;">
+
+        <!-- === LANDING PAGE NAV === -->
+        <div style="padding: 8px 0 6px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #555; text-align: center; margin-bottom: 6px;">Landing Page</div>
+          <div style="display: flex; align-items: center; padding: 0 16px; gap: 8px;">
+            <!-- Mini globe -->
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(42,157,255,0.25) 0%, rgba(42,157,255,0.08) 50%, rgba(10,10,10,0.9) 75%); border: 1px solid rgba(42,157,255,0.15); box-shadow: 0 0 8px rgba(42,157,255,0.1); flex-shrink: 0; position: relative; overflow: hidden;">
+              <!-- Latitude line hints -->
+              <div style="position: absolute; top: 8px; left: 2px; right: 2px; height: 1px; background: rgba(42,157,255,0.1); border-radius: 50%;"></div>
+              <div style="position: absolute; top: 14px; left: 0; right: 0; height: 1px; background: rgba(42,157,255,0.12);"></div>
+              <div style="position: absolute; top: 20px; left: 2px; right: 2px; height: 1px; background: rgba(42,157,255,0.1); border-radius: 50%;"></div>
+            </div>
+            <span style="font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc;">AI 4 Society</span>
+            <div style="flex: 1;"></div>
+            <div style="display: flex; gap: 12px; font-size: 9px; color: #555;">
+              <span>Observatory</span>
+              <span>About</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Landing content hint -->
+        <div style="padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+          <div style="font-size: 8px; color: #FF2A2A; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Accelerating</div>
+          <div style="font-size: 16px; font-weight: 600; color: #fff; line-height: 1.3;">EU deepfake incident triggers emergency AI Act vote...</div>
+          <div style="font-size: 9px; color: #666; margin-top: 6px;">The story section continues below...</div>
+        </div>
+
+        <!-- === OBSERVATORY NAV === -->
+        <div style="padding: 8px 0 6px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-top: 16px;">
+          <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #555; text-align: center; margin-bottom: 6px;">Observatory Page</div>
+          <div style="display: flex; align-items: center; padding: 0 16px; gap: 8px;">
+            <!-- Same mini globe -->
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(42,157,255,0.25) 0%, rgba(42,157,255,0.08) 50%, rgba(10,10,10,0.9) 75%); border: 1px solid rgba(42,157,255,0.15); box-shadow: 0 0 8px rgba(42,157,255,0.1); flex-shrink: 0; position: relative; overflow: hidden;">
+              <div style="position: absolute; top: 8px; left: 2px; right: 2px; height: 1px; background: rgba(42,157,255,0.1); border-radius: 50%;"></div>
+              <div style="position: absolute; top: 14px; left: 0; right: 0; height: 1px; background: rgba(42,157,255,0.12);"></div>
+              <div style="position: absolute; top: 20px; left: 2px; right: 2px; height: 1px; background: rgba(42,157,255,0.1); border-radius: 50%;"></div>
+            </div>
+            <span style="font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc;">AI 4 Society</span>
+            <div style="flex: 1;"></div>
+            <div style="font-size: 9px; padding: 4px 10px; background: rgba(255,255,255,0.08); border-radius: 4px; color: #fff;">Graph</div>
+            <div style="font-size: 9px; color: #555;">Timeline</div>
+          </div>
+        </div>
+
+        <!-- Observatory content hint -->
+        <div style="padding: 16px 20px; position: relative;">
+          <!-- Simulated graph area -->
+          <div style="height: 140px; position: relative;">
+            <div style="position: absolute; top: 20px; left: 30px; width: 22px; height: 22px; border-radius: 50%; background: #FF4444; opacity: 0.7; box-shadow: 0 0 8px rgba(255,68,68,0.3);"></div>
+            <div style="position: absolute; top: 50px; left: 90px; width: 18px; height: 18px; border-radius: 50%; background: #FF8844; opacity: 0.6;"></div>
+            <div style="position: absolute; top: 30px; left: 150px; width: 16px; height: 16px; border-radius: 50%; background: #4ADE80; opacity: 0.6;"></div>
+            <div style="position: absolute; top: 80px; left: 60px; width: 14px; height: 14px; border-radius: 50%; background: #2A9DFF; opacity: 0.5;"></div>
+            <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+              <line x1="41" y1="31" x2="99" y2="59" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+              <line x1="99" y1="59" x2="158" y2="38" stroke="rgba(74,222,128,0.1)" stroke-width="1"/>
+            </svg>
+          </div>
+          <div style="font-size: 9px; color: #444; text-align: center;">Force graph — no globe background, clean canvas</div>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Nav Logo Spinner</h3>
+      <p>Globe shrinks to a 28px spinning logo in the top-left nav. Present on every page — landing, observatory, about. Becomes brand identity rather than a visual feature. Observatory graph gets a clean, uncluttered canvas.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>A: Observatory Background</h4>
+      <ul>
+        <li>Dramatic visual payoff when entering Observatory</li>
+        <li>Reinforces "global" scale of the risk landscape</li>
+        <li>Landing page loads faster (no Three.js on first visit)</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>B: Nav Logo Spinner</h4>
+      <ul>
+        <li>Consistent brand identity across all pages</li>
+        <li>Tiny footprint — no performance cost</li>
+        <li>Observatory graph stays clean and readable</li>
+        <li>Globe becomes an icon, not a feature to maintain</li>
+      </ul>
+    </div>
+  </div>
+</div>

@@ -9,8 +9,7 @@ const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 const BATCH_SIZE = 25;
 
-const SYSTEM_PROMPT = `For each signal, determine harm_status:
-- "incident": Describes an AI-related harm that HAS ALREADY OCCURRED (past tense, specific victims/damages)
+const SYSTEM_PROMPT = `For each signal, determine harm_status:- "incident": Describes an AI-related harm that HAS ALREADY OCCURRED (past tense, specific victims/damages)
 - "hazard": Describes a PLAUSIBLE FUTURE harm or near-miss (warnings, "could lead to", vulnerability)
 - null: Solution-focused or no specific harm described
 
@@ -83,12 +82,10 @@ export const v3BackfillHarmStatus = onRequest(
         .join("\n\n");
 
       const prompt = `Classify the harm_status for each of these signals:\n\n${signalList}`;
-
       try {
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          systemInstruction: SYSTEM_PROMPT,
-          generationConfig: {
+          systemInstruction: SYSTEM_PROMPT,          generationConfig: {
             responseMimeType: "application/json",
             temperature: 0.1,
           },
@@ -140,6 +137,5 @@ export const v3BackfillHarmStatus = onRequest(
     }
 
     logger.info("v3BackfillHarmStatus complete", report);
-    res.status(200).json({ success: true, ...report });
-  }
+    res.status(200).json({ success: true, ...report });  }
 );

@@ -67,7 +67,7 @@ ${signalText}`;
     return `CURRENT SOLUTION NODE:
 Name: ${nodeData.name as string}
 Type: ${nodeData.solution_type ?? "N/A"}
-Score 2026: ${nodeData.score_2026 ?? "N/A"} | Score 2035: ${nodeData.score_2035 ?? "N/A"}
+Score 2026: ${nodeData.score_2026 ?? "N/A"} | 2035: ${nodeData.score_2035 ?? "N/A"}
 Implementation Stage: ${nodeData.implementation_stage ?? "N/A"}
 Key Players: ${JSON.stringify(nodeData.key_players ?? [])}
 Barriers: ${JSON.stringify(nodeData.barriers ?? [])}

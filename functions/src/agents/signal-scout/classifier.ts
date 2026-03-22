@@ -22,6 +22,8 @@ export interface ClassifiedSignal {
   affected_groups: string[];
   confidence_score: number;
   proposed_topic?: string;
+  harm_status: "incident" | "hazard" | null;
+  principles: string[];
 }
 
 export interface ClassificationResult {
@@ -77,6 +79,26 @@ signal_type rules:
 - "both": article covers both a risk and a response/solution
 - "unmatched": article is relevant to AI society impact but does NOT fit any existing node
 
+Additionally, determine harm_status for each article:
+- "incident": The article describes an AI-related harm that HAS ALREADY OCCURRED.
+  Evidence: past tense, specific victims/damages, legal proceedings, documented failures.
+- "hazard": The article describes a PLAUSIBLE FUTURE harm or near-miss.
+  Evidence: warnings, risk assessments, "could lead to", vulnerability disclosures.
+- null: The article is about a solution, policy, or does not describe a specific harm.
+  Use null for solution-type signals unless they reference a specific past incident.
+
+PRINCIPLES (tag 1-3 most relevant per signal, use [] if none apply):
+- P01: Accountability — responsible parties, liability, oversight gaps
+- P02: Fairness — bias, discrimination, equitable access
+- P03: Transparency — explainability, black-box, interpretability
+- P04: Safety — robustness, reliability, failure modes
+- P05: Privacy — surveillance, data collection, consent
+- P06: Human Oversight — autonomy, human-in-the-loop, automation
+- P07: Sustainability — environmental impact, energy, resources
+- P08: Wellbeing — mental health, social impact, quality of life
+- P09: Democracy — elections, free speech, information integrity
+- P10: International Cooperation — cross-border, standards, treaties
+
 For relevant articles (matched to existing nodes):
 {
   "index": <number>,
@@ -88,7 +110,9 @@ For relevant articles (matched to existing nodes):
   ],
   "severity_hint": "Critical" | "Emerging" | "Horizon",
   "affected_groups": ["<group 1>", ...],
-  "confidence_score": <0.0-1.0>
+  "confidence_score": <0.0-1.0>,
+  "harm_status": "incident" | "hazard" | null,
+  "principles": ["P01", "P03"]
 }
 
 For unmatched articles (relevant but outside current graph):
@@ -101,7 +125,9 @@ For unmatched articles (relevant but outside current graph):
   "related_nodes": [],
   "severity_hint": "Critical" | "Emerging" | "Horizon",
   "affected_groups": ["<group 1>", ...],
-  "confidence_score": <0.0-1.0>
+  "confidence_score": <0.0-1.0>,
+  "harm_status": "incident" | "hazard" | null,
+  "principles": ["P01", "P03"]
 }
 
 For irrelevant articles:
@@ -171,6 +197,8 @@ export async function classifyArticles(
         affected_groups?: string[];
         confidence_score?: number;
         proposed_topic?: string;
+        harm_status?: "incident" | "hazard" | null;
+        principles?: string[];
       }> = JSON.parse(result.response.text());
 
       for (const item of parsed) {
@@ -184,6 +212,12 @@ export async function classifyArticles(
         if (!article) continue;
 
         const signalType = item.signal_type ?? "risk";
+
+        // Validate harm_status and principles
+        const validHarmStatuses = new Set(["incident", "hazard"]);
+        const harmStatus = item.harm_status && validHarmStatuses.has(item.harm_status) ? item.harm_status : null;
+        const validPrincipleIds = new Set(["P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10"]);
+        const principles = (item.principles ?? []).filter((p) => validPrincipleIds.has(p));
 
         // Unmatched: require proposed_topic, skip taxonomy checks
         if (signalType === "unmatched") {
@@ -205,6 +239,8 @@ export async function classifyArticles(
             affected_groups: item.affected_groups ?? [],
             confidence_score: confidence,
             proposed_topic: topic,
+            harm_status: harmStatus,
+            principles,
           });
           continue;
         }
@@ -230,6 +266,8 @@ export async function classifyArticles(
           severity_hint: item.severity_hint ?? "Emerging",
           affected_groups: item.affected_groups ?? [],
           confidence_score: confidence,
+          harm_status: harmStatus,
+          principles,
         });
       }
 

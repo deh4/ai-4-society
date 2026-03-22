@@ -58,7 +58,7 @@
 // 1. ENUMS & LITERAL UNIONS
 // ---------------------------------------------------------------------------
 
-/** The five kinds of knowledge-graph node. */
+/** The four kinds of knowledge-graph node. */
 export type NodeType = "risk" | "solution" | "stakeholder" | "milestone" | "principle";
 
 /** How a signal relates to the taxonomy. */
@@ -277,10 +277,10 @@ export interface MilestoneNode extends NodeBase {
 }
 
 /**
- * PrincipleNode — an OECD AI principle or governance norm.
+ * PrincipleNode — an OECD-aligned AI governance principle.
  *
  * Firestore: nodes/{id}  (type: "principle")
- * IDs:       P01+
+ * IDs:       P01–P10
  */
 export interface PrincipleNode extends NodeBase {
   type: "principle";
@@ -499,6 +499,8 @@ export interface Vote {
 
 // UserRole and UserStatus are defined in the enums section above.
 // Full User interface lives in ./user.ts — not duplicated here.
+
+// Legacy types (v1) have been removed — use RiskNode, SolutionNode, MilestoneNode instead.
 
 // ---------------------------------------------------------------------------
 // INTERNAL — Firestore timestamp placeholder

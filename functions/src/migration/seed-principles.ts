@@ -144,5 +144,6 @@ export const seedPrinciples = onRequest(
 
     logger.info("seedPrinciples: complete", result);
     res.json({ success: true, ...result });
+
   }
 );

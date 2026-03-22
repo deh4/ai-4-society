@@ -49,9 +49,9 @@ function milestoneToTimelineItem(m: Milestone): TimelineItem {
     return {
         id: m.id,
         label: m.id,
-        name: m.title,
+        name: m.name,
         score: 0,
-        peakYear: m.year,
+        peakYear: parseInt(m.date, 10) || 2020,
         type: 'milestone',
         velocity: '',
         description: m.description,

@@ -24,14 +24,6 @@ service cloud.firestore {
         && getUserDoc().data.roles.hasAny(roles);
     }
 
-    function canWrite(roles) {
-      return hasAnyRole(roles);
-    }
-
-    function canRead(roles) {
-      return hasAnyRole(roles);
-    }
-
     // Any active user holding at least one reviewer or lead role
     function isActiveReviewer() {
       return isActiveUser()
@@ -79,37 +71,76 @@ service cloud.firestore {
       }
     }
 
-    // ─── Public Collections ───────────────────────────────────────────────────
+    // ─── Signals ───────────────────────────────────────────────────────────────
 
     match /signals/{signalId} {
       allow read: if resource.data.status in ['approved', 'edited']
-                  || canRead(['signal-reviewer', 'lead']);
-      allow write: if canWrite(['signal-reviewer', 'lead']);
+                  || hasAnyRole(['signal-reviewer', 'lead']);
+      allow write: if hasAnyRole(['signal-reviewer', 'lead']);
     }
 
-    // ─── Pipeline & Archive (server-only write) ──────────────────────────────
+    // ─── Graph Model (nodes, edges, snapshot, summaries) ─────────────────────
 
-    match /_pipeline_health/{document=**} {
+    match /nodes/{nodeId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if false; // server-only (Graph Builder / Approval)
     }
 
-    match /_archive/{document=**} {
-      allow read: if canRead(['lead']);
-      allow write: if false;
+    match /edges/{edgeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder / Approval)
     }
 
-    match /_usage/{document=**} {
-      allow read: if canRead(['lead']);
-      allow write: if false;
+    match /graph_snapshot/{docId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
     }
 
-    // ─── Agent-Related Collections ────────────────────────────────────────────
+    match /node_summaries/{nodeId} {
+      allow read: if true;
+      allow write: if false; // server-only (Graph Builder)
+    }
+
+    // Votes subcollection on nodes
+    match /nodes/{nodeId}/votes/{voteId} {
+      allow read: if request.auth != null && request.auth.uid == voteId;
+      allow create: if request.auth != null
+                    && request.auth.uid == voteId
+                    && request.resource.data.keys().hasAll(['userId', 'value', 'createdAt'])
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.value in [1, -1];
+      allow update: if request.auth != null
+                    && request.auth.uid == voteId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['value', 'updatedAt'])
+                    && request.resource.data.value in [1, -1];
+      allow delete: if request.auth != null && request.auth.uid == voteId;
+    }
+
+    // ─── Proposals & Review ────────────────────────────────────────────────────
+
+    match /graph_proposals/{proposalId} {
+      allow read: if isActiveReviewer();
+      allow write: if hasRole('lead');
+    }
 
     match /changelogs/{changelogId} {
-      allow read: if canRead(['lead']);
-      allow write: if false;
+      allow read: if true;
+      allow write: if false; // server-only
     }
+
+    // ─── Editorial & Feed ──────────────────────────────────────────────────────
+
+    match /feed_items/{itemId} {
+      allow read: if true;
+      allow write: if false; // server-only (Feed Curator)
+    }
+
+    match /editorial_hooks/{hookId} {
+      allow read: if true;
+      allow write: if hasAnyRole(['editor', 'lead']);
+    }
+
+    // ─── Agent Infrastructure (server-only write) ──────────────────────────────
 
     match /agents/{agentId} {
       allow read: if true;
@@ -131,70 +162,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── Discovery & Validation Proposals ─────────────────────────────────────
+    // ─── Pipeline & Archive (server-only write) ──────────────────────────────
 
-    match /validation_proposals/{docId} {
-      allow read: if canRead(['scoring-reviewer', 'lead']);
-      allow write: if canWrite(['scoring-reviewer', 'lead']);
-    }
-
-    // ─── V2 Graph Model Collections ──────────────────────────────────────────
-
-    match /nodes/{nodeId} {
+    match /_pipeline_health/{document=**} {
       allow read: if true;
-      allow write: if false; // server-only (Graph Builder)
+      allow write: if false;
     }
 
-    match /edges/{edgeId} {
-      allow read: if true;
-      allow write: if false; // server-only (Graph Builder)
+    match /_archive/{document=**} {
+      allow read: if hasRole('lead');
+      allow write: if false;
     }
 
-    match /graph_snapshot/{docId} {
-      allow read: if true;
-      allow write: if false; // server-only (Graph Builder)
+    match /_usage/{document=**} {
+      allow read: if hasRole('lead');
+      allow write: if false;
     }
-
-    match /node_summaries/{nodeId} {
-      allow read: if true;
-      allow write: if false; // server-only (Graph Builder)
-    }
-
-    match /feed_items/{itemId} {
-      allow read: if true;
-      allow write: if false; // server-only (Feed Curator)
-    }
-
-    match /editorial_hooks/{hookId} {
-      allow read: if true;
-      allow write: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['editor', 'lead']);
-    }
-
-    // Votes subcollection on nodes
-    match /nodes/{nodeId}/votes/{voteId} {
-      allow read: if request.auth != null && request.auth.uid == voteId;
-      allow create: if request.auth != null
-                    && request.auth.uid == voteId
-                    && request.resource.data.keys().hasAll(['userId', 'value', 'createdAt'])
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.value in [1, -1];
-      allow update: if request.auth != null
-                    && request.auth.uid == voteId
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['value', 'updatedAt'])
-                    && request.resource.data.value in [1, -1];
-      allow delete: if request.auth != null && request.auth.uid == voteId;
-    }
-
-    match /graph_proposals/{proposalId} {
-      allow read: if isActiveReviewer();
-      allow write: if hasRole('lead');
-    }
-
-    // V2: changelogs become public read (v1 rule above restricts to lead-only)
-    match /changelogs/{changelogId} {
-      allow read: if true;
-    }
-
   }
 }

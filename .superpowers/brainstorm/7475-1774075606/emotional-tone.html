@@ -1,0 +1,194 @@
+<h2>What should the first 5 seconds feel like?</h2>
+<p class="subtitle">Click the one that resonates most. These are wireframe-level impressions, not final designs.</p>
+
+<div class="cards">
+
+  <!-- OPTION A: Calm Authority -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #0a0a0a; padding: 0; overflow: hidden;">
+      <div style="font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6; height: 100%;">
+        <!-- Nav -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <span style="font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #888;">AI 4 Society</span>
+          <span style="font-size: 9px; color: #555;">Observatory &middot; About &middot; Sign In</span>
+        </div>
+
+        <!-- Hero -->
+        <div style="padding: 40px 24px 20px; text-align: center;">
+          <div style="font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: #2A9DFF; margin-bottom: 12px;">Global AI Risk Observatory</div>
+          <div style="font-size: 22px; font-weight: 300; line-height: 1.3; color: #e6e6e6; max-width: 340px; margin: 0 auto;">Tracking what matters.<br/>Before it's too late.</div>
+          <div style="font-size: 10px; color: #666; margin-top: 12px;">47 sources &middot; 40+ risks &middot; Human-reviewed</div>
+        </div>
+
+        <!-- Clean data grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: rgba(255,255,255,0.04); margin: 0 20px; border-radius: 8px; overflow: hidden;">
+          <div style="background: #0a0a0a; padding: 14px 12px; text-align: center;">
+            <div style="font-size: 20px; font-weight: 600; color: #FF4444;">7</div>
+            <div style="font-size: 8px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">Critical Velocity</div>
+          </div>
+          <div style="background: #0a0a0a; padding: 14px 12px; text-align: center;">
+            <div style="font-size: 20px; font-weight: 600; color: #2A9DFF;">142</div>
+            <div style="font-size: 8px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">Signals This Week</div>
+          </div>
+          <div style="background: #0a0a0a; padding: 14px 12px; text-align: center;">
+            <div style="font-size: 20px; font-weight: 600; color: #4ADE80;">23</div>
+            <div style="font-size: 8px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">Solutions Tracked</div>
+          </div>
+        </div>
+
+        <!-- Sparse list -->
+        <div style="margin: 20px 20px 0; font-size: 10px;">
+          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); color: #999;">
+            <span style="color: #ccc;">Deepfake-Driven Election Manipulation</span>
+            <span style="color: #FF4444;">Critical &uarr;</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); color: #999;">
+            <span style="color: #ccc;">Autonomous Weapons Proliferation</span>
+            <span style="color: #FF8844;">High &uarr;</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 10px 0; color: #999;">
+            <span style="color: #ccc;">AI-Powered Content Provenance</span>
+            <span style="color: #4ADE80;">Scaling &rarr;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Calm Authority</h3>
+      <p>The Economist meets Bloomberg. Clean, sparse, data-forward. Trust through restraint. Numbers speak. You feel informed, not alarmed.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: Urgent Pulse -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #050505; padding: 0; overflow: hidden;">
+      <div style="font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6; height: 100%; position: relative;">
+        <!-- Subtle scan line effect -->
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(42,157,255,0.01) 2px, rgba(42,157,255,0.01) 4px); pointer-events: none;"></div>
+
+        <!-- Top bar with live indicator -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(255,50,50,0.15);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #FF2A2A; box-shadow: 0 0 8px #FF2A2A; animation: pulse 2s infinite;"></div>
+            <span style="font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #FF2A2A;">Live Monitoring</span>
+          </div>
+          <span style="font-size: 9px; color: #444; font-family: monospace;">2026-03-21 14:32 UTC</span>
+        </div>
+
+        <!-- Central pulse -->
+        <div style="text-align: center; padding: 24px 16px 16px;">
+          <div style="font-size: 11px; letter-spacing: 6px; text-transform: uppercase; color: #444; margin-bottom: 8px;">AI 4 Society</div>
+          <div style="font-size: 18px; font-weight: 700; color: #fff; line-height: 1.2;">7 risks accelerating<br/>this week</div>
+          <div style="width: 40px; height: 2px; background: linear-gradient(90deg, #FF2A2A, #FF8844); margin: 12px auto;"></div>
+          <div style="font-size: 9px; color: #666;">47 sources monitored &middot; 6h refresh cycle</div>
+        </div>
+
+        <!-- Velocity bars -->
+        <div style="margin: 0 16px;">
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 3px;">
+              <span style="color: #ccc;">Deepfake Election Manipulation</span>
+              <span style="color: #FF2A2A; font-family: monospace;">92 &uarr;+8</span>
+            </div>
+            <div style="height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;">
+              <div style="width: 92%; height: 100%; background: linear-gradient(90deg, #FF2A2A, #FF4444); border-radius: 2px;"></div>
+            </div>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 3px;">
+              <span style="color: #ccc;">Mass Surveillance Infrastructure</span>
+              <span style="color: #FF8844; font-family: monospace;">78 &uarr;+5</span>
+            </div>
+            <div style="height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;">
+              <div style="width: 78%; height: 100%; background: linear-gradient(90deg, #FF8844, #FFAA44); border-radius: 2px;"></div>
+            </div>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 3px;">
+              <span style="color: #ccc;">Algorithmic Labor Displacement</span>
+              <span style="color: #FF8844; font-family: monospace;">71 &uarr;+3</span>
+            </div>
+            <div style="height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;">
+              <div style="width: 71%; height: 100%; background: linear-gradient(90deg, #FF8844, #FFAA44); border-radius: 2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latest signal ticker -->
+        <div style="margin: 16px 16px 0; padding: 10px 12px; background: rgba(42,157,255,0.05); border: 1px solid rgba(42,157,255,0.1); border-radius: 6px;">
+          <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #2A9DFF; margin-bottom: 4px;">Latest Signal &middot; 23 min ago</div>
+          <div style="font-size: 10px; color: #ccc; line-height: 1.4;">"EU Parliament fast-tracks AI Act enforcement timeline after deepfake incident involving..."</div>
+          <div style="font-size: 8px; color: #555; margin-top: 4px;">Reuters &middot; Credibility: 0.91</div>
+        </div>
+      </div>
+      <style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }</style>
+    </div>
+    <div class="card-body">
+      <h3>B: Urgent Pulse</h3>
+      <p>A live control room. Something is moving right now. Blinking indicators, velocity bars, latest signal ticker. You feel the urgency before you read a word.</p>
+    </div>
+  </div>
+
+  <!-- OPTION C: Human Story -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #0a0a0a; padding: 0; overflow: hidden;">
+      <div style="font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6; height: 100%;">
+        <!-- Minimal nav -->
+        <div style="padding: 12px 20px;">
+          <span style="font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #555;">AI 4 Society</span>
+        </div>
+
+        <!-- Featured story -->
+        <div style="padding: 8px 24px 16px;">
+          <!-- Category tag -->
+          <div style="display: inline-block; font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: #FF2A2A; border: 1px solid rgba(255,42,42,0.3); padding: 3px 8px; border-radius: 3px; margin-bottom: 12px;">Accelerating Risk</div>
+
+          <!-- Headline -->
+          <div style="font-size: 20px; font-weight: 600; line-height: 1.3; color: #fff; margin-bottom: 10px;">A teacher in Manila lost her identity to a deepfake. She's not alone.</div>
+
+          <!-- Subtext -->
+          <div style="font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 16px;">This week, 14 new signals arrived from 9 sources about deepfake-driven manipulation. The risk score rose 8 points. Here's what's happening and what's being done about it.</div>
+
+          <!-- Signal evidence strip -->
+          <div style="display: flex; gap: 6px; margin-bottom: 16px;">
+            <div style="flex: 1; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; border-left: 2px solid #FF4444;">
+              <div style="font-size: 8px; color: #666; text-transform: uppercase;">Risk Score</div>
+              <div style="font-size: 16px; font-weight: 600; color: #FF4444;">92</div>
+              <div style="font-size: 8px; color: #FF6666;">&uarr; +8 this week</div>
+            </div>
+            <div style="flex: 1; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; border-left: 2px solid #2A9DFF;">
+              <div style="font-size: 8px; color: #666; text-transform: uppercase;">Signals</div>
+              <div style="font-size: 16px; font-weight: 600; color: #2A9DFF;">14</div>
+              <div style="font-size: 8px; color: #888;">from 9 sources</div>
+            </div>
+            <div style="flex: 1; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; border-left: 2px solid #4ADE80;">
+              <div style="font-size: 8px; color: #666; text-transform: uppercase;">Solutions</div>
+              <div style="font-size: 16px; font-weight: 600; color: #4ADE80;">3</div>
+              <div style="font-size: 8px; color: #888;">being tracked</div>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="font-size: 10px; padding: 8px 16px; background: #2A9DFF; color: #fff; border-radius: 6px; font-weight: 500;">Read the full picture</div>
+            <div style="font-size: 10px; padding: 8px 16px; border: 1px solid rgba(255,255,255,0.1); color: #888; border-radius: 6px;">See all 40+ risks</div>
+          </div>
+        </div>
+
+        <!-- Bottom hint -->
+        <div style="padding: 8px 24px; border-top: 1px solid rgba(255,255,255,0.04);">
+          <div style="font-size: 8px; color: #444; text-align: center;">Swipe for next story &rarr; &nbsp; or explore the full observatory</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Human Story</h3>
+      <p>One risk, one real consequence, front and center. Like a magazine cover story. Emotional hook first, then data backs it up. You feel it before you analyze it.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <p class="subtitle" style="text-align: center;">All three lead to the same observatory. The question is: what makes someone stop scrolling and care?</p>
+</div>

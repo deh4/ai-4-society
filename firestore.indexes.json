@@ -122,6 +122,22 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "impact_score", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "signals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "discovery_locked", "order": "ASCENDING" },
+        { "fieldPath": "fetched_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "signals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "classification_version", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

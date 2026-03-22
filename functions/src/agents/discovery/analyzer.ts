@@ -49,6 +49,21 @@ export interface NewNodeProposal {
     why_novel: string;
     key_themes: string[];
     suggested_parent_risk_id?: string;
+    // Full skeleton fields (required for risk/solution, optional for stakeholder)
+    summary?: string;
+    deep_dive?: string;
+    score_2026?: number;
+    score_2035?: number;
+    velocity?: string;
+    implementation_stage?: string;
+    key_players?: string[];
+    barriers?: string[];
+    principles?: string[];
+    timeline_narrative?: {
+      near_term: string;
+      mid_term: string;
+      long_term: string;
+    };
   };
   supporting_signal_ids: string[];
   confidence: number;
@@ -81,7 +96,8 @@ export interface DiscoveryResult {
   tokenUsage: { input: number; output: number };
 }
 
-const MIN_SUPPORTING_SIGNALS = 3;
+const MIN_SUPPORTING_SIGNALS = 5;
+const MIN_SUPPORTING_SIGNALS_EDGE = 3;
 
 export async function analyzeSignals(
   signals: SignalInfo[],
@@ -165,16 +181,68 @@ Rules for new_edge proposals:
 
 Respond with a JSON array of proposals (can be empty []):
 
-For new nodes:
+For new risk nodes:
 {
   "proposal_type": "new_node",
   "node_data": {
-    "type": "risk" | "solution" | "stakeholder",
+    "type": "risk",
     "name": "<concise name>",
     "description": "<2-3 sentence description>",
     "why_novel": "<1-2 sentences explaining why not covered by existing nodes>",
     "key_themes": ["<theme1>", "<theme2>"],
-    "suggested_parent_risk_id": "<node ID or omit>"
+    "suggested_parent_risk_id": "<node ID or omit>",
+    "summary": "<2-3 sentence public-facing summary>",
+    "deep_dive": "<3-4 paragraphs of analysis>",
+    "score_2026": <0-100>,
+    "score_2035": <0-100>,
+    "velocity": "Critical" | "High" | "Medium" | "Low",
+    "principles": ["P01", "P03"],
+    "timeline_narrative": {
+      "near_term": "<1-2 sentences>",
+      "mid_term": "<1-2 sentences>",
+      "long_term": "<1-2 sentences>"
+    }
+  },
+  "supporting_signal_ids": ["<id1>", "<id2>", ...],
+  "confidence": <0.0-1.0>
+}
+
+For new solution nodes:
+{
+  "proposal_type": "new_node",
+  "node_data": {
+    "type": "solution",
+    "name": "<concise name>",
+    "description": "<2-3 sentence description>",
+    "why_novel": "<1-2 sentences>",
+    "key_themes": ["<theme1>", "<theme2>"],
+    "suggested_parent_risk_id": "<node ID or omit>",
+    "summary": "<2-3 sentence public-facing summary>",
+    "deep_dive": "<3-4 paragraphs of analysis>",
+    "score_2026": <0-100>,
+    "score_2035": <0-100>,
+    "implementation_stage": "Research" | "Policy Debate" | "Pilot" | "Early Adoption" | "Scaling" | "Mainstream",
+    "key_players": ["<player1>"],
+    "barriers": ["<barrier1>"],
+    "principles": ["P01", "P03"],
+    "timeline_narrative": {
+      "near_term": "<1-2 sentences>",
+      "mid_term": "<1-2 sentences>",
+      "long_term": "<1-2 sentences>"
+    }
+  },
+  "supporting_signal_ids": ["<id1>", "<id2>", ...],
+  "confidence": <0.0-1.0>
+}
+
+For new stakeholder nodes:
+{
+  "proposal_type": "new_node",
+  "node_data": {
+    "type": "stakeholder",
+    "name": "<concise name>",
+    "description": "<2-3 sentence description>",
+    "why_novel": "<1-2 sentences>"
   },
   "supporting_signal_ids": ["<id1>", "<id2>", ...],
   "confidence": <0.0-1.0>
@@ -241,7 +309,7 @@ Only output valid JSON array. No markdown. No explanation outside JSON.`;
           logger.info(`Discovery: dropping new_edge — invalid node IDs`);
           return false;
         }
-        if (validRefs.length < 2) {
+        if (validRefs.length < MIN_SUPPORTING_SIGNALS_EDGE) {
           logger.info(`Discovery: dropping new_edge — only ${validRefs.length} valid signal refs`);
           return false;
         }
