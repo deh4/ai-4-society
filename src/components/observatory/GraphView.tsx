@@ -9,6 +9,7 @@ interface GraphViewProps {
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string | null) => void;
   activeTypes: Set<NodeType>;
+  activePrinciples?: Set<string>;
 }
 
 interface ForceNode {
@@ -38,11 +39,20 @@ const TYPE_COLORS: Record<NodeType, string> = {
 function buildGraphData(
   snapshot: GraphSnapshot,
   activeTypes: Set<NodeType>,
-  preferenceIds: Set<string>
+  preferenceIds: Set<string>,
+  activePrinciples?: Set<string>
 ): { nodes: ForceNode[]; links: GraphLink[] } {
   const nodeIds = new Set<string>();
 
-  const activeNodes = snapshot.nodes.filter((n) => activeTypes.has(n.type));
+  const activeNodes = snapshot.nodes.filter((n) => {
+    if (!activeTypes.has(n.type)) return false;
+    // If principle filters are active, only show nodes that have at least one matching principle
+    if (activePrinciples && activePrinciples.size > 0) {
+      const nodePrinciples = n.principles ?? [];
+      return nodePrinciples.some((p) => activePrinciples.has(p));
+    }
+    return true;
+  });
   activeNodes.forEach((n) => nodeIds.add(n.id));
 
   const links: GraphLink[] = snapshot.edges
@@ -81,6 +91,7 @@ export default function GraphView({
   selectedNodeId,
   onSelectNode,
   activeTypes,
+  activePrinciples,
 }: GraphViewProps) {
   const { snapshot, loading } = useGraph();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,8 +112,8 @@ export default function GraphView({
 
   const graphData = useMemo(() => {
     if (!snapshot) return { nodes: [], links: [] };
-    return buildGraphData(snapshot, activeTypes, preferenceIds);
-  }, [snapshot, activeTypes, preferenceIds]);
+    return buildGraphData(snapshot, activeTypes, preferenceIds, activePrinciples);
+  }, [snapshot, activeTypes, preferenceIds, activePrinciples]);
 
   // Resize observer — also reads the initial size synchronously so there is
   // no flash before the first ResizeObserver callback.
