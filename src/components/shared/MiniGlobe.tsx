@@ -1,19 +1,14 @@
-import "./MiniGlobe.css";
-
 export default function MiniGlobe() {
   return (
-    <div className="mini-globe" aria-hidden="true">
-      <div className="mini-globe__sphere">
-        <div className="mini-globe__meridian mini-globe__meridian--1" />
-        <div className="mini-globe__meridian mini-globe__meridian--2" />
-        <div className="mini-globe__meridian mini-globe__meridian--3" />
-        <div className="mini-globe__equator" />
-        <div className="mini-globe__lat mini-globe__lat--n" />
-        <div className="mini-globe__lat mini-globe__lat--s" />
-        <div className="mini-globe__blip mini-globe__blip--1" />
-        <div className="mini-globe__blip mini-globe__blip--2" />
-        <div className="mini-globe__blip mini-globe__blip--3" />
-      </div>
+    <div className="relative w-10 h-10 shrink-0" aria-hidden="true">
+      <img
+        src="/logo.png"
+        alt=""
+        className="w-full h-full object-contain relative z-10"
+      />
+      {/* Beacon pulse rings */}
+      <span className="absolute inset-0 rounded-full border border-cyan-400/40 animate-beacon-1" />
+      <span className="absolute inset-0 rounded-full border border-cyan-400/20 animate-beacon-2" />
     </div>
   );
 }

@@ -11,6 +11,8 @@ export default {
                 'card-enter': 'cardEnter 0.4s ease-out both',
                 'pulse-subtle': 'pulseSubtle 3s ease-in-out infinite',
                 'signal-blink': 'signalBlink 2s ease-in-out infinite',
+                'beacon-1': 'beaconPulse 3s ease-out infinite',
+                'beacon-2': 'beaconPulse 3s ease-out 1.5s infinite',
             },
             keyframes: {
                 fadeInUp: {
@@ -28,6 +30,10 @@ export default {
                 signalBlink: {
                     '0%, 100%': { opacity: '1' },
                     '50%': { opacity: '0.3' },
+                },
+                beaconPulse: {
+                    '0%': { transform: 'scale(1)', opacity: '0.5' },
+                    '100%': { transform: 'scale(2.2)', opacity: '0' },
                 },
             },
         },
