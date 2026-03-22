@@ -8,11 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "seed": "ts-node src/scripts/seed.ts",
-    "seed:prod": "ts-node src/scripts/seed-prod.ts",
-    "seed:admin": "ts-node src/scripts/seed-admin.ts",
-    "seed:agents": "ts-node src/scripts/seed-agents.ts",
-    "seed:v2-graph": "ts-node src/scripts/seed-v2-graph.ts"
+    "seed:agents": "ts-node src/scripts/seed-agents.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
