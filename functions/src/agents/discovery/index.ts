@@ -25,12 +25,13 @@ async function runDiscoveryAgent(apiKey: string): Promise<{
 
   try {
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
+    cutoff.setDate(cutoff.getDate() - 180); // 6-month window
 
-    // Step 1: Read classified signals (last 30 days) — includes rejected for emergent pattern detection
+    // Step 1: Read classified signals (last 6 months) — includes rejected for emergent pattern detection
     const signalsSnap = await db
       .collection("signals")
       .where("status", "in", ["pending", "approved", "edited", "rejected"])
+      .where("discovery_locked", "==", false)
       .where("fetched_at", ">", cutoff)
       .orderBy("fetched_at", "desc")
       .get();
@@ -49,10 +50,11 @@ async function runDiscoveryAgent(apiKey: string): Promise<{
         review_status: (d.data().status as string) ?? "pending",
       }));
 
-    // Step 2: Read unmatched signals (last 30 days)
+    // Step 2: Read unmatched signals (last 6 months)
     const unmatchedSnap = await db
       .collection("signals")
       .where("signal_type", "==", "unmatched")
+      .where("discovery_locked", "==", false)
       .where("fetched_at", ">", cutoff)
       .orderBy("fetched_at", "desc")
       .get();
@@ -154,7 +156,7 @@ async function runDiscoveryAgent(apiKey: string): Promise<{
 
 export const scheduledDiscovery = onSchedule(
   {
-    schedule: "0 10 * * 0", // Weekly, Sunday 10:00 UTC
+    schedule: "0 10 1,15 * *", // Biweekly, 1st and 15th at 10:00 UTC
     timeoutSeconds: 300,
     memory: "512MiB",
     secrets: [geminiApiKey],
@@ -166,7 +168,7 @@ export const scheduledDiscovery = onSchedule(
       logger.info("Discovery Agent is paused, skipping scheduled run");
       return;
     }
-    logger.info("Discovery Agent v2: starting weekly run");
+    logger.info("Discovery Agent v2: starting biweekly run");
     await runDiscoveryAgent(geminiApiKey.value());
   }
 );

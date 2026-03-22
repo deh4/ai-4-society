@@ -1,8 +1,11 @@
 // functions/src/agents/approval/index.ts
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions/v2";
 import { getAllNodes, getAllEdges, writeGraphSnapshot } from "../../shared/firestore.js";
+
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 function toSlug(name: string): string {
   return name
@@ -13,7 +16,7 @@ function toSlug(name: string): string {
 }
 
 export const approveGraphProposal = onCall(
-  { memory: "256MiB", timeoutSeconds: 60 },
+  { memory: "512MiB", timeoutSeconds: 120, secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
     const uid = request.auth.uid;
@@ -102,30 +105,29 @@ export const approveGraphProposal = onCall(
           approved_by: uid,
         };
 
-        // Type-specific defaults — numeric fields default to neutral midpoints so
-        // charts render, not crash. Validator will propose real values.
+        // Type-specific defaults — use skeleton data from discovery agent if available,
+        // fall back to neutral midpoints so charts render, not crash.
         if (nodeType === "risk") {
           Object.assign(baseNode, {
-            score_2026: 50,
-            score_2035: 50,
-            velocity: "Medium",
+            score_2026: nodeData.score_2026 ?? 50,
+            score_2035: nodeData.score_2035 ?? 50,
+            velocity: nodeData.velocity ?? "Medium",
             expert_severity: 50,
             public_perception: 50,
-            connected_to: [],
+            principles: nodeData.principles ?? [],
             mitigation_strategies: [],
-            who_affected: [],
-            signal_evidence: [],
           });
           if (nodeData.suggested_parent_risk_id) {
             baseNode.category = nodeData.suggested_parent_risk_id;
           }
         } else if (nodeType === "solution") {
           Object.assign(baseNode, {
-            implementation_stage: "Research",
-            adoption_score_2026: 20,
-            adoption_score_2035: 50,
-            key_players: [],
-            barriers: [],
+            implementation_stage: nodeData.implementation_stage ?? "Research",
+            score_2026: nodeData.score_2026 ?? 20,
+            score_2035: nodeData.score_2035 ?? 50,
+            key_players: nodeData.key_players ?? [],
+            barriers: nodeData.barriers ?? [],
+            principles: nodeData.principles ?? [],
             solution_type: "Structural",
           });
           if (nodeData.suggested_parent_risk_id) {
@@ -260,7 +262,10 @@ export const approveGraphProposal = onCall(
     if (result.action === "approved") {
       try {
         const [nodes, edges] = await Promise.all([getAllNodes(), getAllEdges()]);
-        const snapshotNodes = nodes.map((n) => {
+        const visibleTypes = new Set(["risk", "solution", "milestone"]);
+        const visibleNodes = nodes.filter((n) => visibleTypes.has(n.type as string));
+        const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+        const snapshotNodes = visibleNodes.map((n) => {
           const node: Record<string, unknown> = { id: n.id, type: n.type, name: n.name };
           if (n.velocity) node.velocity = n.velocity;
           if (n.implementation_stage) node.implementation_stage = n.implementation_stage;
@@ -268,9 +273,11 @@ export const approveGraphProposal = onCall(
           if (n.score_2026 !== undefined) node.score_2026 = n.score_2026;
           return node;
         });
-        const snapshotEdges = edges.map((e) => ({
-          from: e.from_node, to: e.to_node, relationship: e.relationship,
-        }));
+        const snapshotEdges = edges
+          .filter((e) => visibleNodeIds.has(e.from_node as string) && visibleNodeIds.has(e.to_node as string))
+          .map((e) => ({
+            from: e.from_node, to: e.to_node, relationship: e.relationship,
+          }));
         await writeGraphSnapshot({
           nodes: snapshotNodes, edges: snapshotEdges,
           nodeCount: snapshotNodes.length, edgeCount: snapshotEdges.length,
@@ -278,6 +285,22 @@ export const approveGraphProposal = onCall(
         logger.info("Post-approval: graph snapshot rebuilt");
       } catch (err) {
         logger.warn("Post-approval graph rebuild failed (non-fatal):", err);
+      }
+
+      // Trigger reclassification for new_node approvals
+      if (result.nodeId) {
+        try {
+          const proposalSnap = await db.collection("graph_proposals").doc(proposalId).get();
+          const proposalData = proposalSnap.data();
+          if (proposalData?.node_data) {
+            const { reclassifyPendingSignals } = await import("../signal-scout/reclassifier.js");
+            const nodeInfo = proposalData.node_data as { type: string; name: string; description: string };
+            const reclassResult = await reclassifyPendingSignals(result.nodeId, nodeInfo, geminiApiKey.value());
+            logger.info(`Post-approval reclassification: ${reclassResult.reclassified} remapped, ${reclassResult.unchanged} unchanged`);
+          }
+        } catch (err) {
+          logger.warn("Post-approval reclassification failed (non-fatal):", err);
+        }
       }
     }
 
