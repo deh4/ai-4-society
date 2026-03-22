@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import {
   getAllNodes,
   getAllEdges,
+  getGraphVisibleNodes,
   writeGraphSnapshot,
   writeNodeSummary,
   getSignalsForNode,
@@ -35,10 +36,14 @@ export const buildGraph = onCall(
     }
     await lockRef.set({ lastRunAt: FieldValue.serverTimestamp() });
 
-    const [nodes, edges] = await Promise.all([getAllNodes(), getAllEdges()]);
+    const [nodes, visibleNodes, edges] = await Promise.all([
+      getAllNodes(),
+      getGraphVisibleNodes(),
+      getAllEdges(),
+    ]);
 
-    // Build minimal snapshot for visualization
-    const snapshotNodes: SnapshotNode[] = nodes.map((n) => {
+    // Build minimal snapshot for visualization (risk/solution/milestone only)
+    const snapshotNodes: SnapshotNode[] = visibleNodes.map((n) => {
       const node: SnapshotNode = {
         id: n.id as string,
         type: n.type as string,
@@ -51,12 +56,16 @@ export const buildGraph = onCall(
       return node;
     });
 
-    const snapshotEdges = edges.map((e) => ({
-      from: e.from_node as string,
-      to: e.to_node as string,
-      relationship: e.relationship as string,
-      ...(e.properties ? { properties: e.properties } : {}),
-    }));
+    // Only include edges where both endpoints are visible nodes
+    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+    const snapshotEdges = edges
+      .filter((e) => visibleNodeIds.has(e.from_node as string) && visibleNodeIds.has(e.to_node as string))
+      .map((e) => ({
+        from: e.from_node as string,
+        to: e.to_node as string,
+        relationship: e.relationship as string,
+        ...(e.properties ? { properties: e.properties } : {}),
+      }));
 
     await writeGraphSnapshot({
       nodes: snapshotNodes,

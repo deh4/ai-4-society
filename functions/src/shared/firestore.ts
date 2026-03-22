@@ -16,6 +16,15 @@ export async function getAllEdges(): Promise<DocWithId[]> {
   return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
 }
 
+/** Get nodes for graph visualization (excludes stakeholders and principles). */
+export async function getGraphVisibleNodes(): Promise<DocWithId[]> {
+  const snap = await getDb()
+    .collection("nodes")
+    .where("type", "in", ["risk", "solution", "milestone"])
+    .get();
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+}
+
 export async function getNodesByType(type: string): Promise<DocWithId[]> {
   const snap = await getDb().collection("nodes").where("type", "==", type).get();
   return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
