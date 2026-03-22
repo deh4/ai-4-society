@@ -377,10 +377,10 @@ export default function Observatory() {
         )}
       </AnimatePresence>
 
-      {/* Mobile bottom sheet — detail panel */}
-      <AnimatePresence>
-        {selectedNodeId && (
-          <div className="lg:hidden">
+      {/* Mobile fixed bottom panel — detail panel */}
+      {selectedNodeId && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[var(--bg-primary)]" style={{ height: "calc(var(--vh-full, 100vh) - 25dvh - 56px)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="overflow-y-auto h-full">
             <DetailPanel
               key={`bottomSheet-${selectedNodeId}`}
               nodeId={selectedNodeId}
@@ -389,8 +389,8 @@ export default function Observatory() {
               mode="bottomSheet"
             />
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </Layout>
   );
 }

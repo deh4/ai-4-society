@@ -43,6 +43,9 @@ Thumbs.db
 functions/lib/
 functions/node_modules/
 
+# Video renders
+video/out/
+
 # Cache
 .vite
 .eslintcache

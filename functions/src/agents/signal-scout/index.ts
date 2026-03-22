@@ -208,8 +208,8 @@ async function runSignalScout(apiKey: string): Promise<{
 export const scheduledSignalScout = onSchedule(
   {
     schedule: "every 6 hours",
-    timeoutSeconds: 300,
-    memory: "512MiB",
+    timeoutSeconds: 540,
+    memory: "1GiB",
     secrets: [geminiApiKey],
   },
   async () => {
@@ -225,7 +225,7 @@ export const scheduledSignalScout = onSchedule(
 );
 
 export const triggerSignalScout = onCall(
-  { memory: "512MiB", timeoutSeconds: 300, secrets: [geminiApiKey] },
+  { memory: "1GiB", timeoutSeconds: 540, secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be signed in");
     logger.info(`Signal Scout v2: manual trigger by ${request.auth.uid}`);

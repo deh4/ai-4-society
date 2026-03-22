@@ -70,27 +70,26 @@ async function extractOgImage(articleUrl: string): Promise<string | undefined> {
 
 async function fetchRSS(source: DataSource): Promise<RawArticle[]> {
   const feed = await rssParser.parseURL(source.url);
-  const articles: RawArticle[] = [];
+  const items = feed.items ?? [];
 
-  for (const item of feed.items ?? []) {
-    // Try RSS enclosure first (common for media-rich feeds)
-    let image_url = (item.enclosure as { url?: string } | undefined)?.url;
+  // Build articles first, then extract OG images in parallel
+  const articles: RawArticle[] = items.map((item) => ({
+    title: item.title ?? "Untitled",
+    url: item.link ?? "",
+    source_name: source.name,
+    source_id: source.id,
+    published_date: item.isoDate ?? new Date().toISOString(),
+    snippet: item.contentSnippet?.slice(0, 500),
+    image_url: (item.enclosure as { url?: string } | undefined)?.url,
+  }));
 
-    // Fall back to OG meta tag extraction
-    if (!image_url && item.link) {
-      image_url = await extractOgImage(item.link);
+  // Extract OG images in parallel for articles missing an image
+  const ogPromises = articles.map(async (article) => {
+    if (!article.image_url && article.url) {
+      article.image_url = await extractOgImage(article.url);
     }
-
-    articles.push({
-      title: item.title ?? "Untitled",
-      url: item.link ?? "",
-      source_name: source.name,
-      source_id: source.id,
-      published_date: item.isoDate ?? new Date().toISOString(),
-      snippet: item.contentSnippet?.slice(0, 500),
-      image_url,
-    });
-  }
+  });
+  await Promise.all(ogPromises);
 
   return articles;
 }
@@ -191,31 +190,40 @@ async function fetchWithRetry(source: DataSource, maxRetries = 2): Promise<RawAr
 }
 
 export async function fetchAllSources(enabledSourceIds?: Set<string>): Promise<FetchAllResult> {
-  const results: RawArticle[] = [];
   const sourceHealth: Record<string, SourceFetchHealth> = {};
 
-  for (const source of DATA_SOURCES) {
+  const enabledSources = DATA_SOURCES.filter((source) => {
     if (enabledSourceIds && !enabledSourceIds.has(source.id)) {
       logger.info(`Skipping disabled source: ${source.name}`);
-      continue;
+      return false;
     }
-    try {
-      let articles = await fetchWithRetry(source);
-      if (source.maxItems && articles.length > source.maxItems) {
-        articles = articles.slice(0, source.maxItems);
+    return true;
+  });
+
+  // Fetch all sources in parallel (each source has its own internal timeouts)
+  const fetchResults = await Promise.allSettled(
+    enabledSources.map(async (source) => {
+      try {
+        let articles = await fetchWithRetry(source);
+        if (source.maxItems && articles.length > source.maxItems) {
+          articles = articles.slice(0, source.maxItems);
+        }
+        sourceHealth[source.id] = { status: articles.length > 0 ? "ok" : "empty", count: articles.length };
+        logger.info(`Fetched ${articles.length} articles from ${source.name}`);
+        return articles;
+      } catch (err) {
+        logger.warn(`Failed to fetch from ${source.name}:`, err);
+        sourceHealth[source.id] = {
+          status: "error",
+          count: 0,
+          error: err instanceof Error ? err.message : String(err),
+        };
+        return [] as RawArticle[];
       }
-      results.push(...articles);
-      sourceHealth[source.id] = { status: articles.length > 0 ? "ok" : "empty", count: articles.length };
-      logger.info(`Fetched ${articles.length} articles from ${source.name}`);
-    } catch (err) {
-      logger.warn(`Failed to fetch from ${source.name}:`, err);
-      sourceHealth[source.id] = {
-        status: "error",
-        count: 0,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-  }
+    })
+  );
+
+  const results = fetchResults.flatMap((r) => r.status === "fulfilled" ? r.value : []);
 
   // Deduplicate by URL
   const seen = new Set<string>();
