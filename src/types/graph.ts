@@ -1,6 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type NodeType = "risk" | "solution" | "stakeholder" | "milestone";
+export type NodeType = "risk" | "solution" | "stakeholder" | "milestone" | "principle";
 
 export interface RiskNode {
   id: string;
@@ -20,6 +20,7 @@ export interface RiskNode {
     long_term: string;
   };
   mitigation_strategies: string[];
+  principles: string[];
   version: number;
   lastUpdated: Timestamp;
   lastUpdatedBy: string;
@@ -40,10 +41,11 @@ export interface SolutionNode {
     | "Early Adoption"
     | "Scaling"
     | "Mainstream";
-  adoption_score_2026: number;
-  adoption_score_2035: number;
+  score_2026: number;
+  score_2035: number;
   key_players: string[];
   barriers: string[];
+  principles: string[];
   timeline_narrative: {
     near_term: string;
     mid_term: string;
@@ -74,7 +76,16 @@ export interface MilestoneNode {
   createdAt: Timestamp;
 }
 
-export type GraphNode = RiskNode | SolutionNode | StakeholderNode | MilestoneNode;
+export interface PrincipleNode {
+  id: string;
+  type: "principle";
+  name: string;
+  summary: string;
+  oecd_reference: string;
+  createdAt: Timestamp;
+}
+
+export type GraphNode = RiskNode | SolutionNode | StakeholderNode | MilestoneNode | PrincipleNode;
 
 export interface Edge {
   id: string;
@@ -88,18 +99,20 @@ export interface Edge {
     severity?: "high" | "medium" | "low";
   };
   created_by: "migration" | "discovery-agent" | string;
+  approved_by?: string;
   createdAt: Timestamp;
 }
 
 export interface GraphSnapshot {
   nodes: Array<{
     id: string;
-    type: NodeType;
+    type: "risk" | "solution" | "milestone";
     name: string;
     velocity?: string;
     implementation_stage?: string;
     significance?: string;
     score_2026?: number;
+    principles?: string[];
   }>;
   edges: Array<{
     from: string;

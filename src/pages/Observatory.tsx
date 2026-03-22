@@ -125,9 +125,7 @@ export default function Observatory() {
               ? "Risk"
               : selectedNode.type === "solution"
                 ? "Solution"
-                : selectedNode.type === "stakeholder"
-                  ? "Organization"
-                  : "Event",
+                : "Event",
         },
         "keywords": [
           selectedNode.type,

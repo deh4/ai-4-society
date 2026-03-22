@@ -58,8 +58,8 @@
 // 1. ENUMS & LITERAL UNIONS
 // ---------------------------------------------------------------------------
 
-/** The four kinds of knowledge-graph node. */
-export type NodeType = "risk" | "solution" | "stakeholder" | "milestone";
+/** The five kinds of knowledge-graph node. */
+export type NodeType = "risk" | "solution" | "stakeholder" | "milestone" | "principle";
 
 /** How a signal relates to the taxonomy. */
 export type SignalType = "risk" | "solution" | "both" | "unmatched";
@@ -79,7 +79,8 @@ export type EdgeRelationship =
   | "addressed_by"
   | "impacts"
   | "amplifies"
-  | "depends_on";
+  | "depends_on"
+  | "governs";
 
 /** Velocity / urgency rating for risk nodes. */
 export type Velocity = "Critical" | "High" | "Medium" | "Low";
@@ -226,6 +227,7 @@ export interface RiskNode extends VersionedNode {
   public_perception: number;
   timeline_narrative: TimelineNarrative;
   mitigation_strategies: string[];
+  principles: string[];
 }
 
 /**
@@ -240,10 +242,11 @@ export interface SolutionNode extends VersionedNode {
   summary: string;
   deep_dive: string;
   implementation_stage: ImplementationStage;
-  adoption_score_2026: number;
-  adoption_score_2035: number;
+  score_2026: number;
+  score_2035: number;
   key_players: string[];
   barriers: string[];
+  principles: string[];
   timeline_narrative: TimelineNarrative;
 }
 
@@ -273,8 +276,20 @@ export interface MilestoneNode extends NodeBase {
   source_url?: string;
 }
 
+/**
+ * PrincipleNode — an OECD AI principle or governance norm.
+ *
+ * Firestore: nodes/{id}  (type: "principle")
+ * IDs:       P01+
+ */
+export interface PrincipleNode extends NodeBase {
+  type: "principle";
+  summary: string;
+  oecd_reference: string;
+}
+
 /** Discriminated union of all node types. */
-export type GraphNode = RiskNode | SolutionNode | StakeholderNode | MilestoneNode;
+export type GraphNode = RiskNode | SolutionNode | StakeholderNode | MilestoneNode | PrincipleNode;
 
 // ---------------------------------------------------------------------------
 // 5. EDGES — relationships between nodes
@@ -301,6 +316,7 @@ export interface Edge {
     severity?: EdgeSeverity;
   };
   created_by: AgentId | "migration";
+  approved_by?: string;
   createdAt: FirestoreTimestamp;
 }
 
@@ -417,12 +433,13 @@ export interface FeedItem {
 export interface GraphSnapshot {
   nodes: Array<{
     id: string;
-    type: NodeType;
+    type: "risk" | "solution" | "milestone";
     name: string;
     velocity?: Velocity;
     implementation_stage?: ImplementationStage;
     significance?: MilestoneSignificance;
     score_2026?: number;
+    principles?: string[];
   }>;
   edges: Array<{
     from: string;
@@ -482,72 +499,6 @@ export interface Vote {
 
 // UserRole and UserStatus are defined in the enums section above.
 // Full User interface lives in ./user.ts — not duplicated here.
-
-// ---------------------------------------------------------------------------
-// 11. LEGACY TYPES — v1 compatibility (to be removed)
-// ---------------------------------------------------------------------------
-
-/**
- * @deprecated Use RiskNode instead. v1 uses `risk_name`; v2 uses `name`.
- * Firestore: risks/{id}  (legacy collection)
- */
-export interface LegacyRisk {
-  id: string;
-  risk_name: string;
-  category: string;
-  score_2026: number;
-  score_2035: number;
-  connected_to: string[];
-  velocity: "High" | "Medium" | "Low" | "Critical";
-  summary: string;
-  deep_dive: string;
-  who_affected: string[];
-  timeline_narrative: TimelineNarrative;
-  mitigation_strategies: string[];
-  signal_evidence: LegacySignalEvidence[];
-  expert_severity: number;
-  public_perception: number;
-}
-
-/**
- * @deprecated Use SolutionNode instead. v1 uses `solution_title`; v2 uses `name`.
- * Firestore: solutions/{id}  (legacy collection)
- */
-export interface LegacySolution {
-  id: string;
-  parent_risk_id: string;
-  solution_title: string;
-  solution_type: string;
-  summary: string;
-  deep_dive: string;
-  implementation_stage: string;
-  adoption_score_2026: number;
-  adoption_score_2035: number;
-  key_players: string[];
-  barriers: string[];
-  timeline_narrative: TimelineNarrative;
-}
-
-/**
- * @deprecated Use MilestoneNode instead. v1 uses `year: number`; v2 uses `date: string`.
- * Firestore: milestones/{id}  (legacy collection)
- */
-export interface LegacyMilestone {
-  id: string;
-  year: number;
-  title: string;
-  description: string;
-}
-
-/** @deprecated Inline signal evidence from v1 risk documents. */
-export interface LegacySignalEvidence {
-  date: string;
-  isNew: boolean;
-  headline: string;
-  source: string;
-  url?: string;
-  isLive?: boolean;
-}
 
 // ---------------------------------------------------------------------------
 // INTERNAL — Firestore timestamp placeholder
