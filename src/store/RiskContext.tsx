@@ -168,7 +168,7 @@ export function RiskProvider({ children }: { children: ReactNode }) {
             if (matching.length === 0) return risk;
 
             const existingUrls = new Set(
-                risk.signal_evidence.map((se) => se.url).filter(Boolean)
+                (risk.signal_evidence ?? []).map((se) => se.url).filter(Boolean)
             );
 
             const newEvidence: SignalEvidence[] = matching
@@ -184,7 +184,7 @@ export function RiskProvider({ children }: { children: ReactNode }) {
 
             return {
                 ...risk,
-                signal_evidence: [...newEvidence, ...risk.signal_evidence],
+                signal_evidence: [...newEvidence, ...(risk.signal_evidence ?? [])],
             };
         });
     }, [baseRisks, liveSignals]);
