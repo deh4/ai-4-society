@@ -32,6 +32,7 @@ export default function Observatory() {
     () => new Set<string>()
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Resolve URL param (slug or legacy Firestore ID) → Firestore node ID.
   // Runs whenever the URL param or snapshot changes.
@@ -205,45 +206,81 @@ export default function Observatory() {
       </Helmet>
       <div className="max-w-7xl mx-auto px-4 py-4 overflow-x-hidden">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div>
-                <h1 className="text-xl font-bold">Observatory</h1>
-                {snapshot && (
-                  <p className="text-xs text-gray-500">
-                    {snapshot.nodeCount} nodes · {snapshot.edgeCount} edges
-                  </p>
-                )}
-              </div>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="text-xl font-bold">Observatory</h1>
+              {snapshot && (
+                <p className="text-xs text-gray-500">
+                  {snapshot.nodeCount} nodes · {snapshot.edgeCount} edges
+                </p>
+              )}
             </div>
-            {activeTab === "graph" && (
-              <NodeTypeFilter
-                active={activeTypes}
-                onChange={setActiveTypes}
-                activePrinciples={activePrinciples}
-                onPrinciplesChange={setActivePrinciples}
-              />
-            )}
           </div>
 
-          {/* Tab switcher */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
-            {(["graph", "timeline"] as const).map((tab) => (
+          <div className="flex items-center gap-2">
+            {/* Filters toggle */}
+            {activeTab === "graph" && (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-xs px-4 py-1.5 rounded transition-all ${
-                  activeTab === tab
-                    ? "bg-white/10 text-white"
-                    : "text-gray-500 hover:text-white"
+                onClick={() => setFiltersOpen((o) => !o)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                  filtersOpen
+                    ? "border-white/20 bg-white/10 text-white"
+                    : "border-white/10 text-gray-400 hover:text-white hover:border-white/20"
                 }`}
               >
-                {tab === "graph" ? "Graph" : "Timeline"}
+                Filters
+                <svg
+                  className={`inline-block w-3 h-3 ml-1 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
-            ))}
+            )}
+
+            {/* Tab switcher */}
+            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+              {(["graph", "timeline"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`text-xs px-4 py-1.5 rounded transition-all ${
+                    activeTab === tab
+                      ? "bg-white/10 text-white"
+                      : "text-gray-500 hover:text-white"
+                  }`}
+                >
+                  {tab === "graph" ? "Graph" : "Timeline"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Filters accordion */}
+        <AnimatePresence>
+          {filtersOpen && activeTab === "graph" && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden mb-4"
+            >
+              <div className="border border-white/10 rounded-lg p-3 bg-white/[0.02]">
+                <NodeTypeFilter
+                  active={activeTypes}
+                  onChange={setActiveTypes}
+                  activePrinciples={activePrinciples}
+                  onPrinciplesChange={setActivePrinciples}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Loading state */}
         {loading && (
