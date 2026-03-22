@@ -4,12 +4,6 @@ service cloud.firestore {
 
     // ─── Helper Functions ─────────────────────────────────────────────────────
 
-    // Legacy admin check (kept during migration, remove after confirmed)
-    function isAdmin() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-
     function getUserDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
@@ -30,13 +24,12 @@ service cloud.firestore {
         && getUserDoc().data.roles.hasAny(roles);
     }
 
-    // During migration: accept either legacy admin OR new RBAC
     function canWrite(roles) {
-      return isAdmin() || hasAnyRole(roles);
+      return hasAnyRole(roles);
     }
 
     function canRead(roles) {
-      return isAdmin() || hasAnyRole(roles);
+      return hasAnyRole(roles);
     }
 
     // Any active user holding at least one reviewer or lead role
@@ -53,7 +46,7 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == userId;
 
       // Lead can read all users
-      allow read: if isAdmin() || hasRole('lead');
+      allow read: if hasRole('lead');
 
       // Sign-up: user creates own doc with no self-assigned roles
       allow create: if request.auth != null
@@ -72,7 +65,7 @@ service cloud.firestore {
                          ['lastActiveAt', 'acknowledgedAt', 'onboardingCompleted']);
 
       // Lead manages users: can update status and roles, but not email or appliedAt
-      allow update: if (isAdmin() || hasRole('lead'))
+      allow update: if hasRole('lead')
                     && request.resource.data.email == resource.data.email
                     && request.resource.data.appliedAt == resource.data.appliedAt;
 
@@ -86,32 +79,7 @@ service cloud.firestore {
       }
     }
 
-    // ─── Admins Collection (Legacy — kept during migration) ───────────────────
-
-    match /admins/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.auth.token.email in ['dehakuran@gmail.com'];
-      allow update, delete: if false;
-    }
-
     // ─── Public Collections ───────────────────────────────────────────────────
-
-    match /risks/{riskId} {
-      allow read: if true;
-      allow write: if canWrite(['editor', 'lead']);
-    }
-
-    match /solutions/{solutionId} {
-      allow read: if true;
-      allow write: if canWrite(['editor', 'lead']);
-    }
-
-    match /milestones/{milestoneId} {
-      allow read: if true;
-      allow write: if canWrite(['editor', 'lead']);
-    }
 
     match /signals/{signalId} {
       allow read: if resource.data.status in ['approved', 'edited']
@@ -137,26 +105,6 @@ service cloud.firestore {
     }
 
     // ─── Agent-Related Collections ────────────────────────────────────────────
-
-    match /topics/{topicId} {
-      allow read: if canRead(['discovery-reviewer', 'lead']);
-      allow write: if false;
-    }
-
-    match /risk_updates/{updateId} {
-      allow read: if canRead(['scoring-reviewer', 'lead']);
-      allow write: if canWrite(['scoring-reviewer', 'lead']);
-    }
-
-    match /solution_updates/{updateId} {
-      allow read: if canRead(['scoring-reviewer', 'lead']);
-      allow write: if canWrite(['scoring-reviewer', 'lead']);
-    }
-
-    match /validation_reports/{reportId} {
-      allow read: if canRead(['scoring-reviewer', 'lead']);
-      allow write: if false;
-    }
 
     match /changelogs/{changelogId} {
       allow read: if canRead(['lead']);
@@ -184,11 +132,6 @@ service cloud.firestore {
     }
 
     // ─── Discovery & Validation Proposals ─────────────────────────────────────
-
-    match /discovery_proposals/{docId} {
-      allow read: if canRead(['discovery-reviewer', 'lead']);
-      allow write: if canWrite(['discovery-reviewer', 'lead']);
-    }
 
     match /validation_proposals/{docId} {
       allow read: if canRead(['scoring-reviewer', 'lead']);
@@ -244,8 +187,8 @@ service cloud.firestore {
     }
 
     match /graph_proposals/{proposalId} {
-      allow read: if isActiveReviewer() || isAdmin();
-      allow write: if isAdmin() || hasRole('lead');
+      allow read: if isActiveReviewer();
+      allow write: if hasRole('lead');
     }
 
     // V2: changelogs become public read (v1 rule above restricts to lead-only)
@@ -253,7 +196,5 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Note: v1 signals rules remain above; v2 signals will use same collection
-    // but once v2 UI ships, signal rules will be updated to use isV2Reviewer
   }
 }
