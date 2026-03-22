@@ -143,3 +143,5 @@ export { sitemap } from "./sitemap.js";
 
 export { v3Cleanup } from "./migration/v3-cleanup.js";
 export { seedPrinciples } from "./migration/seed-principles.js";
+export { v3PopulateDiscoveryNodes } from "./migration/v3-populate-discovery-nodes.js";
+export { v3BackfillHarmStatus } from "./migration/v3-backfill-harm-status.js";
