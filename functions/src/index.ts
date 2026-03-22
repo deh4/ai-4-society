@@ -917,3 +917,4 @@ export { scheduledValidator, triggerValidator } from "./agents/validator/index.j
 export { approveGraphProposal, rejectGraphProposal } from "./agents/approval/index.js";
 export { scheduledPodcast, triggerPodcast } from "./agents/podcast/index.js";
 export { sitemap } from "./sitemap.js";
+export { v3PopulateDiscoveryNodes } from "./migration/v3-populate-discovery-nodes.js";
